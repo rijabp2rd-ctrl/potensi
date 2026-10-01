@@ -1,0 +1,88 @@
+{
+  "entities": {
+    "PotensiPajak": {
+      "title": "PotensiPajak",
+      "description": "Laporan potensi objek pajak daerah BP2RD",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 64 },
+        "tanggal": { "type": "string", "maxLength": 32 },
+        "namaObjek": { "type": "string", "maxLength": 256 },
+        "kategoriObjek": { "type": "string", "maxLength": 128 },
+        "namaWajibPajak": { "type": "string", "maxLength": 128 },
+        "alamat": { "type": "string", "maxLength": 512 },
+        "kecamatan": { "type": "string", "maxLength": 128 },
+        "kelurahan": { "type": "string", "maxLength": 128 },
+        "noWhatsapp": { "type": "string", "maxLength": 32 },
+        "estimasiPotensiTahunan": { "type": "number" },
+        "koordinatLat": { "type": "number" },
+        "koordinatLng": { "type": "number" },
+        "skorKelayakan": { "type": "number" },
+        "statusValidasi": { "type": "string", "maxLength": 64 },
+        "statusAdmin": { "type": "string", "maxLength": 64 },
+        "catatanPetugas": { "type": "string", "maxLength": 1024 },
+        "petugasSurvey": { "type": "string", "maxLength": 128 },
+        "sumberData": { "type": "string", "maxLength": 64 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "namaObjek", "kategoriObjek", "alamat", "noWhatsapp"]
+    },
+    "PbbP2": {
+      "title": "PbbP2",
+      "description": "Data layanan dan konfirmasi pembayaran PBB-P2",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 64 },
+        "tanggal": { "type": "string", "maxLength": 32 },
+        "namaWajibPajak": { "type": "string", "maxLength": 128 },
+        "nik": { "type": "string", "maxLength": 16 },
+        "statusNop": { "type": "string", "maxLength": 32 },
+        "nop": { "type": "string", "maxLength": 32 },
+        "lokasiObjek": { "type": "string", "maxLength": 512 },
+        "kelurahanDesa": { "type": "string", "maxLength": 128 },
+        "kecamatan": { "type": "string", "maxLength": 128 },
+        "tahunPajak": { "type": "number" },
+        "nominalBayar": { "type": "number" },
+        "statusVerifikasi": { "type": "string", "maxLength": 64 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "namaWajibPajak", "nik", "lokasiObjek"]
+    },
+    "SurveiIkm": {
+      "title": "SurveiIkm",
+      "description": "Survei Indeks Kepuasan Masyarakat (IKM) Permenpan-RB 14/2017",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 64 },
+        "tanggal": { "type": "string", "maxLength": 32 },
+        "namaWajibPajak": { "type": "string", "maxLength": 128 },
+        "alamat": { "type": "string", "maxLength": 512 },
+        "skorKemudahan": { "type": "number" },
+        "skorKecepatan": { "type": "number" },
+        "skorKesopanan": { "type": "number" },
+        "skorTransparansi": { "type": "number" },
+        "skorSarana": { "type": "number" },
+        "skorRataRata": { "type": "number" },
+        "nilaiKonversi": { "type": "number" },
+        "kategoriMutu": { "type": "string", "maxLength": 64 },
+        "saranMasukan": { "type": "string", "maxLength": 2048 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "namaWajibPajak", "alamat", "nilaiKonversi"]
+    }
+  },
+  "firestore": {
+    "/potensi_pajak/{potensiId}": {
+      "schema": { "$ref": "#/entities/PotensiPajak" },
+      "description": "Koleksi data potensi pajak daerah"
+    },
+    "/pbb_p2/{pbbId}": {
+      "schema": { "$ref": "#/entities/PbbP2" },
+      "description": "Koleksi data pembayaran PBB-P2"
+    },
+    "/survei_ikm/{ikmId}": {
+      "schema": { "$ref": "#/entities/SurveiIkm" },
+      "description": "Koleksi respon survei IKM"
+    }
+  }
+}

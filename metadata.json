@@ -1,0 +1,6 @@
+{
+  "name": "SIPOTENSI BP2RD - Portal Penggalian Potensi Pajak Daerah & IKM",
+  "description": "Sistem Informasi Penggalian Potensi Pajak Daerah, Monitoring PBB-P2, Survei IKM terintegrasi Google Sheets dan Dashboard Analitik Interaktif",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
