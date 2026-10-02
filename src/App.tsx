@@ -10,7 +10,8 @@ import { DocumentLibrary } from './components/DocumentLibrary';
 import { LoginModal } from './components/LoginModal';
 import { GoogleDriveSheetsHub } from './components/GoogleDriveSheetsHub';
 import { StorageService } from './services/storage';
-import { syncEntryToFirestore } from './services/firebase';
+import { syncEntryToFirestore, auth, logoutGoogle, db } from './services/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { PotensiPajakEntry, PbbP2Entry, IkmEntry, AppUser, GoogleSheetsConfig } from './types';
 import { CheckCircle2, FileSpreadsheet, Building2 } from 'lucide-react';
 
@@ -29,13 +30,41 @@ export default function App() {
   const [isGoogleHubOpen, setIsGoogleHubOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Load Initial Data
+  // Load Initial Data & Sync with Firebase Auth
   useEffect(() => {
     setPotensiList(StorageService.getPotensiList());
     setPbbList(StorageService.getPbbList());
     setIkmList(StorageService.getIkmList());
     setCurrentUser(StorageService.getCurrentUser());
     setSheetsConfig(StorageService.getSheetsConfig());
+
+    // Listen to Firebase Auth state
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        try {
+          const userDocRef = doc(db, 'users', user.uid);
+          const snap = await getDoc(userDocRef);
+          const isSuperAdmin = user.email === 'rija.bp2rd@gmail.com';
+          const role = isSuperAdmin ? 'admin' : (snap.exists() ? snap.data().role : (user.email?.includes('admin') ? 'admin' : 'petugas'));
+          
+          const appUser: AppUser = {
+            id: user.uid,
+            email: user.email || 'petugas@bp2rd.go.id',
+            nama: (snap.exists() && snap.data().nama) || user.displayName || 'Petugas BP2RD',
+            role,
+            nip: (snap.exists() && snap.data().nip) || (role === 'admin' ? '198005122005011003' : '198709142010011002'),
+            jabatan: (snap.exists() && snap.data().jabatan) || (role === 'admin' ? 'Kepala Bidang Pendataan & Penetapan' : 'Petugas Uji Petik Lapangan'),
+            unitKerja: 'Badan Pengelola Pajak dan Retribusi Daerah (BP2RD)',
+          };
+          StorageService.setCurrentUser(appUser);
+          setCurrentUser(appUser);
+        } catch (err) {
+          console.warn('Firebase user sync note:', err);
+        }
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const showToast = (msg: string) => {
@@ -94,13 +123,14 @@ export default function App() {
   const handleLoginSuccess = (user: AppUser) => {
     StorageService.setCurrentUser(user);
     setCurrentUser(user);
-    showToast(`Selamat datang kembali, ${user.nama}!`);
+    showToast(`Selamat datang, ${user.nama} (${user.role === 'admin' ? 'Administrator' : 'Petugas Lapangan'})!`);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await logoutGoogle();
     StorageService.setCurrentUser(null);
     setCurrentUser(null);
-    showToast('Anda telah keluar dari sesi admin.');
+    showToast('Anda telah keluar dari sesi.');
   };
 
   const handleSaveSheetsConfig = (cfg: GoogleSheetsConfig) => {

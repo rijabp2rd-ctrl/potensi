@@ -10,6 +10,7 @@ import {
 import { 
   getFirestore, 
   doc, 
+  getDoc,
   getDocFromServer, 
   collection, 
   getDocs, 
@@ -17,6 +18,7 @@ import {
   onSnapshot 
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
+import { AppUser } from '../types';
 
 // Initialize Firebase App
 const app = initializeApp(firebaseConfig);
@@ -84,7 +86,6 @@ export async function testFirestoreConnection(): Promise<boolean> {
       console.warn('Firebase Firestore is offline or config needs check.');
       return false;
     }
-    // PERMISSION_DENIED is normal for test doc and proves network connection is active!
     return true;
   }
 }
@@ -99,7 +100,6 @@ export const initAuth = (
       if (cachedAccessToken) {
         if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
       } else if (!isSigningIn) {
-        // Token will be acquired on sign in or popup
         if (onAuthFailure) onAuthFailure();
       }
     } else {
@@ -109,7 +109,7 @@ export const initAuth = (
   });
 };
 
-// Sign in with Google (Popup)
+// Sign in with Google (Popup) with Access Token
 export const googleSignIn = async (): Promise<{ user: User; accessToken: string } | null> => {
   try {
     isSigningIn = true;
@@ -136,6 +136,82 @@ export const getAccessToken = async (): Promise<string | null> => {
 export const logoutGoogle = async () => {
   await signOut(auth);
   cachedAccessToken = null;
+};
+
+/**
+ * Login Petugas / Admin terkoneksi ke Firebase Auth & Firestore
+ * Melakukan autentikasi via Google Firebase Auth, lalu menyinkronkan profil role di Firestore (/users/{uid})
+ */
+export const firebaseLoginOfficerOrAdmin = async (
+  rolePreference?: 'admin' | 'petugas'
+): Promise<{ user: User; appUser: AppUser; accessToken: string }> => {
+  const result = await googleSignIn();
+  if (!result) {
+    throw new Error('Autentikasi Firebase dibatalkan');
+  }
+
+  const { user, accessToken } = result;
+
+  // Determine user role
+  const isSuperAdminEmail = user.email === 'rija.bp2rd@gmail.com';
+  const role: 'admin' | 'petugas' = isSuperAdminEmail 
+    ? 'admin' 
+    : (rolePreference || (user.email?.toLowerCase().includes('admin') ? 'admin' : 'petugas'));
+
+  const userDocRef = doc(db, 'users', user.uid);
+  let appUser: AppUser;
+
+  try {
+    const existingSnap = await getDoc(userDocRef);
+    if (existingSnap.exists()) {
+      const data = existingSnap.data();
+      appUser = {
+        id: user.uid,
+        email: user.email || 'petugas@bp2rd.go.id',
+        nama: data.nama || user.displayName || 'Petugas BP2RD',
+        role: isSuperAdminEmail ? 'admin' : (data.role || role),
+        nip: data.nip || (role === 'admin' ? '198005122005011003' : '198709142010011002'),
+        jabatan: data.jabatan || (role === 'admin' ? 'Kepala Bidang Pendataan & Penetapan' : 'Petugas Survey & Uji Petik Lapangan'),
+        unitKerja: data.unitKerja || 'Badan Pengelola Pajak dan Retribusi Daerah (BP2RD)',
+      };
+      // update lastLogin
+      await setDoc(userDocRef, { ...appUser, photoURL: user.photoURL || '', lastLogin: new Date().toISOString() }, { merge: true });
+    } else {
+      appUser = {
+        id: user.uid,
+        email: user.email || 'petugas@bp2rd.go.id',
+        nama: user.displayName || 'Petugas BP2RD',
+        role,
+        nip: role === 'admin' ? '198005122005011003' : '198709142010011002',
+        jabatan: role === 'admin' ? 'Kepala Bidang Pendataan & Penetapan' : 'Petugas Survey & Uji Petik Lapangan',
+        unitKerja: 'Badan Pengelola Pajak dan Retribusi Daerah (BP2RD)',
+      };
+      await setDoc(userDocRef, {
+        uid: user.uid,
+        email: appUser.email,
+        nama: appUser.nama,
+        role: appUser.role,
+        nip: appUser.nip,
+        jabatan: appUser.jabatan,
+        unitKerja: appUser.unitKerja,
+        photoURL: user.photoURL || '',
+        lastLogin: new Date().toISOString(),
+      });
+    }
+  } catch (err) {
+    console.warn('Firestore user profile sync note:', err);
+    appUser = {
+      id: user.uid,
+      email: user.email || 'petugas@bp2rd.go.id',
+      nama: user.displayName || 'Petugas BP2RD',
+      role,
+      nip: role === 'admin' ? '198005122005011003' : '198709142010011002',
+      jabatan: role === 'admin' ? 'Kepala Bidang Pendataan & Penetapan' : 'Petugas Survey & Uji Petik Lapangan',
+      unitKerja: 'Badan Pengelola Pajak dan Retribusi Daerah (BP2RD)',
+    };
+  }
+
+  return { user, appUser, accessToken };
 };
 
 // Firestore Sync Functions

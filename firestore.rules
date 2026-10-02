@@ -15,6 +15,22 @@ service cloud.firestore {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Profil Akun Petugas & Admin BP2RD
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create, update: if isOwner(userId) && isValidId(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.token.email == "rija.bp2rd@gmail.com";
+    }
+
     // Koleksi Penggalian Potensi Pajak
     match /potensi_pajak/{potensiId} {
       allow read: if true;
