@@ -21,15 +21,21 @@ import {
   Star,
   Building2,
   Check,
-  Code2
+  Code2,
+  FolderArchive
 } from 'lucide-react';
-import { PotensiPajakEntry, PbbP2Entry, IkmEntry, GoogleSheetsConfig } from '../types';
+import { PotensiPajakEntry, PbbP2Entry, IkmEntry, GoogleSheetsConfig, LibraryBerkasEntry, AppUser } from '../types';
 import { StorageService } from '../services/storage';
+import { AdminInputLibraryBerkas } from './AdminInputLibraryBerkas';
 
 interface RealtimeReportsManagerProps {
   potensiList: PotensiPajakEntry[];
   pbbList: PbbP2Entry[];
   ikmList: IkmEntry[];
+  libraryList: LibraryBerkasEntry[];
+  currentUser: AppUser | null;
+  onSaveLibraryEntry: (entry: LibraryBerkasEntry) => void;
+  onDeleteLibraryEntry: (id: string) => void;
   onUpdatePotensiStatus: (id: string, status: PotensiPajakEntry['statusAdmin'], catatan?: string, petugas?: string) => void;
   onUpdatePbbStatus: (id: string, status: PbbP2Entry['statusVerifikasi'], catatan?: string) => void;
   sheetsConfig: GoogleSheetsConfig;
@@ -41,13 +47,17 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
   potensiList,
   pbbList,
   ikmList,
+  libraryList,
+  currentUser,
+  onSaveLibraryEntry,
+  onDeleteLibraryEntry,
   onUpdatePotensiStatus,
   onUpdatePbbStatus,
   sheetsConfig,
   onSaveSheetsConfig,
   onOpenLibrary,
 }) => {
-  const [activeReportTab, setActiveReportTab] = useState<'potensi' | 'pbb' | 'ikm' | 'sheets'>('potensi');
+  const [activeReportTab, setActiveReportTab] = useState<'potensi' | 'pbb' | 'ikm' | 'input-library' | 'sheets'>('potensi');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('Semua');
 
@@ -202,7 +212,7 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2.5">
           <button
-            onClick={() => handleExportCsv(activeReportTab === 'sheets' ? 'potensi' : activeReportTab)}
+            onClick={() => handleExportCsv(activeReportTab === 'sheets' || activeReportTab === 'input-library' ? 'potensi' : activeReportTab)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow transition-all"
           >
             <Download className="w-3.5 h-3.5" />
@@ -258,6 +268,18 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
         </button>
 
         <button
+          onClick={() => { setActiveReportTab('input-library'); }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all shrink-0 ${
+            activeReportTab === 'input-library'
+              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
+              : 'text-purple-300 hover:text-white hover:bg-slate-800 border border-purple-500/30'
+          }`}
+        >
+          <FolderArchive className="w-4 h-4 text-purple-400" />
+          <span>+ Input Library Berkas ({libraryList?.length || 0})</span>
+        </button>
+
+        <button
           onClick={() => setActiveReportTab('sheets')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all shrink-0 ${
             activeReportTab === 'sheets'
@@ -271,7 +293,7 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
       </div>
 
       {/* Search & Filter Toolbar (for table tabs) */}
-      {activeReportTab !== 'sheets' && (
+      {activeReportTab !== 'sheets' && activeReportTab !== 'input-library' && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="relative w-full sm:w-80">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
@@ -698,6 +720,16 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
             </pre>
           </div>
         </div>
+      )}
+
+      {/* Tab: Input Library Berkas Khusus Admin / Petugas */}
+      {activeReportTab === 'input-library' && (
+        <AdminInputLibraryBerkas
+          currentUser={currentUser}
+          libraryList={libraryList}
+          onSaveEntry={onSaveLibraryEntry}
+          onDeleteEntry={onDeleteLibraryEntry}
+        />
       )}
 
       {/* Modal Detail & Verifikasi Potensi */}

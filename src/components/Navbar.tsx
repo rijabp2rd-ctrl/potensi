@@ -187,20 +187,23 @@ export const Navbar: React.FC<NavbarProps> = ({
             {currentUser ? (
               <div className="flex items-center gap-2 bg-slate-800/80 border border-slate-700 pl-3 pr-1 py-1 rounded-xl">
                 <div className="flex flex-col text-right">
-                  <span className="text-xs font-semibold text-white leading-tight">
-                    {currentUser.nama}
-                  </span>
-                  <span className="text-[10px] text-blue-300 font-medium uppercase tracking-wider">
-                    {currentUser.role === 'admin' ? 'Administrator BP2RD' : 'Petugas Lapangan'}
+                  <div className="flex items-center justify-end gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span className="text-xs font-semibold text-white leading-tight">
+                      {currentUser.nama}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-amber-300 font-medium">
+                    {currentUser.role === 'admin' ? 'Super Admin BP2RD' : 'Petugas Lapangan'} • Firebase Auth
                   </span>
                 </div>
-                <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white text-xs font-bold">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow">
                   {currentUser.nama.charAt(0)}
                 </div>
                 <button
                   onClick={onLogout}
-                  title="Logout"
-                  className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-lg transition-colors ml-1"
+                  title="Logout dari Sesi Firebase"
+                  className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-lg transition-colors ml-1 cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
@@ -208,10 +211,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             ) : (
               <button
                 onClick={onOpenLogin}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-md shadow-blue-600/30 transition-all border border-blue-400/20 active:scale-95"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-amber-600 via-orange-600 to-rose-600 hover:from-amber-500 hover:to-orange-500 text-white shadow-md shadow-orange-600/30 transition-all border border-orange-400/30 active:scale-95 cursor-pointer"
               >
                 <LogIn className="w-3.5 h-3.5" />
-                <span>Login Admin / Petugas</span>
+                <span>Login Firebase (Admin / Petugas)</span>
               </button>
             )}
           </div>

@@ -10,9 +10,17 @@ import { DocumentLibrary } from './components/DocumentLibrary';
 import { LoginModal } from './components/LoginModal';
 import { GoogleDriveSheetsHub } from './components/GoogleDriveSheetsHub';
 import { StorageService } from './services/storage';
-import { syncEntryToFirestore, auth, logoutGoogle, db } from './services/firebase';
+import { 
+  syncEntryToFirestore, 
+  auth, 
+  logoutGoogle, 
+  db,
+  syncLibraryEntryToFirestore,
+  deleteLibraryEntryFromFirestore,
+  fetchLibraryEntriesFromFirestore
+} from './services/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { PotensiPajakEntry, PbbP2Entry, IkmEntry, AppUser, GoogleSheetsConfig } from './types';
+import { PotensiPajakEntry, PbbP2Entry, IkmEntry, AppUser, GoogleSheetsConfig, LibraryBerkasEntry } from './types';
 import { CheckCircle2, FileSpreadsheet, Building2 } from 'lucide-react';
 
 export default function App() {
@@ -22,6 +30,7 @@ export default function App() {
   const [potensiList, setPotensiList] = useState<PotensiPajakEntry[]>([]);
   const [pbbList, setPbbList] = useState<PbbP2Entry[]>([]);
   const [ikmList, setIkmList] = useState<IkmEntry[]>([]);
+  const [libraryList, setLibraryList] = useState<LibraryBerkasEntry[]>(StorageService.getLibraryList());
   
   // Config & User States
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
@@ -35,8 +44,17 @@ export default function App() {
     setPotensiList(StorageService.getPotensiList());
     setPbbList(StorageService.getPbbList());
     setIkmList(StorageService.getIkmList());
+    setLibraryList(StorageService.getLibraryList());
     setCurrentUser(StorageService.getCurrentUser());
     setSheetsConfig(StorageService.getSheetsConfig());
+
+    // Fetch library items from Firestore if available
+    fetchLibraryEntriesFromFirestore().then((remoteItems) => {
+      if (remoteItems && remoteItems.length > 0) {
+        remoteItems.forEach((item) => StorageService.saveLibraryEntry(item));
+        setLibraryList(StorageService.getLibraryList());
+      }
+    });
 
     // Listen to Firebase Auth state
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -139,6 +157,21 @@ export default function App() {
     showToast('Pengaturan Google Sheets berhasil disimpan!');
   };
 
+  // Library Handlers
+  const handleSaveLibraryEntry = async (entry: LibraryBerkasEntry) => {
+    StorageService.saveLibraryEntry(entry);
+    setLibraryList(StorageService.getLibraryList());
+    await syncLibraryEntryToFirestore(entry);
+    showToast(`Berkas "${entry.title}" berhasil diinput ke Library & Firestore!`);
+  };
+
+  const handleDeleteLibraryEntry = async (id: string) => {
+    StorageService.deleteLibraryEntry(id);
+    setLibraryList(StorageService.getLibraryList());
+    await deleteLibraryEntryFromFirestore(id);
+    showToast('Berkas berhasil dihapus dari sistem.');
+  };
+
   // Stats calculation for Landing Hero
   const totalPotensiRupiah = potensiList.reduce((acc, curr) => acc + (curr.estimasiPotensiTahunan || 0), 0);
   const avgIkmScore = ikmList.length > 0 
@@ -214,6 +247,7 @@ export default function App() {
             ikmList={ikmList}
             onOpenReports={() => setActiveTab('laporan')}
             onOpenLibrary={() => setActiveTab('library')}
+            onOpenInputLibrary={() => setActiveTab('laporan')}
           />
         )}
 
@@ -222,6 +256,10 @@ export default function App() {
             potensiList={potensiList}
             pbbList={pbbList}
             ikmList={ikmList}
+            libraryList={libraryList}
+            currentUser={currentUser}
+            onSaveLibraryEntry={handleSaveLibraryEntry}
+            onDeleteLibraryEntry={handleDeleteLibraryEntry}
             onUpdatePotensiStatus={handleUpdatePotensiStatus}
             onUpdatePbbStatus={handleUpdatePbbStatus}
             sheetsConfig={sheetsConfig}
@@ -234,7 +272,11 @@ export default function App() {
           <DocumentLibrary
             potensiList={potensiList}
             pbbList={pbbList}
+            libraryList={libraryList}
+            currentUser={currentUser}
             onBackToHome={() => setActiveTab('beranda')}
+            onOpenInputLibrary={() => setActiveTab('laporan')}
+            onDeleteEntry={handleDeleteLibraryEntry}
           />
         )}
       </main>

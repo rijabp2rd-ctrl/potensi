@@ -1,4 +1,4 @@
-import { PotensiPajakEntry, PbbP2Entry, IkmEntry, AppUser, GoogleSheetsConfig } from '../types';
+import { PotensiPajakEntry, PbbP2Entry, IkmEntry, AppUser, GoogleSheetsConfig, LibraryBerkasEntry } from '../types';
 
 const STORAGE_KEYS = {
   POTENSI: 'sipotensi_data_potensi_v1',
@@ -6,6 +6,7 @@ const STORAGE_KEYS = {
   IKM: 'sipotensi_data_ikm_v1',
   USER: 'sipotensi_current_user_v1',
   SHEETS_CONFIG: 'sipotensi_sheets_config_v1',
+  LIBRARY: 'sipotensi_data_library_v1',
 };
 
 // Initial Seed Data to make dashboards, charts, tables, and libraries instantly dynamic
@@ -345,6 +346,94 @@ const SEED_IKM: IkmEntry[] = [
   },
 ];
 
+const SEED_LIBRARY: LibraryBerkasEntry[] = [
+  {
+    id: 'REG-2026-001',
+    title: 'Peraturan Daerah (Perda) Pajak Daerah & Retribusi Daerah No. 1 Tahun 2026',
+    category: 'regulasi',
+    nomorSurat: 'Perda No. 01/2026',
+    fileType: 'PDF Document',
+    sizeStr: '3.4 MB',
+    date: '2026-01-15',
+    authorOrWp: 'Pemerintah Daerah & DPRD',
+    status: 'Berlaku Efektif',
+    statusColor: 'bg-emerald-950 text-emerald-300 border-emerald-500/30',
+    description: 'Ketentuan umum tarif pajak restoran, reklame, perhotelan, parkir, dan air tanah sesuai UU No. 1/2022 HKPD.',
+    previewUrl: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=600&q=80',
+    isPublic: true,
+    tags: ['Perda', 'HKPD', 'Tarif Pajak', 'Regulasi'],
+    createdAt: '2026-01-15T08:00:00Z',
+  },
+  {
+    id: 'REG-2026-002',
+    title: 'Petunjuk Teknis (Juknis) Operasional Penggalian Potensi Objek Baru BP2RD',
+    category: 'sop',
+    nomorSurat: 'Juknis BP2RD-04/2026',
+    fileType: 'PDF Document',
+    sizeStr: '2.1 MB',
+    date: '2026-03-01',
+    authorOrWp: 'Bidang Pendataan & Penetapan',
+    status: 'SOP Resmi',
+    statusColor: 'bg-blue-950 text-blue-300 border-blue-500/30',
+    description: 'Pedoman operasional verifikasi titik GPS, verifikasi berkas DPA/ARKAS, dan formulasi proyeksi omzet uji petik.',
+    previewUrl: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=600&q=80',
+    isPublic: true,
+    tags: ['Juknis', 'SOP', 'Pendataan', 'GPS'],
+    createdAt: '2026-03-01T09:00:00Z',
+  },
+  {
+    id: 'REG-2026-003',
+    title: 'Peta Zona Nilai Tanah (ZNT) & Klasifikasi Penetapan NJOP PBB-P2 2026',
+    category: 'regulasi',
+    nomorSurat: 'Kepbapenda No. 89/2026',
+    fileType: 'Spatial Map PDF',
+    sizeStr: '12.8 MB',
+    date: '2026-02-10',
+    authorOrWp: 'UPT Pemetaan & Penilaian Pajak',
+    status: 'Referensi Pemetaan',
+    statusColor: 'bg-purple-950 text-purple-300 border-purple-500/30',
+    description: 'Zonasi nilai pasar tanah per blok kecamatan untuk perhitungan SPPT PBB tahun berjalan.',
+    previewUrl: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=600&q=80',
+    isPublic: true,
+    tags: ['PBB-P2', 'ZNT', 'NJOP', 'Peta Geospasial'],
+    createdAt: '2026-02-10T10:00:00Z',
+  },
+  {
+    id: 'BLK-2026-004',
+    title: 'Formulir Blangko Pendaftaran SPOP & LSPOP PBB-P2 Format Standar',
+    category: 'blanko',
+    nomorSurat: 'Form SPOP-2026',
+    fileType: 'Dokumen Formulir PDF/Word',
+    sizeStr: '850 KB',
+    date: '2026-02-15',
+    authorOrWp: 'Bidang Pajak Daerah BP2RD',
+    status: 'Format Standar',
+    statusColor: 'bg-amber-950 text-amber-300 border-amber-500/30',
+    description: 'Blangko resmi Surat Pemberitahuan Objek Pajak (SPOP) dan Lampiran SPOP (LSPOP) untuk mutasi dan pendaftaran objek baru.',
+    previewUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=600&q=80',
+    isPublic: true,
+    tags: ['Blanko', 'SPOP', 'LSPOP', 'PBB'],
+    createdAt: '2026-02-15T11:00:00Z',
+  },
+  {
+    id: 'DPA-2026-005',
+    title: 'Template & Pedoman Verifikasi Dokumen DPA / ARKAS Anggaran Sekolah & Lembaga',
+    category: 'dpa',
+    nomorSurat: 'Pedoman BP2RD-ARKAS-01',
+    fileType: 'Dokumen Standar Excel/PDF',
+    sizeStr: '1.5 MB',
+    date: '2026-01-20',
+    authorOrWp: 'Subbag Keuangan & Verifikasi',
+    status: 'Pedoman Verifikasi',
+    statusColor: 'bg-indigo-950 text-indigo-300 border-indigo-500/30',
+    description: 'Format lampiran verifikasi DPA belanja modal dan ARKAS sekolah dalam penetapan potensi pajak belanja daerah.',
+    previewUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=600&q=80',
+    isPublic: true,
+    tags: ['DPA', 'ARKAS', 'Anggaran', 'Verifikasi'],
+    createdAt: '2026-01-20T08:30:00Z',
+  },
+];
+
 const DEFAULT_SHEETS_CONFIG: GoogleSheetsConfig = {
   webhookUrl: 'https://script.google.com/macros/s/AKfycbwBP2RD-Gov-Tax-Sync-Master/exec',
   spreadsheetId: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms',
@@ -458,6 +547,48 @@ export const StorageService = {
     localStorage.setItem(STORAGE_KEYS.IKM, JSON.stringify(updated));
     this.syncToGoogleSheets('ikm', entry);
     return entry;
+  },
+
+  // Library Berkas & Dokumen
+  getLibraryList(): LibraryBerkasEntry[] {
+    const raw = localStorage.getItem(STORAGE_KEYS.LIBRARY);
+    if (!raw) {
+      localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(SEED_LIBRARY));
+      return SEED_LIBRARY;
+    }
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return SEED_LIBRARY;
+    }
+  },
+
+  saveLibraryEntry(entry: LibraryBerkasEntry): LibraryBerkasEntry {
+    const list = this.getLibraryList();
+    // Prepend new entry
+    const updated = [entry, ...list.filter((item) => item.id !== entry.id)];
+    localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(updated));
+    return entry;
+  },
+
+  updateLibraryEntry(entry: LibraryBerkasEntry): LibraryBerkasEntry {
+    const list = this.getLibraryList();
+    const idx = list.findIndex((item) => item.id === entry.id);
+    if (idx !== -1) {
+      list[idx] = entry;
+      localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(list));
+    } else {
+      list.unshift(entry);
+      localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(list));
+    }
+    return entry;
+  },
+
+  deleteLibraryEntry(id: string): boolean {
+    const list = this.getLibraryList();
+    const filtered = list.filter((item) => item.id !== id);
+    localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(filtered));
+    return true;
   },
 
   // Google Sheets Config

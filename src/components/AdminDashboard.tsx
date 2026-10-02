@@ -23,7 +23,8 @@ import {
   Star, 
   Filter, 
   Building2, 
-  Layers 
+  Layers,
+  FolderArchive
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { PotensiPajakEntry, PbbP2Entry, IkmEntry } from '../types';
@@ -48,6 +49,7 @@ interface AdminDashboardProps {
   ikmList: IkmEntry[];
   onOpenReports: () => void;
   onOpenLibrary: () => void;
+  onOpenInputLibrary?: () => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -56,6 +58,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   ikmList,
   onOpenReports,
   onOpenLibrary,
+  onOpenInputLibrary,
 }) => {
   const [selectedKecamatan, setSelectedKecamatan] = useState<string>('Semua');
 
@@ -294,6 +297,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           >
             <FileSpreadsheet className="w-3.5 h-3.5" />
             <span>Manajemen Laporan</span>
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
+            onClick={onOpenInputLibrary || onOpenReports}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-600/25 transition-all"
+          >
+            <FolderArchive className="w-3.5 h-3.5" />
+            <span>+ Input Library Berkas</span>
           </motion.button>
 
           <motion.button

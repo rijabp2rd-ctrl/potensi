@@ -95,6 +95,29 @@ export interface IkmEntry {
   syncedToGoogleSheets: boolean;
 }
 
+export interface LibraryBerkasEntry {
+  id: string;
+  title: string;
+  category: 'regulasi' | 'sop' | 'dpa' | 'blanko' | 'objek' | 'pbb';
+  nomorSurat?: string;
+  fileType: string;
+  sizeStr: string;
+  date: string;
+  authorOrWp: string;
+  status: string;
+  statusColor?: string;
+  description: string;
+  previewUrl?: string;
+  fileData?: string;
+  fileName?: string;
+  fileSize?: number;
+  uploadedBy?: string;
+  driveUrl?: string;
+  isPublic: boolean;
+  tags?: string[];
+  createdAt: string;
+}
+
 export interface AppUser {
   id: string;
   email: string;

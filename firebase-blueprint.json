@@ -17,6 +17,29 @@
       },
       "required": ["uid", "email", "nama", "role"]
     },
+    "LibraryBerkas": {
+      "title": "LibraryBerkas",
+      "description": "Dokumen resmi, berkas regulasi, SOP, format blanko, dan materi perpajakan BP2RD",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 64 },
+        "title": { "type": "string", "maxLength": 256 },
+        "category": { "type": "string", "enum": ["regulasi", "sop", "dpa", "blanko", "objek", "pbb"] },
+        "nomorSurat": { "type": "string", "maxLength": 128 },
+        "fileType": { "type": "string", "maxLength": 64 },
+        "sizeStr": { "type": "string", "maxLength": 32 },
+        "date": { "type": "string", "maxLength": 32 },
+        "authorOrWp": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "maxLength": 64 },
+        "statusColor": { "type": "string", "maxLength": 128 },
+        "description": { "type": "string", "maxLength": 2048 },
+        "previewUrl": { "type": "string", "maxLength": 1024 },
+        "fileData": { "type": "string" },
+        "uploadedBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "title", "category", "authorOrWp"]
+    },
     "PotensiPajak": {
       "title": "PotensiPajak",
       "description": "Laporan potensi objek pajak daerah BP2RD",
@@ -96,6 +119,10 @@
     "/admins/{adminId}": {
       "schema": { "$ref": "#/entities/UserAccount" },
       "description": "Daftar ID Administrator berwenang"
+    },
+    "/library_berkas/{berkasId}": {
+      "schema": { "$ref": "#/entities/LibraryBerkas" },
+      "description": "Arsip perpustakaan berkas dan regulasi daerah"
     },
     "/potensi_pajak/{potensiId}": {
       "schema": { "$ref": "#/entities/PotensiPajak" },

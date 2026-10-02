@@ -31,6 +31,17 @@ service cloud.firestore {
       allow write: if isSignedIn() && request.auth.token.email == "rija.bp2rd@gmail.com";
     }
 
+    // Koleksi Library Berkas & Regulasi
+    match /library_berkas/{berkasId} {
+      allow read: if true;
+      allow create, update: if isSignedIn() && isValidId(berkasId)
+        && request.resource.data.id is string
+        && request.resource.data.title is string
+        && request.resource.data.title.size() <= 256
+        && request.resource.data.category is string;
+      allow delete: if isSignedIn();
+    }
+
     // Koleksi Penggalian Potensi Pajak
     match /potensi_pajak/{potensiId} {
       allow read: if true;
