@@ -19,7 +19,13 @@ import {
   RefreshCw,
   PlusCircle,
   FileCheck,
-  Building2
+  Building2,
+  ShieldCheck,
+  Clock,
+  XCircle,
+  Edit3,
+  HelpCircle,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { LibraryBerkasEntry, AppUser } from '../types';
@@ -31,7 +37,14 @@ interface AdminInputLibraryBerkasProps {
   libraryList: LibraryBerkasEntry[];
   onSaveEntry: (entry: LibraryBerkasEntry) => void;
   onDeleteEntry: (id: string) => void;
+  onUpdateStatus?: (
+    id: string,
+    statusVerifikasi: LibraryBerkasEntry['statusVerifikasi'],
+    catatan?: string,
+    verifiedBy?: string
+  ) => void;
   onOpenPreview?: (item: LibraryBerkasEntry) => void;
+  onOpenLogin?: () => void;
 }
 
 export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = ({
@@ -39,8 +52,12 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
   libraryList,
   onSaveEntry,
   onDeleteEntry,
+  onUpdateStatus,
   onOpenPreview,
+  onOpenLogin,
 }) => {
+  const isAdmin = currentUser?.role === 'admin';
+
   // Form States
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<LibraryBerkasEntry['category']>('regulasi');
@@ -53,6 +70,10 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
   const [description, setDescription] = useState('');
   const [driveUrl, setDriveUrl] = useState('');
   const [isPublic, setIsPublic] = useState(true);
+  const [statusVerifikasiInput, setStatusVerifikasiInput] = useState<LibraryBerkasEntry['statusVerifikasi']>(
+    currentUser?.role === 'admin' ? 'Terverifikasi & Sah' : 'Menunggu Verifikasi'
+  );
+  const [catatanVerifikasiInput, setCatatanVerifikasiInput] = useState('');
   
   // File Upload State
   const [uploadedFile, setUploadedFile] = useState<{
@@ -72,6 +93,17 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
   const [previewModalItem, setPreviewModalItem] = useState<LibraryBerkasEntry | null>(null);
   const [tableSearch, setTableSearch] = useState('');
   const [tableCategoryFilter, setTableCategoryFilter] = useState('all');
+  const [tableVerifikasiFilter, setTableVerifikasiFilter] = useState('all');
+
+  // Verification Modal State
+  const [verifModalItem, setVerifModalItem] = useState<LibraryBerkasEntry | null>(null);
+  const [verifStatusChoice, setVerifStatusChoice] = useState<LibraryBerkasEntry['statusVerifikasi']>('Terverifikasi & Sah');
+  const [verifCatatanText, setVerifCatatanText] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  // Delete Confirmation Modal State
+  const [deleteModalItem, setDeleteModalItem] = useState<LibraryBerkasEntry | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Handle Local File Upload
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,7 +156,7 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
     { value: 'pbb', label: 'Tanda Terima & Bukti Bayar PBB-P2', icon: Building2, color: 'text-rose-400', defaultStatus: 'Lunas & Sah' },
   ];
 
-  // Submit Handler
+  // Submit New Entry Handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
@@ -154,6 +186,8 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
     }
 
     const newId = `LIB-${Date.now()}`;
+    const verifierName = currentUser ? `${currentUser.nama} (${currentUser.role === 'admin' ? 'Administrator' : 'Petugas'})` : 'Admin BP2RD';
+    
     const newEntry: LibraryBerkasEntry = {
       id: newId,
       title: title.trim(),
@@ -180,6 +214,10 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
       driveUrl: driveUrl.trim() || undefined,
       isPublic,
       tags: tags.length ? tags : ['BP2RD'],
+      statusVerifikasi: statusVerifikasiInput,
+      catatanVerifikasi: catatanVerifikasiInput.trim() || (statusVerifikasiInput === 'Terverifikasi & Sah' ? 'Telah diverifikasi dan disahkan oleh administrator.' : 'Menunggu telaah verifikator.'),
+      verifiedBy: statusVerifikasiInput === 'Terverifikasi & Sah' ? verifierName : undefined,
+      verifiedAt: statusVerifikasiInput === 'Terverifikasi & Sah' ? new Date().toISOString() : undefined,
       createdAt: new Date().toISOString(),
     };
 
@@ -193,13 +231,14 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
       // Trigger Confetti Celebration
       triggerSuccessConfetti();
 
-      setSubmitFeedback(`Berkas "${newEntry.title}" berhasil diinput dan disinkronkan ke Firebase Firestore!`);
+      setSubmitFeedback(`Berkas "${newEntry.title}" berhasil diinput dan disinkronkan ke Firebase Firestore! Status: ${newEntry.statusVerifikasi}`);
 
       // Reset form
       setTitle('');
       setNomorSurat('');
       setDescription('');
       setDriveUrl('');
+      setCatatanVerifikasiInput('');
       setUploadedFile(null);
     } catch (err: any) {
       console.error('Error saving library berkas:', err);
@@ -209,11 +248,121 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
     }
   };
 
-  // Delete Handler
-  const handleDelete = async (item: LibraryBerkasEntry) => {
-    if (confirm(`Yakin ingin menghapus berkas "${item.title}"?`)) {
-      onDeleteEntry(item.id);
-      await deleteLibraryEntryFromFirestore(item.id);
+  // Open Verification Modal for an Item
+  const handleOpenVerifModal = (item: LibraryBerkasEntry) => {
+    if (!isAdmin) {
+      alert('Akses Dibatasi: Menu aksi ubah status verifikasi hanya dapat dilakukan oleh Administrator BP2RD.');
+      return;
+    }
+    setVerifModalItem(item);
+    setVerifStatusChoice(item.statusVerifikasi || 'Terverifikasi & Sah');
+    setVerifCatatanText(item.catatanVerifikasi || '');
+  };
+
+  // Submit Verification Result
+  const handleConfirmVerification = async () => {
+    if (!isAdmin) {
+      alert('Akses Dibatasi: Hanya Administrator BP2RD yang berwenang mengubah status verifikasi berkas.');
+      return;
+    }
+    if (!verifModalItem) return;
+    setIsVerifying(true);
+
+    const verifierName = currentUser 
+      ? `${currentUser.nama} (${currentUser.role === 'admin' ? 'Administrator BP2RD' : 'Petugas Lapangan'})` 
+      : 'Rija (Administrator BP2RD)';
+
+    const updatedItem: LibraryBerkasEntry = {
+      ...verifModalItem,
+      statusVerifikasi: verifStatusChoice,
+      catatanVerifikasi: verifCatatanText.trim() || (verifStatusChoice === 'Terverifikasi & Sah' ? 'Telah diverifikasi dan disahkan oleh Administrator.' : 'Memerlukan perbaikan berkas.'),
+      verifiedBy: verifierName,
+      verifiedAt: new Date().toISOString(),
+    };
+
+    try {
+      // 1. Update in local storage state
+      if (onUpdateStatus) {
+        onUpdateStatus(verifModalItem.id, verifStatusChoice, updatedItem.catatanVerifikasi, verifierName);
+      } else {
+        onSaveEntry(updatedItem);
+      }
+
+      // 2. Sync updated verification status to Firestore
+      await syncLibraryEntryToFirestore(updatedItem);
+
+      if (verifStatusChoice === 'Terverifikasi & Sah') {
+        triggerSuccessConfetti();
+      }
+
+      setSubmitFeedback(`Status verifikasi berkas "${updatedItem.title}" berhasil diperbarui menjadi: ${verifStatusChoice}`);
+      setVerifModalItem(null);
+    } catch (err: any) {
+      console.error('Error verifying berkas:', err);
+      alert('Gagal menyinkronkan verifikasi ke Firestore.');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  // Quick 1-Click Approve
+  const handleQuickApprove = async (item: LibraryBerkasEntry) => {
+    if (!isAdmin) {
+      alert('Akses Dibatasi: Menu aksi pengesahan dokumen hanya dapat dilakukan oleh Administrator BP2RD.');
+      return;
+    }
+    const verifierName = currentUser ? `${currentUser.nama} (Admin BP2RD)` : 'Administrator BP2RD';
+    const updatedItem: LibraryBerkasEntry = {
+      ...item,
+      statusVerifikasi: 'Terverifikasi & Sah',
+      catatanVerifikasi: 'Disahkan langsung oleh administrator.',
+      verifiedBy: verifierName,
+      verifiedAt: new Date().toISOString(),
+    };
+
+    if (onUpdateStatus) {
+      onUpdateStatus(item.id, 'Terverifikasi & Sah', updatedItem.catatanVerifikasi, verifierName);
+    } else {
+      onSaveEntry(updatedItem);
+    }
+
+    await syncLibraryEntryToFirestore(updatedItem);
+    triggerSuccessConfetti();
+    setSubmitFeedback(`Berkas "${item.title}" langsung disahkan sebagai Terverifikasi & Sah!`);
+  };
+
+  // Open Delete Confirmation Modal
+  const handleOpenDeleteModal = (item: LibraryBerkasEntry) => {
+    if (!isAdmin) {
+      alert('Akses Dibatasi: Menu aksi hapus berkas hanya dapat dilakukan oleh Administrator BP2RD.');
+      return;
+    }
+    setDeleteModalItem(item);
+  };
+
+  // Confirm Delete Handler
+  const handleConfirmDelete = async () => {
+    if (!isAdmin) {
+      alert('Akses Dibatasi: Hanya Administrator BP2RD yang berwenang menghapus berkas.');
+      return;
+    }
+    if (!deleteModalItem) return;
+    setIsDeleting(true);
+
+    try {
+      // 1. Delete from local state
+      onDeleteEntry(deleteModalItem.id);
+
+      // 2. Delete from Firestore
+      await deleteLibraryEntryFromFirestore(deleteModalItem.id);
+
+      setSubmitFeedback(`Berkas "${deleteModalItem.title}" telah dihapus secara permanen dari sistem & Firestore.`);
+      setDeleteModalItem(null);
+    } catch (err: any) {
+      console.error('Error deleting library berkas:', err);
+      alert('Gagal menghapus berkas dari Firestore.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -223,10 +372,13 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
       item.title.toLowerCase().includes(tableSearch.toLowerCase()) ||
       (item.nomorSurat && item.nomorSurat.toLowerCase().includes(tableSearch.toLowerCase())) ||
       item.authorOrWp.toLowerCase().includes(tableSearch.toLowerCase()) ||
-      (item.tags && item.tags.some((t) => t.toLowerCase().includes(tableSearch.toLowerCase())));
+      (item.tags && item.tags.some((t) => t.toLowerCase().includes(tableSearch.toLowerCase()))) ||
+      (item.catatanVerifikasi && item.catatanVerifikasi.toLowerCase().includes(tableSearch.toLowerCase()));
 
     const matchesCategory = tableCategoryFilter === 'all' || item.category === tableCategoryFilter;
-    return matchesSearch && matchesCategory;
+    const matchesVerifikasi = tableVerifikasiFilter === 'all' || (item.statusVerifikasi || 'Terverifikasi & Sah') === tableVerifikasiFilter;
+
+    return matchesSearch && matchesCategory && matchesVerifikasi;
   });
 
   return (
@@ -236,10 +388,10 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
         <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
           <div>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
               <span className="px-3 py-1 rounded-full bg-blue-600/30 border border-blue-400/40 text-blue-300 text-xs font-bold flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-                <span>Menu Khusus Admin &amp; Petugas BP2RD</span>
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                <span>Portal Verifikasi &amp; Input Berkas Admin</span>
               </span>
               <span className="px-2.5 py-1 rounded-full bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs font-semibold flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
@@ -248,26 +400,26 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white flex items-center gap-3">
               <FolderArchive className="w-8 h-8 text-blue-400" />
-              <span>Input Berkas &amp; Dokumen Perpustakaan</span>
+              <span>Input, Hapus &amp; Verifikasi Berkas Perpajakan</span>
             </h2>
             <p className="text-slate-300 text-xs sm:text-sm mt-1 max-w-2xl">
-              Unggah Peraturan Daerah (Perda), Standar Operasional Prosedur (SOP), Formulir Blanko SPOP, Dokumen Anggaran DPA/ARKAS, maupun Dokumentasi Foto Lapangan ke dalam sistem terpadu.
+              Kelola repositori dokumen resmi BP2RD: unggah Perda, Juknis SOP, Blanko SPOP, berkas DPA/ARKAS, verifikasi keabsahan dokumen, dan hapus berkas kadaluarsa langsung di cloud Firestore.
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-4 shrink-0">
             <div className="text-right hidden sm:block">
               <p className="text-[11px] text-slate-400">Total Berkas Tersimpan</p>
               <p className="text-2xl font-black text-white">{libraryList.length} Berkas</p>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shadow-inner">
-              <FileText className="w-6 h-6" />
+              <ShieldCheck className="w-6 h-6" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main Two-Column Layout: Form on Left/Top, Quick Rules on Right */}
+      {/* Main Two-Column Layout: Form on Left, SOP & Rules on Right */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Form Column */}
         <div className="lg:col-span-2">
@@ -275,9 +427,9 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
             <div className="border-b border-slate-800 pb-4 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <PlusCircle className="w-5 h-5 text-blue-400" />
-                <h3 className="text-base font-bold text-white">Formulir Input Berkas Baru</h3>
+                <h3 className="text-base font-bold text-white">Formulir Input &amp; Penerbitan Berkas</h3>
               </div>
-              <span className="text-[11px] text-slate-400 font-mono">ID Otomatis: LIB-{Date.now().toString().slice(-6)}</span>
+              <span className="text-[11px] text-slate-400 font-mono">ID: LIB-{Date.now().toString().slice(-6)}</span>
             </div>
 
             {submitFeedback && (
@@ -285,17 +437,24 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={`p-4 rounded-2xl border text-xs flex items-center gap-3 ${
-                  submitFeedback.includes('berhasil')
+                  submitFeedback.includes('berhasil') || submitFeedback.includes('disahkan')
                     ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-200'
                     : 'bg-rose-950/80 border-rose-500/50 text-rose-200'
                 }`}
               >
-                {submitFeedback.includes('berhasil') ? (
+                {submitFeedback.includes('berhasil') || submitFeedback.includes('disahkan') ? (
                   <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
                 ) : (
                   <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
                 )}
-                <span>{submitFeedback}</span>
+                <span className="flex-1 font-medium">{submitFeedback}</span>
+                <button
+                  type="button"
+                  onClick={() => setSubmitFeedback(null)}
+                  className="text-slate-400 hover:text-white ml-2"
+                >
+                  ✕
+                </button>
               </motion.div>
             )}
 
@@ -350,7 +509,7 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
               </div>
             </div>
 
-            {/* Nomor Surat & Tanggal & Status */}
+            {/* Nomor Surat & Tanggal & Status Dokumen */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
@@ -380,12 +539,12 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Status Legalitas Berkas
+                  Status Legalitas Dokumen
                 </label>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-blue-500 cursor-pointer"
                 >
                   <option value="Berlaku Efektif">Berlaku Efektif</option>
                   <option value="SOP Resmi">SOP Resmi</option>
@@ -397,6 +556,58 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
                 </select>
               </div>
             </div>
+
+            {/* Status Verifikasi Langsung dari Admin */}
+            {isAdmin ? (
+              <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-white flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    <span>Status Verifikasi Awal (Otoritas Admin)</span>
+                  </label>
+                  <span className="text-[10px] text-slate-400">Verifikator: {currentUser ? currentUser.nama : 'Admin BP2RD'}</span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { value: 'Terverifikasi & Sah', label: 'Terverifikasi & Sah', color: 'border-emerald-500 text-emerald-300 bg-emerald-950/40' },
+                    { value: 'Menunggu Verifikasi', label: 'Menunggu Telaah', color: 'border-amber-500 text-amber-300 bg-amber-950/40' },
+                    { value: 'Perlu Perbaikan', label: 'Perlu Perbaikan', color: 'border-indigo-500 text-indigo-300 bg-indigo-950/40' },
+                    { value: 'Ditolak', label: 'Ditolak', color: 'border-rose-500 text-rose-300 bg-rose-950/40' },
+                  ].map((s) => (
+                    <button
+                      key={s.value}
+                      type="button"
+                      onClick={() => setStatusVerifikasiInput(s.value as any)}
+                      className={`py-2 px-2.5 rounded-xl border text-[11px] font-bold transition-all text-center cursor-pointer ${
+                        statusVerifikasiInput === s.value
+                          ? `${s.color} ring-1 ring-white/20 shadow-md`
+                          : 'border-slate-700 text-slate-400 hover:text-white bg-slate-900/60'
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div>
+                  <input
+                    type="text"
+                    value={catatanVerifikasiInput}
+                    onChange={(e) => setCatatanVerifikasiInput(e.target.value)}
+                    placeholder="Catatan verifikasi / disposisi admin (opsional, misal: 'Telah diaudit sesuai Lembaran Daerah No. 1')..."
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-blue-500 placeholder:text-slate-500"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="p-3.5 rounded-2xl bg-slate-800/40 border border-slate-700/60 text-xs text-slate-300 flex items-center gap-2.5">
+                <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>
+                  Dokumen yang Anda unggah otomatis berstatus <strong>Menunggu Verifikasi</strong>. Pengesahan &amp; verifikasi dokumen dilakukan oleh <strong>Administrator BP2RD</strong>.
+                </span>
+              </div>
+            )}
 
             {/* Instansi Penerbit / Author */}
             <div>
@@ -444,7 +655,7 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
                         e.stopPropagation();
                         setUploadedFile(null);
                       }}
-                      className="text-xs text-rose-400 hover:text-rose-300 font-bold px-2 py-1 bg-rose-950/40 rounded-lg border border-rose-500/30"
+                      className="text-xs text-rose-400 hover:text-rose-300 font-bold px-2 py-1 bg-rose-950/40 rounded-lg border border-rose-500/30 cursor-pointer"
                     >
                       Ganti
                     </button>
@@ -524,7 +735,7 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
                   <button
                     type="button"
                     onClick={handleAddTag}
-                    className="px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-500"
+                    className="px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-500 cursor-pointer"
                   >
                     Tambah
                   </button>
@@ -540,7 +751,7 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
                       <button
                         type="button"
                         onClick={() => handleRemoveTag(t)}
-                        className="hover:text-rose-400 font-bold ml-1"
+                        className="hover:text-rose-400 font-bold ml-1 cursor-pointer"
                       >
                         ×
                       </button>
@@ -557,7 +768,7 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
                   <button
                     type="button"
                     onClick={() => setIsPublic(!isPublic)}
-                    className={`p-2 rounded-xl flex items-center justify-center transition-all ${
+                    className={`p-2 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
                       isPublic ? 'bg-emerald-600/30 text-emerald-400' : 'bg-amber-600/30 text-amber-400'
                     }`}
                   >
@@ -585,9 +796,10 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
                   setDescription('');
                   setUploadedFile(null);
                   setDriveUrl('');
+                  setCatatanVerifikasiInput('');
                   setSubmitFeedback(null);
                 }}
-                className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all"
+                className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all cursor-pointer"
               >
                 Reset Isian
               </button>
@@ -614,51 +826,51 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
         <div className="space-y-6">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
             <div className="flex items-center gap-2.5 text-blue-400">
-              <BookOpen className="w-5 h-5" />
-              <h4 className="text-sm font-bold text-white">Panduan Pengarsipan Dokumen</h4>
+              <ShieldCheck className="w-5 h-5 text-emerald-400" />
+              <h4 className="text-sm font-bold text-white">Pedoman Verifikasi Dokumen Admin</h4>
             </div>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Setiap berkas yang diinput akan secara otomatis diindeks pada repositori perpajakan daerah dan disinkronkan ke koleksi Cloud Firestore:
+              Admin dan petugas BP2RD dapat memvalidasi dan memverifikasi setiap berkas yang diunggah ke perpustakaan:
             </p>
 
-            <div className="space-y-3 pt-2">
-              <div className="p-3 rounded-2xl bg-slate-800/80 border border-slate-700/80">
+            <div className="space-y-2.5 pt-2">
+              <div className="p-3 rounded-2xl bg-emerald-950/40 border border-emerald-500/30">
                 <p className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                  <span>1. Regulasi &amp; Perda</span>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Terverifikasi &amp; Sah</span>
                 </p>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Cantumkan nomor lembaran daerah dan tahun penetapan agar valid sebagai rujukan keberatan wajib pajak.
-                </p>
-              </div>
-
-              <div className="p-3 rounded-2xl bg-slate-800/80 border border-slate-700/80">
-                <p className="text-xs font-bold text-blue-300 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-blue-400"></span>
-                  <span>2. Petunjuk Teknis SOP</span>
-                </p>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Digunakan sebagai panduan uji petik omzet restoran, reklame, dan validasi fisik di lapangan oleh petugas survey.
+                <p className="text-[11px] text-slate-300 mt-1">
+                  Dokumen telah diaudit, sah secara hukum, dan diakui sebagai rujukan penetapan atau pelayanan.
                 </p>
               </div>
 
-              <div className="p-3 rounded-2xl bg-slate-800/80 border border-slate-700/80">
+              <div className="p-3 rounded-2xl bg-amber-950/40 border border-amber-500/30">
                 <p className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-                  <span>3. Blanko Permohonan</span>
+                  <Clock className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Menunggu Verifikasi</span>
                 </p>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Wajib Pajak dapat langsung mengunduh formulir resmi format standar tanpa harus datang ke kantor pelayanan.
+                <p className="text-[11px] text-slate-300 mt-1">
+                  Dokumen baru yang memerlukan peninjauan klausul atau pengecekan lampiran oleh tim pengkaji.
                 </p>
               </div>
 
-              <div className="p-3 rounded-2xl bg-slate-800/80 border border-slate-700/80">
+              <div className="p-3 rounded-2xl bg-indigo-950/40 border border-indigo-500/30">
                 <p className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-indigo-400"></span>
-                  <span>4. DPA / ARKAS Anggaran</span>
+                  <AlertCircle className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Perlu Perbaikan</span>
                 </p>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Lampiran belanja modal dan pembiayaan dinas/sekolah yang memiliki potensi potongan pajak daerah.
+                <p className="text-[11px] text-slate-300 mt-1">
+                  Memerlukan revisi redaksi, kelengkapan tanda tangan pejabat, atau resolusi gambar yang lebih jelas.
+                </p>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-rose-950/40 border border-rose-500/30">
+                <p className="text-xs font-bold text-rose-300 flex items-center gap-1.5">
+                  <XCircle className="w-3.5 h-3.5 text-rose-400" />
+                  <span>Ditolak / Dihapus</span>
+                </p>
+                <p className="text-[11px] text-slate-300 mt-1">
+                  Berkas tidak sesuai regulasi atau kadaluarsa. Admin dapat menghapus langsung dari sistem.
                 </p>
               </div>
             </div>
@@ -666,8 +878,8 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
 
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-blue-400"></span>
-              <span>Koneksi Database Aktif</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Koneksi Firestore &amp; Otoritas</span>
             </h4>
             <div className="space-y-2 text-xs">
               <div className="flex justify-between py-1.5 border-b border-slate-800">
@@ -675,44 +887,44 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
                 <span className="font-mono font-bold text-blue-300">library_berkas</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-slate-800">
-                <span className="text-slate-400">Mode Sinkronisasi</span>
-                <span className="text-emerald-400 font-semibold">Otomatis 2-Arah</span>
+                <span className="text-slate-400">Otoritas Verifikasi</span>
+                <span className="text-emerald-400 font-semibold">{currentUser ? currentUser.role.toUpperCase() : 'ADMIN'}</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-slate-800">
-                <span className="text-slate-400">Format Preview</span>
-                <span className="text-slate-200">PDF, Citra, Dokumen</span>
+                <span className="text-slate-400">Fitur Hapus</span>
+                <span className="text-rose-400 font-semibold">Terkonfirmasi &amp; Permanen</span>
               </div>
               <div className="flex justify-between py-1.5">
-                <span className="text-slate-400">Dukungan Drive</span>
-                <span className="text-blue-400 font-semibold">Tautan Langsung</span>
+                <span className="text-slate-400">Sinkronisasi Cloud</span>
+                <span className="text-blue-400 font-semibold">Otomatis Real-Time</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Uploaded Files Management Table */}
+      {/* Uploaded Files Management Table with Verification & Delete */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h3 className="text-lg font-extrabold text-white flex items-center gap-2.5">
               <FolderArchive className="w-5 h-5 text-blue-400" />
-              <span>Daftar Berkas Perpustakaan Terinput</span>
+              <span>Daftar Berkas, Status Verifikasi &amp; Aksi Admin</span>
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              Kelola seluruh dokumen yang telah dimasukkan ke repositori perpustakaan SIPOTENSI
+              Tinjau, verifikasi keabsahan dokumen, ubah status disposisi, atau hapus berkas dari sistem perpajakan BP2RD
             </p>
           </div>
 
           {/* Table Filters */}
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            <div className="relative w-full sm:w-64">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative w-full sm:w-60">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={tableSearch}
                 onChange={(e) => setTableSearch(e.target.value)}
-                placeholder="Cari berkas / nomor..."
+                placeholder="Cari berkas / catatan..."
                 className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500 placeholder:text-slate-500"
               />
             </div>
@@ -720,7 +932,7 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
             <select
               value={tableCategoryFilter}
               onChange={(e) => setTableCategoryFilter(e.target.value)}
-              className="w-full sm:w-auto px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500"
+              className="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
             >
               <option value="all">Semua Kategori</option>
               <option value="regulasi">Regulasi &amp; Perda</option>
@@ -730,8 +942,41 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
               <option value="objek">Foto Objek</option>
               <option value="pbb">PBB-P2</option>
             </select>
+
+            <select
+              value={tableVerifikasiFilter}
+              onChange={(e) => setTableVerifikasiFilter(e.target.value)}
+              className="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+            >
+              <option value="all">Semua Status Verifikasi</option>
+              <option value="Terverifikasi & Sah">Terverifikasi &amp; Sah</option>
+              <option value="Menunggu Verifikasi">Menunggu Verifikasi</option>
+              <option value="Perlu Perbaikan">Perlu Perbaikan</option>
+              <option value="Ditolak">Ditolak</option>
+            </select>
           </div>
         </div>
+
+        {/* Restricted Access Banner for Non-Admin */}
+        {!isAdmin && (
+          <div className="p-4 rounded-2xl bg-amber-950/40 border border-amber-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-200 shadow-md">
+            <div className="flex items-center gap-2.5">
+              <Lock className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>
+                <strong>Akses Terbatas (Non-Admin / Petugas):</strong> Menu aksi admin (<strong>Hapus</strong> berkas, <strong>Lihat</strong> pratinjau, dan <strong>Ubah Status</strong> verifikasi) hanya tampil dan aktif pada saat login sebagai <strong>Administrator BP2RD</strong>.
+              </span>
+            </div>
+            {onOpenLogin && (
+              <button
+                type="button"
+                onClick={onOpenLogin}
+                className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shrink-0 cursor-pointer transition-colors shadow"
+              >
+                Login Administrator
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Table View */}
         <div className="overflow-x-auto">
@@ -740,120 +985,345 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
               <tr className="border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-800/40">
                 <th className="py-3 px-4">Judul Berkas &amp; Nomor</th>
                 <th className="py-3 px-4">Kategori</th>
-                <th className="py-3 px-4">Ukuran &amp; Tipe</th>
-                <th className="py-3 px-4">Instansi / Petugas</th>
-                <th className="py-3 px-4">Status &amp; Akses</th>
-                <th className="py-3 px-4 text-right">Aksi</th>
+                <th className="py-3 px-4">Instansi &amp; File</th>
+                <th className="py-3 px-4">Status Verifikasi Admin</th>
+                <th className="py-3 px-4">Akses &amp; Catatan</th>
+                {isAdmin && <th className="py-3 px-4 text-right">Aksi Admin</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
               {filteredLibrary.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-500 text-xs">
-                    Tidak ada berkas yang cocok dengan pencarian atau filter.
+                  <td colSpan={isAdmin ? 6 : 5} className="py-8 text-center text-slate-500 text-xs">
+                    Tidak ada berkas yang cocok dengan pencarian atau filter status.
                   </td>
                 </tr>
               ) : (
-                filteredLibrary.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="py-3.5 px-4 max-w-sm">
-                      <p className="font-bold text-white text-xs">{item.title}</p>
-                      {item.nomorSurat && (
-                        <p className="text-[10px] text-blue-300 font-mono mt-0.5">{item.nomorSurat}</p>
-                      )}
-                      <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">{item.description}</p>
-                    </td>
+                filteredLibrary.map((item) => {
+                  const verifStatus = item.statusVerifikasi || 'Terverifikasi & Sah';
+                  return (
+                    <tr key={item.id} className="hover:bg-slate-800/40 transition-colors">
+                      <td className="py-3.5 px-4 max-w-xs">
+                        <p className="font-bold text-white text-xs">{item.title}</p>
+                        {item.nomorSurat && (
+                          <p className="text-[10px] text-blue-300 font-mono mt-0.5">{item.nomorSurat}</p>
+                        )}
+                        <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">{item.description}</p>
+                      </td>
 
-                    <td className="py-3.5 px-4">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
-                        item.category === 'regulasi'
-                          ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/30'
-                          : item.category === 'sop'
-                          ? 'bg-blue-950 text-blue-300 border border-blue-500/30'
-                          : item.category === 'blanko'
-                          ? 'bg-amber-950 text-amber-300 border border-amber-500/30'
-                          : item.category === 'dpa'
-                          ? 'bg-indigo-950 text-indigo-300 border border-indigo-500/30'
-                          : 'bg-purple-950 text-purple-300 border border-purple-500/30'
-                      }`}>
-                        {item.category}
-                      </span>
-                    </td>
-
-                    <td className="py-3.5 px-4">
-                      <p className="font-semibold text-slate-200">{item.fileType}</p>
-                      <p className="text-[10px] text-slate-400">{item.sizeStr}</p>
-                    </td>
-
-                    <td className="py-3.5 px-4">
-                      <p className="text-slate-200 truncate max-w-[160px]">{item.authorOrWp}</p>
-                      <p className="text-[10px] text-slate-400">{item.date}</p>
-                    </td>
-
-                    <td className="py-3.5 px-4">
-                      <div className="space-y-1">
-                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">
-                          {item.status}
+                      <td className="py-3.5 px-4">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
+                          item.category === 'regulasi'
+                            ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/30'
+                            : item.category === 'sop'
+                            ? 'bg-blue-950 text-blue-300 border border-blue-500/30'
+                            : item.category === 'blanko'
+                            ? 'bg-amber-950 text-amber-300 border border-amber-500/30'
+                            : item.category === 'dpa'
+                            ? 'bg-indigo-950 text-indigo-300 border border-indigo-500/30'
+                            : 'bg-purple-950 text-purple-300 border border-purple-500/30'
+                        }`}>
+                          {item.category}
                         </span>
-                        <div>
-                          {item.isPublic ? (
-                            <span className="text-[9px] text-emerald-400 flex items-center gap-1 font-semibold">
-                              <Globe className="w-3 h-3" /> Publik
-                            </span>
-                          ) : (
-                            <span className="text-[9px] text-amber-400 flex items-center gap-1 font-semibold">
-                              <Lock className="w-3 h-3" /> Internal
-                            </span>
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        <p className="text-slate-200 truncate max-w-[140px] font-medium">{item.authorOrWp}</p>
+                        <p className="text-[10px] text-slate-400">{item.fileType} • {item.sizeStr}</p>
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        <div className="space-y-1">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                            verifStatus === 'Terverifikasi & Sah'
+                              ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50'
+                              : verifStatus === 'Menunggu Verifikasi'
+                              ? 'bg-amber-950/80 text-amber-300 border-amber-500/50'
+                              : verifStatus === 'Perlu Perbaikan'
+                              ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/50'
+                              : 'bg-rose-950/80 text-rose-300 border-rose-500/50'
+                          }`}>
+                            {verifStatus === 'Terverifikasi & Sah' && <CheckCircle2 className="w-3 h-3 text-emerald-400" />}
+                            {verifStatus === 'Menunggu Verifikasi' && <Clock className="w-3 h-3 text-amber-400" />}
+                            {verifStatus === 'Perlu Perbaikan' && <AlertCircle className="w-3 h-3 text-indigo-400" />}
+                            {verifStatus === 'Ditolak' && <XCircle className="w-3 h-3 text-rose-400" />}
+                            <span>{verifStatus}</span>
+                          </span>
+
+                          {item.verifiedBy && (
+                            <p className="text-[9px] text-slate-400 leading-tight">
+                              Verifikator: <span className="text-slate-300">{item.verifiedBy}</span>
+                            </p>
                           )}
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (onOpenPreview) onOpenPreview(item);
-                            else setPreviewModalItem(item);
-                          }}
-                          className="p-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/30 transition-all"
-                          title="Lihat Pratinjau Berkas"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                        </button>
+                      <td className="py-3.5 px-4">
+                        <div className="space-y-1 max-w-[170px]">
+                          <div>
+                            {item.isPublic ? (
+                              <span className="text-[10px] text-emerald-400 flex items-center gap-1 font-semibold">
+                                <Globe className="w-3 h-3" /> Publik
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-amber-400 flex items-center gap-1 font-semibold">
+                                <Lock className="w-3 h-3" /> Khusus Internal
+                              </span>
+                            )}
+                          </div>
+                          {item.catatanVerifikasi && (
+                            <p className="text-[10px] text-slate-400 italic line-clamp-2">
+                              "{item.catatanVerifikasi}"
+                            </p>
+                          )}
+                        </div>
+                      </td>
 
-                        {item.driveUrl && (
-                          <a
-                            href={item.driveUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/30 transition-all"
-                            title="Buka di Google Drive"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
-                        )}
+                      {/* Menu Aksi Admin: HANYA TAMPIL PADA LOGIN ADMIN */}
+                      {isAdmin && (
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {/* 1. Ubah Status: Quick Approve button if pending */}
+                            {verifStatus !== 'Terverifikasi & Sah' && (
+                              <button
+                                type="button"
+                                onClick={() => handleQuickApprove(item)}
+                                className="p-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 transition-all cursor-pointer"
+                                title="Sahkan Langsung (1-Klik)"
+                              >
+                                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              </button>
+                            )}
 
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(item)}
-                          className="p-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 border border-rose-500/30 transition-all"
-                          title="Hapus Berkas dari Sistem"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                            {/* 2. Ubah Status & Catatan Verifikasi Modal */}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenVerifModal(item)}
+                              className="p-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/40 transition-all cursor-pointer"
+                              title="Ubah Status & Catatan Verifikasi Admin"
+                            >
+                              <ShieldCheck className="w-3.5 h-3.5" />
+                            </button>
+
+                            {/* 3. Lihat Berkas / Pratinjau */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (onOpenPreview) onOpenPreview(item);
+                                else setPreviewModalItem(item);
+                              }}
+                              className="p-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/30 transition-all cursor-pointer"
+                              title="Lihat Pratinjau Berkas"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+
+                            {/* Google Drive Link */}
+                            {item.driveUrl && (
+                              <a
+                                href={item.driveUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/30 transition-all cursor-pointer"
+                                title="Buka di Google Drive"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            )}
+
+                            {/* 4. Hapus Berkas */}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenDeleteModal(item)}
+                              className="p-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 border border-rose-500/40 transition-all cursor-pointer"
+                              title="Hapus Berkas dari Sistem & Firestore"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Internal Preview Modal */}
+      {/* Modal 1: Verifikasi Berkas (Verification Modal) */}
+      <AnimatePresence>
+        {verifModalItem && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-slate-900 border border-slate-700 rounded-3xl max-w-xl w-full p-6 text-white shadow-2xl space-y-5"
+            >
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-2xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white">Verifikasi &amp; Disposisi Berkas</h3>
+                    <p className="text-[11px] text-slate-400 font-mono">{verifModalItem.id}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setVerifModalItem(null)}
+                  className="text-slate-400 hover:text-white p-1 text-lg font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Target Item Details */}
+              <div className="bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700 space-y-1.5 text-xs">
+                <p className="font-bold text-white text-sm">{verifModalItem.title}</p>
+                <div className="flex flex-wrap items-center gap-3 text-slate-300 text-[11px]">
+                  <span>Kategori: <strong className="text-blue-300">{verifModalItem.category.toUpperCase()}</strong></span>
+                  <span>Penerbit: <strong>{verifModalItem.authorOrWp}</strong></span>
+                  <span>Ukuran: <strong>{verifModalItem.sizeStr}</strong></span>
+                </div>
+              </div>
+
+              {/* Status Verifikasi Selector */}
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-2">
+                  Tentukan Keputusan Verifikasi:
+                </label>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {[
+                    { value: 'Terverifikasi & Sah', label: 'Terverifikasi & Sah', icon: CheckCircle2, desc: 'Dokumen legal & resmi diakui', color: 'border-emerald-500 bg-emerald-950/40 text-emerald-300' },
+                    { value: 'Menunggu Verifikasi', label: 'Menunggu Verifikasi', icon: Clock, desc: 'Dalam tahap telaah berkas', color: 'border-amber-500 bg-amber-950/40 text-amber-300' },
+                    { value: 'Perlu Perbaikan', label: 'Perlu Perbaikan', icon: AlertCircle, desc: 'Perlu revisi / lampiran tambahan', color: 'border-indigo-500 bg-indigo-950/40 text-indigo-300' },
+                    { value: 'Ditolak', label: 'Ditolak', icon: XCircle, desc: 'Dokumen tidak sah/kadaluarsa', color: 'border-rose-500 bg-rose-950/40 text-rose-300' },
+                  ].map((opt) => {
+                    const Icon = opt.icon;
+                    const isSelected = verifStatusChoice === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setVerifStatusChoice(opt.value as any)}
+                        className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                          isSelected
+                            ? `${opt.color} ring-1 ring-white/20 shadow-lg`
+                            : 'border-slate-700 bg-slate-800/60 text-slate-400 hover:text-white hover:border-slate-600'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Icon className="w-4 h-4" />
+                          <span className="text-xs font-bold text-white">{opt.label}</span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1">{opt.desc}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Catatan Verifikasi Admin */}
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">
+                  Catatan Verifikasi / Disposisi Administrator:
+                </label>
+                <textarea
+                  rows={3}
+                  value={verifCatatanText}
+                  onChange={(e) => setVerifCatatanText(e.target.value)}
+                  placeholder="Berikan catatan tindak lanjut, alasan verifikasi, atau instruksi perbaikan..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-indigo-500 placeholder:text-slate-500"
+                />
+              </div>
+
+              {/* Verifier Badge */}
+              <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+                <span>Verifikator: <strong className="text-slate-200">{currentUser ? currentUser.nama : 'Admin BP2RD'}</strong></span>
+                <span>Waktu: <strong className="text-slate-200">{new Date().toLocaleDateString('id-ID')}</strong></span>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setVerifModalItem(null)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  disabled={isVerifying}
+                  onClick={handleConfirmVerification}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/25 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isVerifying ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                  <span>Simpan Hasil Verifikasi</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal 2: Konfirmasi Hapus Berkas (Delete Confirmation Modal) */}
+      <AnimatePresence>
+        {deleteModalItem && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-slate-900 border border-rose-500/40 rounded-3xl max-w-md w-full p-6 text-white shadow-2xl space-y-4"
+            >
+              <div className="flex items-center gap-3 text-rose-400">
+                <div className="w-10 h-10 rounded-2xl bg-rose-950 border border-rose-500/40 flex items-center justify-center">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Konfirmasi Hapus Berkas</h3>
+                  <p className="text-[11px] text-rose-300">Tindakan ini tidak dapat dibatalkan</p>
+                </div>
+              </div>
+
+              <div className="bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700 text-xs space-y-1">
+                <p className="font-bold text-white">{deleteModalItem.title}</p>
+                <p className="text-slate-400 text-[11px]">ID: <span className="font-mono text-slate-300">{deleteModalItem.id}</span></p>
+                <p className="text-slate-400 text-[11px]">Kategori: <span className="text-slate-300">{deleteModalItem.category}</span></p>
+              </div>
+
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Apakah Anda yakin ingin menghapus berkas ini dari repositori library dan database Cloud Firestore?
+              </p>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setDeleteModalItem(null)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={handleConfirmDelete}
+                  className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-lg shadow-rose-600/30 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isDeleting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  <span>Ya, Hapus Permanen</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal 3: Pratinjau Berkas (Preview Modal) */}
       <AnimatePresence>
         {previewModalItem && (
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
@@ -875,7 +1345,7 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
                 </div>
                 <button
                   onClick={() => setPreviewModalItem(null)}
-                  className="text-slate-400 hover:text-white p-1"
+                  className="text-slate-400 hover:text-white p-1 text-lg font-bold"
                 >
                   ✕
                 </button>
@@ -905,8 +1375,8 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
                     <span className="text-white font-medium">{previewModalItem.authorOrWp}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400">Status: </span>
-                    <span className="text-emerald-400 font-semibold">{previewModalItem.status}</span>
+                    <span className="text-slate-400">Status Verifikasi: </span>
+                    <span className="text-emerald-400 font-semibold">{previewModalItem.statusVerifikasi || 'Terverifikasi & Sah'}</span>
                   </div>
                 </div>
               </div>
@@ -917,7 +1387,7 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
                     href={previewModalItem.driveUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5"
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                     <span>Buka Google Drive</span>
@@ -926,7 +1396,7 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
                 <button
                   type="button"
                   onClick={() => setPreviewModalItem(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold"
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold cursor-pointer"
                 >
                   Tutup
                 </button>

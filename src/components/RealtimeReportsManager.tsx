@@ -22,7 +22,10 @@ import {
   Building2,
   Check,
   Code2,
-  FolderArchive
+  FolderArchive,
+  Trash2,
+  Lock,
+  PlusCircle
 } from 'lucide-react';
 import { PotensiPajakEntry, PbbP2Entry, IkmEntry, GoogleSheetsConfig, LibraryBerkasEntry, AppUser } from '../types';
 import { StorageService } from '../services/storage';
@@ -36,11 +39,21 @@ interface RealtimeReportsManagerProps {
   currentUser: AppUser | null;
   onSaveLibraryEntry: (entry: LibraryBerkasEntry) => void;
   onDeleteLibraryEntry: (id: string) => void;
+  onUpdateLibraryStatus?: (
+    id: string,
+    statusVerifikasi: LibraryBerkasEntry['statusVerifikasi'],
+    catatan?: string,
+    verifiedBy?: string
+  ) => void;
   onUpdatePotensiStatus: (id: string, status: PotensiPajakEntry['statusAdmin'], catatan?: string, petugas?: string) => void;
   onUpdatePbbStatus: (id: string, status: PbbP2Entry['statusVerifikasi'], catatan?: string) => void;
+  onDeletePotensi?: (id: string) => void;
+  onDeletePbb?: (id: string) => void;
+  onDeleteIkm?: (id: string) => void;
   sheetsConfig: GoogleSheetsConfig;
   onSaveSheetsConfig: (config: GoogleSheetsConfig) => void;
   onOpenLibrary: () => void;
+  onOpenLogin?: () => void;
 }
 
 export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
@@ -51,12 +64,19 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
   currentUser,
   onSaveLibraryEntry,
   onDeleteLibraryEntry,
+  onUpdateLibraryStatus,
   onUpdatePotensiStatus,
   onUpdatePbbStatus,
+  onDeletePotensi,
+  onDeletePbb,
+  onDeleteIkm,
   sheetsConfig,
   onSaveSheetsConfig,
   onOpenLibrary,
+  onOpenLogin,
 }) => {
+  const isAdmin = currentUser?.role === 'admin';
+
   const [activeReportTab, setActiveReportTab] = useState<'potensi' | 'pbb' | 'ikm' | 'input-library' | 'sheets'>('potensi');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('Semua');
@@ -65,16 +85,45 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
   const [selectedPotensi, setSelectedPotensi] = useState<PotensiPajakEntry | null>(null);
   const [selectedPbb, setSelectedPbb] = useState<PbbP2Entry | null>(null);
 
-  // Edit Status States
+  // Edit Status States (Potensi)
   const [editStatusValue, setEditStatusValue] = useState<PotensiPajakEntry['statusAdmin']>('Diverifikasi');
   const [editCatatan, setEditCatatan] = useState('');
   const [editPetugas, setEditPetugas] = useState('');
+
+  // Edit Status States (PBB)
+  const [selectedPbbEdit, setSelectedPbbEdit] = useState<PbbP2Entry | null>(null);
+  const [editPbbStatus, setEditPbbStatus] = useState<PbbP2Entry['statusVerifikasi']>('Lunas & Sah');
+  const [editPbbCatatan, setEditPbbCatatan] = useState('');
+
+  // IKM Detail Modal State
+  const [selectedIkmDetail, setSelectedIkmDetail] = useState<IkmEntry | null>(null);
+
+  // Delete Confirmation Modal State
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState<{ type: 'potensi' | 'pbb' | 'ikm'; id: string; title: string } | null>(null);
 
   // Sheets Config States
   const [localSheetsConfig, setLocalSheetsConfig] = useState<GoogleSheetsConfig>({ ...sheetsConfig });
   const [copyCodeSuccess, setCopyCodeSuccess] = useState(false);
   const [testPingStatus, setTestPingStatus] = useState<string | null>(null);
   const [isTestingPing, setIsTestingPing] = useState(false);
+
+  const handleConfirmDelete = () => {
+    if (!deleteConfirmItem || !isAdmin) return;
+    if (deleteConfirmItem.type === 'potensi' && onDeletePotensi) {
+      onDeletePotensi(deleteConfirmItem.id);
+    } else if (deleteConfirmItem.type === 'pbb' && onDeletePbb) {
+      onDeletePbb(deleteConfirmItem.id);
+    } else if (deleteConfirmItem.type === 'ikm' && onDeleteIkm) {
+      onDeleteIkm(deleteConfirmItem.id);
+    }
+    setDeleteConfirmItem(null);
+  };
+
+  const handleSavePbbStatus = () => {
+    if (!selectedPbbEdit || !isAdmin) return;
+    onUpdatePbbStatus(selectedPbbEdit.id, editPbbStatus, editPbbCatatan);
+    setSelectedPbbEdit(null);
+  };
 
   // Format Currency
   const formatRupiah = (val: number) => {
@@ -346,6 +395,27 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
         </div>
       )}
 
+      {/* Non-Admin Access Banner */}
+      {!isAdmin && (
+        <div className="p-4 rounded-2xl bg-amber-950/40 border border-amber-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-200 shadow-md">
+          <div className="flex items-center gap-2.5">
+            <Lock className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>
+              <strong>Mode Peninjauan Terbatas (Non-Admin / Petugas):</strong> Menu aksi admin (<strong>Hapus</strong> data, <strong>Lihat</strong> audit, dan <strong>Ubah Status</strong> verifikasi) hanya tampil pada saat login sebagai <strong>Administrator BP2RD</strong>.
+            </span>
+          </div>
+          {onOpenLogin && (
+            <button
+              type="button"
+              onClick={onOpenLogin}
+              className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shrink-0 cursor-pointer transition-colors shadow"
+            >
+              Login Administrator
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Tab 1: TABEL POTENSI PAJAK */}
       {activeReportTab === 'potensi' && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
@@ -360,13 +430,13 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
                   <th className="py-3.5 px-4">Estimasi Potensi</th>
                   <th className="py-3.5 px-4">Skor Validasi</th>
                   <th className="py-3.5 px-4">Status Admin</th>
-                  <th className="py-3.5 px-4 text-center">Aksi Detail</th>
+                  {isAdmin && <th className="py-3.5 px-4 text-center">Aksi Admin</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {filteredPotensi.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-8 text-center text-slate-400 text-xs">
+                    <td colSpan={isAdmin ? 8 : 7} className="py-8 text-center text-slate-400 text-xs">
                       Tidak ada data potensi yang sesuai dengan pencarian.
                     </td>
                   </tr>
@@ -424,19 +494,43 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
                           {item.statusAdmin}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-center">
-                        <button
-                          onClick={() => {
-                            setSelectedPotensi(item);
-                            setEditStatusValue(item.statusAdmin);
-                            setEditCatatan(item.catatanPetugas || '');
-                            setEditPetugas(item.petugasSurvey || '');
-                          }}
-                          className="px-2.5 py-1 rounded-lg bg-blue-600/30 hover:bg-blue-600 text-blue-200 hover:text-white border border-blue-500/30 text-xs font-medium transition-all"
-                        >
-                          Audit & Verifikasi
-                        </button>
-                      </td>
+                      {isAdmin && (
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => {
+                                setSelectedPotensi(item);
+                                setEditStatusValue(item.statusAdmin);
+                                setEditCatatan(item.catatanPetugas || '');
+                                setEditPetugas(item.petugasSurvey || '');
+                              }}
+                              className="p-1.5 rounded-lg bg-blue-600/30 hover:bg-blue-600 text-blue-200 hover:text-white border border-blue-500/30 text-xs transition-all cursor-pointer"
+                              title="Lihat Detail & Audit"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedPotensi(item);
+                                setEditStatusValue(item.statusAdmin);
+                                setEditCatatan(item.catatanPetugas || '');
+                                setEditPetugas(item.petugasSurvey || '');
+                              }}
+                              className="p-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white border border-indigo-500/30 text-xs transition-all cursor-pointer"
+                              title="Ubah Status Verifikasi"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmItem({ type: 'potensi', id: item.id, title: item.namaObjek })}
+                              className="p-1.5 rounded-lg bg-rose-600/30 hover:bg-rose-600 text-rose-200 hover:text-white border border-rose-500/30 text-xs transition-all cursor-pointer"
+                              title="Hapus Data Potensi"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))
                 )}
@@ -460,52 +554,85 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
                   <th className="py-3.5 px-4">Lokasi Objek PBB</th>
                   <th className="py-3.5 px-4">Nominal Setor</th>
                   <th className="py-3.5 px-4">Status Verifikasi</th>
-                  <th className="py-3.5 px-4 text-center">Bukti Bayar</th>
+                  {isAdmin && <th className="py-3.5 px-4 text-center">Aksi Admin</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
-                {filteredPbb.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="py-3 px-4 font-mono font-medium text-emerald-300">{item.id}</td>
-                    <td className="py-3 px-4 font-semibold text-white">{item.namaWajibPajak}</td>
-                    <td className="py-3 px-4 font-mono">{item.nik}</td>
-                    <td className="py-3 px-4">
-                      {item.statusNop === 'ada' ? (
-                        <span className="font-mono text-xs text-emerald-300 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">
-                          {item.nop}
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-amber-300 font-semibold bg-amber-950/60 px-2 py-0.5 rounded border border-amber-500/30">
-                          Objek Baru (Belum Ada NOP)
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      <p className="max-w-xs truncate">{item.lokasiObjek}</p>
-                      <p className="text-[10px] text-slate-400">{item.kelurahanDesa}, {item.kecamatan}</p>
-                    </td>
-                    <td className="py-3 px-4 font-semibold text-emerald-400">
-                      {formatRupiah(item.nominalBayar || 0)}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="px-2.5 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/30">
-                        {item.statusVerifikasi}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      {item.buktiBayar ? (
-                        <button
-                          onClick={() => setSelectedPbb(item)}
-                          className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px]"
-                        >
-                          Lihat Struk
-                        </button>
-                      ) : (
-                        <span className="text-slate-500 text-[10px]">Tanpa Berkas</span>
-                      )}
+                {filteredPbb.length === 0 ? (
+                  <tr>
+                    <td colSpan={isAdmin ? 8 : 7} className="py-8 text-center text-slate-400 text-xs">
+                      Tidak ada data pembayaran PBB yang sesuai dengan pencarian.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredPbb.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-800/30 transition-colors">
+                      <td className="py-3 px-4 font-mono font-medium text-emerald-300">{item.id}</td>
+                      <td className="py-3 px-4 font-semibold text-white">{item.namaWajibPajak}</td>
+                      <td className="py-3 px-4 font-mono">{item.nik}</td>
+                      <td className="py-3 px-4">
+                        {item.statusNop === 'ada' ? (
+                          <span className="font-mono text-xs text-emerald-300 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">
+                            {item.nop}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-amber-300 font-semibold bg-amber-950/60 px-2 py-0.5 rounded border border-amber-500/30">
+                            Objek Baru (Belum Ada NOP)
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <p className="max-w-xs truncate">{item.lokasiObjek}</p>
+                        <p className="text-[10px] text-slate-400">{item.kelurahanDesa}, {item.kecamatan}</p>
+                      </td>
+                      <td className="py-3 px-4 font-semibold text-emerald-400">
+                        {formatRupiah(item.nominalBayar || 0)}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="px-2.5 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/30">
+                          {item.statusVerifikasi}
+                        </span>
+                      </td>
+                      {isAdmin && (
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            {item.buktiBayar ? (
+                              <button
+                                onClick={() => setSelectedPbb(item)}
+                                className="p-1.5 rounded-lg bg-blue-600/30 hover:bg-blue-600 text-blue-200 hover:text-white border border-blue-500/30 text-xs transition-all cursor-pointer"
+                                title="Lihat Struk Pembayaran"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
+                            ) : (
+                              <span className="p-1.5 rounded-lg bg-slate-800 text-slate-500 text-xs" title="Tanpa Berkas Struk">
+                                <Eye className="w-3.5 h-3.5 opacity-30" />
+                              </span>
+                            )}
+                            <button
+                              onClick={() => {
+                                setSelectedPbbEdit(item);
+                                setEditPbbStatus(item.statusVerifikasi);
+                                setEditPbbCatatan(item.catatanVerifikasi || '');
+                              }}
+                              className="p-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600 text-emerald-200 hover:text-white border border-emerald-500/30 text-xs transition-all cursor-pointer"
+                              title="Ubah Status Verifikasi PBB"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmItem({ type: 'pbb', id: item.id, title: `PBB: ${item.namaWajibPajak}` })}
+                              className="p-1.5 rounded-lg bg-rose-600/30 hover:bg-rose-600 text-rose-200 hover:text-white border border-rose-500/30 text-xs transition-all cursor-pointer"
+                              title="Hapus Data PBB"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -526,35 +653,64 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
                   <th className="py-3.5 px-4 text-center">Nilai Konversi</th>
                   <th className="py-3.5 px-4">Mutu</th>
                   <th className="py-3.5 px-4">Saran & Masukan Wajib Pajak</th>
+                  {isAdmin && <th className="py-3.5 px-4 text-center">Aksi Admin</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
-                {filteredIkm.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="py-3 px-4 font-mono font-medium text-amber-300">{item.id}</td>
-                    <td className="py-3 px-4 font-semibold text-white">{item.namaWajibPajak}</td>
-                    <td className="py-3 px-4">
-                      <p>{item.bidangUsaha}</p>
-                      <p className="text-[10px] text-slate-400">{item.alamat}</p>
-                    </td>
-                    <td className="py-3 px-4 text-center font-mono">
-                      <span title="Kemudahan | Kecepatan | Kesopanan | Transparansi | Sarana">
-                        {item.skorKemudahan}-{item.skorKecepatan}-{item.skorKesopanan}-{item.skorTransparansi}-{item.skorSarana}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-center font-bold text-amber-400">
-                      {item.nilaiKonversi}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-500/30">
-                        {item.kategoriMutu}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 max-w-sm italic text-slate-300">
-                      &quot;{item.saranMasukan}&quot;
+                {filteredIkm.length === 0 ? (
+                  <tr>
+                    <td colSpan={isAdmin ? 8 : 7} className="py-8 text-center text-slate-400 text-xs">
+                      Tidak ada data survei IKM yang sesuai dengan pencarian.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredIkm.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-800/30 transition-colors">
+                      <td className="py-3 px-4 font-mono font-medium text-amber-300">{item.id}</td>
+                      <td className="py-3 px-4 font-semibold text-white">{item.namaWajibPajak}</td>
+                      <td className="py-3 px-4">
+                        <p>{item.bidangUsaha}</p>
+                        <p className="text-[10px] text-slate-400">{item.alamat}</p>
+                      </td>
+                      <td className="py-3 px-4 text-center font-mono">
+                        <span title="Kemudahan | Kecepatan | Kesopanan | Transparansi | Sarana">
+                          {item.skorKemudahan}-{item.skorKecepatan}-{item.skorKesopanan}-{item.skorTransparansi}-{item.skorSarana}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center font-bold text-amber-400">
+                        {item.nilaiKonversi}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-500/30">
+                          {item.kategoriMutu}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 max-w-sm italic text-slate-300">
+                        &quot;{item.saranMasukan}&quot;
+                      </td>
+                      {isAdmin && (
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => setSelectedIkmDetail(item)}
+                              className="p-1.5 rounded-lg bg-blue-600/30 hover:bg-blue-600 text-blue-200 hover:text-white border border-blue-500/30 text-xs transition-all cursor-pointer"
+                              title="Lihat Detail Responden IKM"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmItem({ type: 'ikm', id: item.id, title: `IKM: ${item.namaWajibPajak}` })}
+                              className="p-1.5 rounded-lg bg-rose-600/30 hover:bg-rose-600 text-rose-200 hover:text-white border border-rose-500/30 text-xs transition-all cursor-pointer"
+                              title="Hapus Data IKM"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -729,6 +885,8 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
           libraryList={libraryList}
           onSaveEntry={onSaveLibraryEntry}
           onDeleteEntry={onDeleteLibraryEntry}
+          onUpdateStatus={onUpdateLibraryStatus}
+          onOpenLogin={onOpenLogin}
         />
       )}
 
@@ -948,6 +1106,202 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
             >
               Tutup
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Edit Status Verifikasi PBB (Khusus Admin) */}
+      {selectedPbbEdit && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 text-white shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-sm font-bold text-white">Verifikasi Pembayaran PBB-P2</h3>
+              </div>
+              <button
+                onClick={() => setSelectedPbbEdit(null)}
+                className="text-slate-400 hover:text-white font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700 text-xs space-y-1">
+              <p><span className="text-slate-400">ID Setor:</span> <strong className="text-emerald-300 font-mono">{selectedPbbEdit.id}</strong></p>
+              <p><span className="text-slate-400">Wajib Pajak:</span> <strong className="text-white">{selectedPbbEdit.namaWajibPajak}</strong></p>
+              <p><span className="text-slate-400">Nominal:</span> <strong className="text-emerald-400">{formatRupiah(selectedPbbEdit.nominalBayar || 0)}</strong></p>
+              <p><span className="text-slate-400">NOP:</span> <strong className="text-slate-200 font-mono">{selectedPbbEdit.nop || 'Pendaftaran Objek Baru'}</strong></p>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">
+                  Ubah Status Verifikasi Admin
+                </label>
+                <select
+                  value={editPbbStatus}
+                  onChange={(e) => setEditPbbStatus(e.target.value as any)}
+                  className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-emerald-500 cursor-pointer"
+                >
+                  <option value="Lunas & Sah">Lunas &amp; Sah</option>
+                  <option value="Menunggu Verifikasi">Menunggu Verifikasi</option>
+                  <option value="Data Tidak Sesuai">Data Tidak Sesuai</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">
+                  Catatan Verifikasi / Keterangan
+                </label>
+                <textarea
+                  rows={2}
+                  value={editPbbCatatan}
+                  onChange={(e) => setEditPbbCatatan(e.target.value)}
+                  placeholder="Tambahkan catatan audit atau bukti rekonsiliasi kas daerah..."
+                  className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-emerald-500 placeholder:text-slate-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setSelectedPbbEdit(null)}
+                className="px-3.5 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleSavePbbStatus}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow"
+              >
+                Simpan Verifikasi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Detail Survei IKM */}
+      {selectedIkmDetail && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 text-white shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Star className="w-5 h-5 text-amber-400" />
+                <h3 className="text-sm font-bold text-white">Detail Evaluasi &amp; Mutu IKM</h3>
+              </div>
+              <button
+                onClick={() => setSelectedIkmDetail(null)}
+                className="text-slate-400 hover:text-white font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-2 bg-slate-800/60 p-3 rounded-xl border border-slate-700">
+                <div>
+                  <span className="text-slate-400 block">Responden:</span>
+                  <span className="font-bold text-white">{selectedIkmDetail.namaWajibPajak}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block">Bidang Usaha:</span>
+                  <span className="font-semibold text-slate-200">{selectedIkmDetail.bidangUsaha || '-'}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-slate-400 block">Alamat / Lokasi:</span>
+                  <span className="text-slate-300">{selectedIkmDetail.alamat}</span>
+                </div>
+              </div>
+
+              <div>
+                <p className="font-bold text-slate-300 mb-2">Penilaian 5 Unsur Pelayanan (Skala 1 - 5):</p>
+                <div className="grid grid-cols-5 gap-2 text-center">
+                  <div className="bg-slate-800 p-2 rounded-lg border border-slate-700">
+                    <p className="text-[10px] text-slate-400">Prosedur</p>
+                    <p className="text-base font-bold text-amber-300">{selectedIkmDetail.skorKemudahan}</p>
+                  </div>
+                  <div className="bg-slate-800 p-2 rounded-lg border border-slate-700">
+                    <p className="text-[10px] text-slate-400">Kecepatan</p>
+                    <p className="text-base font-bold text-amber-300">{selectedIkmDetail.skorKecepatan}</p>
+                  </div>
+                  <div className="bg-slate-800 p-2 rounded-lg border border-slate-700">
+                    <p className="text-[10px] text-slate-400">Kesopanan</p>
+                    <p className="text-base font-bold text-amber-300">{selectedIkmDetail.skorKesopanan}</p>
+                  </div>
+                  <div className="bg-slate-800 p-2 rounded-lg border border-slate-700">
+                    <p className="text-[10px] text-slate-400">Transparansi</p>
+                    <p className="text-base font-bold text-amber-300">{selectedIkmDetail.skorTransparansi}</p>
+                  </div>
+                  <div className="bg-slate-800 p-2 rounded-lg border border-slate-700">
+                    <p className="text-[10px] text-slate-400">Fasilitas</p>
+                    <p className="text-base font-bold text-amber-300">{selectedIkmDetail.skorSarana}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-slate-400">Mutu Pelayanan:</span>
+                  <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-950 text-amber-300 border border-amber-500/30">
+                    {selectedIkmDetail.kategoriMutu} (Nilai: {selectedIkmDetail.nilaiKonversi})
+                  </span>
+                </div>
+                <p className="text-slate-300 italic mt-2">
+                  &quot;{selectedIkmDetail.saranMasukan}&quot;
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setSelectedIkmDetail(null)}
+              className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition-all"
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Hapus Data (Khusus Admin) */}
+      {deleteConfirmItem && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-rose-500/40 rounded-2xl max-w-md w-full p-6 text-white shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-rose-400">
+              <div className="w-10 h-10 rounded-xl bg-rose-600/20 border border-rose-500/30 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-rose-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">Konfirmasi Hapus Data (Aksi Admin)</h3>
+                <p className="text-[11px] text-slate-400">Tindakan ini permanen dan akan disinkronkan ke sistem</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-rose-950/30 border border-rose-500/30 text-xs text-rose-200">
+              <p>Apakah Anda yakin ingin menghapus data berikut dari sistem?</p>
+              <p className="mt-1 font-bold text-white font-mono">{deleteConfirmItem.title}</p>
+              <p className="text-[10px] text-slate-400 mt-1">ID: {deleteConfirmItem.id} • Kategori: {deleteConfirmItem.type.toUpperCase()}</p>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmItem(null)}
+                className="px-3.5 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow"
+              >
+                Ya, Hapus Data Ini
+              </button>
+            </div>
           </div>
         </div>
       )}

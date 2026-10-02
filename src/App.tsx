@@ -17,7 +17,8 @@ import {
   db,
   syncLibraryEntryToFirestore,
   deleteLibraryEntryFromFirestore,
-  fetchLibraryEntriesFromFirestore
+  fetchLibraryEntriesFromFirestore,
+  deleteEntryFromFirestore
 } from './services/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { PotensiPajakEntry, PbbP2Entry, IkmEntry, AppUser, GoogleSheetsConfig, LibraryBerkasEntry } from './types';
@@ -137,6 +138,28 @@ export default function App() {
     showToast(`Status verifikasi PBB ${id} diperbarui.`);
   };
 
+  // Admin Delete Handlers
+  const handleDeletePotensi = async (id: string) => {
+    StorageService.deletePotensiEntry(id);
+    setPotensiList(StorageService.getPotensiList());
+    await deleteEntryFromFirestore('potensi_pajak', id);
+    showToast(`Data potensi ${id} berhasil dihapus dari sistem.`);
+  };
+
+  const handleDeletePbb = async (id: string) => {
+    StorageService.deletePbbEntry(id);
+    setPbbList(StorageService.getPbbList());
+    await deleteEntryFromFirestore('pbb_p2', id);
+    showToast(`Data pembayaran PBB ${id} berhasil dihapus.`);
+  };
+
+  const handleDeleteIkm = async (id: string) => {
+    StorageService.deleteIkmEntry(id);
+    setIkmList(StorageService.getIkmList());
+    await deleteEntryFromFirestore('survei_ikm', id);
+    showToast(`Data evaluasi IKM ${id} berhasil dihapus.`);
+  };
+
   // User Auth Handlers
   const handleLoginSuccess = (user: AppUser) => {
     StorageService.setCurrentUser(user);
@@ -170,6 +193,20 @@ export default function App() {
     setLibraryList(StorageService.getLibraryList());
     await deleteLibraryEntryFromFirestore(id);
     showToast('Berkas berhasil dihapus dari sistem.');
+  };
+
+  const handleUpdateLibraryStatus = async (
+    id: string,
+    statusVerifikasi: LibraryBerkasEntry['statusVerifikasi'],
+    catatan?: string,
+    verifiedBy?: string
+  ) => {
+    const updated = StorageService.updateLibraryStatus(id, statusVerifikasi, catatan, verifiedBy);
+    if (updated) {
+      setLibraryList(StorageService.getLibraryList());
+      await syncLibraryEntryToFirestore(updated);
+      showToast(`Status verifikasi berkas "${updated.title}" diperbarui: ${statusVerifikasi}`);
+    }
   };
 
   // Stats calculation for Landing Hero
@@ -260,11 +297,16 @@ export default function App() {
             currentUser={currentUser}
             onSaveLibraryEntry={handleSaveLibraryEntry}
             onDeleteLibraryEntry={handleDeleteLibraryEntry}
+            onUpdateLibraryStatus={handleUpdateLibraryStatus}
             onUpdatePotensiStatus={handleUpdatePotensiStatus}
             onUpdatePbbStatus={handleUpdatePbbStatus}
+            onDeletePotensi={handleDeletePotensi}
+            onDeletePbb={handleDeletePbb}
+            onDeleteIkm={handleDeleteIkm}
             sheetsConfig={sheetsConfig}
             onSaveSheetsConfig={handleSaveSheetsConfig}
             onOpenLibrary={() => setActiveTab('library')}
+            onOpenLogin={() => setIsLoginModalOpen(true)}
           />
         )}
 

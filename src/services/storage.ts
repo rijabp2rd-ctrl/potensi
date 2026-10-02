@@ -362,6 +362,10 @@ const SEED_LIBRARY: LibraryBerkasEntry[] = [
     previewUrl: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=600&q=80',
     isPublic: true,
     tags: ['Perda', 'HKPD', 'Tarif Pajak', 'Regulasi'],
+    statusVerifikasi: 'Terverifikasi & Sah',
+    catatanVerifikasi: 'Perda resmi telah diundangkan dalam Lembaran Daerah Tahun 2026.',
+    verifiedBy: 'Rija (Administrator BP2RD)',
+    verifiedAt: '2026-01-16T10:00:00Z',
     createdAt: '2026-01-15T08:00:00Z',
   },
   {
@@ -379,6 +383,10 @@ const SEED_LIBRARY: LibraryBerkasEntry[] = [
     previewUrl: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=600&q=80',
     isPublic: true,
     tags: ['Juknis', 'SOP', 'Pendataan', 'GPS'],
+    statusVerifikasi: 'Terverifikasi & Sah',
+    catatanVerifikasi: 'SOP disahkan Kepala Badan untuk pedoman tim survey lapangan.',
+    verifiedBy: 'Rija (Administrator BP2RD)',
+    verifiedAt: '2026-03-02T09:30:00Z',
     createdAt: '2026-03-01T09:00:00Z',
   },
   {
@@ -396,6 +404,10 @@ const SEED_LIBRARY: LibraryBerkasEntry[] = [
     previewUrl: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=600&q=80',
     isPublic: true,
     tags: ['PBB-P2', 'ZNT', 'NJOP', 'Peta Geospasial'],
+    statusVerifikasi: 'Terverifikasi & Sah',
+    catatanVerifikasi: 'Peta digital telah sinkron dengan data spasial BPN & Pemkot.',
+    verifiedBy: 'Rija (Administrator BP2RD)',
+    verifiedAt: '2026-02-11T11:15:00Z',
     createdAt: '2026-02-10T10:00:00Z',
   },
   {
@@ -413,6 +425,10 @@ const SEED_LIBRARY: LibraryBerkasEntry[] = [
     previewUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=600&q=80',
     isPublic: true,
     tags: ['Blanko', 'SPOP', 'LSPOP', 'PBB'],
+    statusVerifikasi: 'Terverifikasi & Sah',
+    catatanVerifikasi: 'Blangko standar nasional sesuai format Dirjen Pajak & Kemendagri.',
+    verifiedBy: 'Rija (Administrator BP2RD)',
+    verifiedAt: '2026-02-16T08:00:00Z',
     createdAt: '2026-02-15T11:00:00Z',
   },
   {
@@ -430,6 +446,10 @@ const SEED_LIBRARY: LibraryBerkasEntry[] = [
     previewUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=600&q=80',
     isPublic: true,
     tags: ['DPA', 'ARKAS', 'Anggaran', 'Verifikasi'],
+    statusVerifikasi: 'Terverifikasi & Sah',
+    catatanVerifikasi: 'Panduan diverifikasi untuk kesesuaian belanja modal BOS & DPA OPD.',
+    verifiedBy: 'Rija (Administrator BP2RD)',
+    verifiedAt: '2026-01-21T09:00:00Z',
     createdAt: '2026-01-20T08:30:00Z',
   },
 ];
@@ -488,6 +508,13 @@ export const StorageService = {
     return list[idx];
   },
 
+  deletePotensiEntry(id: string): boolean {
+    const list = this.getPotensiList();
+    const filtered = list.filter((item) => item.id !== id);
+    localStorage.setItem(STORAGE_KEYS.POTENSI, JSON.stringify(filtered));
+    return true;
+  },
+
   // PBB-P2 Data
   getPbbList(): PbbP2Entry[] {
     const raw = localStorage.getItem(STORAGE_KEYS.PBB);
@@ -527,6 +554,13 @@ export const StorageService = {
     return list[idx];
   },
 
+  deletePbbEntry(id: string): boolean {
+    const list = this.getPbbList();
+    const filtered = list.filter((item) => item.id !== id);
+    localStorage.setItem(STORAGE_KEYS.PBB, JSON.stringify(filtered));
+    return true;
+  },
+
   // IKM Data
   getIkmList(): IkmEntry[] {
     const raw = localStorage.getItem(STORAGE_KEYS.IKM);
@@ -547,6 +581,13 @@ export const StorageService = {
     localStorage.setItem(STORAGE_KEYS.IKM, JSON.stringify(updated));
     this.syncToGoogleSheets('ikm', entry);
     return entry;
+  },
+
+  deleteIkmEntry(id: string): boolean {
+    const list = this.getIkmList();
+    const filtered = list.filter((item) => item.id !== id);
+    localStorage.setItem(STORAGE_KEYS.IKM, JSON.stringify(filtered));
+    return true;
   },
 
   // Library Berkas & Dokumen
@@ -589,6 +630,26 @@ export const StorageService = {
     const filtered = list.filter((item) => item.id !== id);
     localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(filtered));
     return true;
+  },
+
+  updateLibraryStatus(
+    id: string,
+    statusVerifikasi: LibraryBerkasEntry['statusVerifikasi'],
+    catatanVerifikasi?: string,
+    verifiedBy?: string
+  ): LibraryBerkasEntry | null {
+    const list = this.getLibraryList();
+    const idx = list.findIndex((item) => item.id === id);
+    if (idx === -1) return null;
+    list[idx] = {
+      ...list[idx],
+      statusVerifikasi,
+      ...(catatanVerifikasi !== undefined ? { catatanVerifikasi } : {}),
+      ...(verifiedBy !== undefined ? { verifiedBy } : {}),
+      verifiedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(list));
+    return list[idx];
   },
 
   // Google Sheets Config

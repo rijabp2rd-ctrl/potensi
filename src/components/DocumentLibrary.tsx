@@ -48,6 +48,8 @@ interface LibraryItem {
   description: string;
   isCustom?: boolean;
   isPublic?: boolean;
+  statusVerifikasi?: string;
+  catatanVerifikasi?: string;
 }
 
 export const DocumentLibrary: React.FC<DocumentLibraryProps> = ({
@@ -59,6 +61,7 @@ export const DocumentLibrary: React.FC<DocumentLibraryProps> = ({
   onOpenInputLibrary,
   onDeleteEntry,
 }) => {
+  const isAdmin = currentUser?.role === 'admin';
   const [activeCategory, setActiveCategory] = useState<'all' | 'dpa' | 'objek' | 'pbb' | 'regulasi' | 'sop' | 'blanko'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState<LibraryItem | null>(null);
@@ -129,6 +132,8 @@ export const DocumentLibrary: React.FC<DocumentLibraryProps> = ({
     description: entry.description,
     isCustom: true,
     isPublic: entry.isPublic,
+    statusVerifikasi: entry.statusVerifikasi || 'Terverifikasi & Sah',
+    catatanVerifikasi: entry.catatanVerifikasi,
   }));
 
   // 3. Dynamic Potensi Entries
@@ -230,7 +235,7 @@ export const DocumentLibrary: React.FC<DocumentLibraryProps> = ({
 
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             {/* Admin Input Library Action Button */}
-            {onOpenInputLibrary && (
+            {isAdmin && onOpenInputLibrary && (
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -347,10 +352,21 @@ export const DocumentLibrary: React.FC<DocumentLibraryProps> = ({
                 )}
               </div>
 
-              <div className="absolute top-3 right-3">
+              <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border backdrop-blur-md ${item.statusColor}`}>
                   {item.status}
                 </span>
+                {item.statusVerifikasi && (
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border backdrop-blur-md ${
+                    item.statusVerifikasi === 'Terverifikasi & Sah'
+                      ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/50'
+                      : item.statusVerifikasi === 'Menunggu Verifikasi'
+                      ? 'bg-amber-950/90 text-amber-300 border-amber-500/50'
+                      : 'bg-rose-950/90 text-rose-300 border-rose-500/50'
+                  }`}>
+                    {item.statusVerifikasi}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -391,7 +407,7 @@ export const DocumentLibrary: React.FC<DocumentLibraryProps> = ({
                   </a>
                 )}
 
-                {item.isCustom && onDeleteEntry && (
+                {isAdmin && item.isCustom && onDeleteEntry && (
                   <button
                     onClick={() => {
                       if (confirm(`Hapus berkas "${item.title}"?`)) {
@@ -399,7 +415,7 @@ export const DocumentLibrary: React.FC<DocumentLibraryProps> = ({
                       }
                     }}
                     className="p-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 border border-rose-500/30 transition-all cursor-pointer"
-                    title="Hapus Berkas"
+                    title="Hapus Berkas (Admin)"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -476,12 +492,30 @@ export const DocumentLibrary: React.FC<DocumentLibraryProps> = ({
               <div className="text-xs space-y-1.5 text-slate-300">
                 <p><strong>Deskripsi:</strong> {selectedItem.description}</p>
                 <p><strong>Sumber/Pemilik:</strong> {selectedItem.authorOrWp}</p>
-                <p><strong>Status:</strong> {selectedItem.status}</p>
+                <p><strong>Status Legalitas:</strong> {selectedItem.status}</p>
+                <p><strong>Status Verifikasi:</strong> <span className="text-emerald-400 font-semibold">{selectedItem.statusVerifikasi || 'Terverifikasi & Sah'}</span></p>
+                {selectedItem.catatanVerifikasi && (
+                  <p><strong>Catatan Verifikasi Admin:</strong> <span className="text-amber-300 italic">"{selectedItem.catatanVerifikasi}"</span></p>
+                )}
                 <p><strong>Ukuran Berkas:</strong> {selectedItem.sizeStr}</p>
                 <p><strong>Tanggal:</strong> {selectedItem.date}</p>
               </div>
 
               <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-800">
+                {isAdmin && selectedItem.isCustom && onDeleteEntry && (
+                  <button
+                    onClick={() => {
+                      if (confirm(`Hapus berkas "${selectedItem.title}" secara permanen?`)) {
+                        onDeleteEntry(selectedItem.id);
+                        setSelectedItem(null);
+                      }
+                    }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-600/30 hover:bg-rose-600 text-rose-200 hover:text-white border border-rose-500/30 text-xs font-bold mr-auto transition-all cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Hapus Berkas (Admin)</span>
+                  </button>
+                )}
                 {selectedItem.driveUrl && (
                   <a
                     href={selectedItem.driveUrl}

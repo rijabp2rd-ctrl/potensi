@@ -327,6 +327,17 @@ export async function fetchEntriesFromFirestore(collectionName: 'potensi_pajak' 
   }
 }
 
+export async function deleteEntryFromFirestore(collectionName: 'potensi_pajak' | 'pbb_p2' | 'survei_ikm', id: string): Promise<boolean> {
+  try {
+    const docRef = doc(db, collectionName, id);
+    await deleteDoc(docRef);
+    return true;
+  } catch (error) {
+    console.warn(`Firestore delete note for ${collectionName}:`, error);
+    return false;
+  }
+}
+
 // Library Berkas Firestore Functions
 export async function syncLibraryEntryToFirestore(entry: LibraryBerkasEntry): Promise<boolean> {
   try {
@@ -350,6 +361,10 @@ export async function syncLibraryEntryToFirestore(entry: LibraryBerkasEntry): Pr
       previewUrl: entry.previewUrl || '',
       driveUrl: entry.driveUrl || '',
       uploadedBy: entry.uploadedBy || 'Admin BP2RD',
+      statusVerifikasi: entry.statusVerifikasi || 'Menunggu Verifikasi',
+      catatanVerifikasi: entry.catatanVerifikasi || '',
+      verifiedBy: entry.verifiedBy || '',
+      verifiedAt: entry.verifiedAt || '',
       createdAt: entry.createdAt || new Date().toISOString(),
       tags: entry.tags || [],
       isPublic: entry.isPublic ?? true,

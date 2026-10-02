@@ -36,6 +36,10 @@
         "previewUrl": { "type": "string", "maxLength": 1024 },
         "fileData": { "type": "string" },
         "uploadedBy": { "type": "string", "maxLength": 128 },
+        "statusVerifikasi": { "type": "string", "enum": ["Menunggu Verifikasi", "Terverifikasi & Sah", "Perlu Perbaikan", "Ditolak"] },
+        "catatanVerifikasi": { "type": "string", "maxLength": 1024 },
+        "verifiedBy": { "type": "string", "maxLength": 128 },
+        "verifiedAt": { "type": "string", "maxLength": 64 },
         "createdAt": { "type": "string", "maxLength": 64 }
       },
       "required": ["id", "title", "category", "authorOrWp"]

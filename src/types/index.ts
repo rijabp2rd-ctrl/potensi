@@ -115,6 +115,10 @@ export interface LibraryBerkasEntry {
   driveUrl?: string;
   isPublic: boolean;
   tags?: string[];
+  statusVerifikasi: 'Menunggu Verifikasi' | 'Terverifikasi & Sah' | 'Perlu Perbaikan' | 'Ditolak';
+  catatanVerifikasi?: string;
+  verifiedBy?: string;
+  verifiedAt?: string;
   createdAt: string;
 }
 
