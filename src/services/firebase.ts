@@ -27,16 +27,14 @@ import { AppUser, LibraryBerkasEntry } from '../types';
 const app = initializeApp(firebaseConfig);
 
 // CRITICAL: Initialize Firestore with database ID specified in config
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+const firestoreDbId = (firebaseConfig as any).firestoreDatabaseId || 'ai-studio-sipotensibp2rdpo-624d743a-87c8-41e3-bc96-f4238c410308';
+export const db = getFirestore(app, firestoreDbId);
 export const auth = getAuth(app);
 
 // Configure Google Auth Provider with Google Drive & Sheets scopes
 const provider = new GoogleAuthProvider();
-provider.addScope('https://www.googleapis.com/auth/drive');
-provider.addScope('https://www.googleapis.com/auth/drive.file');
-provider.addScope('https://www.googleapis.com/auth/drive.readonly');
 provider.addScope('https://www.googleapis.com/auth/spreadsheets');
-provider.addScope('https://www.googleapis.com/auth/spreadsheets.readonly');
+provider.addScope('https://www.googleapis.com/auth/drive.file');
 
 // In-memory token cache (NEVER in localStorage)
 let cachedAccessToken: string | null = null;

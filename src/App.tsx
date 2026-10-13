@@ -9,7 +9,9 @@ import { RetribusiDaerahForm } from './components/RetribusiDaerahForm';
 import { PetaGeospasialHsu } from './components/PetaGeospasialHsu';
 import { AdminInputLibraryBerkas } from './components/AdminInputLibraryBerkas';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard';
+import { IndeksKepuasanMasyarakat } from './components/IndeksKepuasanMasyarakat';
 import { LoginModal } from './components/LoginModal';
+import { GoogleSpreadsheetSyncModal } from './components/GoogleSpreadsheetSyncModal';
 import { 
   PotensiPajakEntry, 
   PbbP2Entry, 
@@ -17,7 +19,8 @@ import {
   LibraryBerkasEntry, 
   AppUser, 
   LibraryCategory,
-  VerificationStatus 
+  VerificationStatus,
+  IkmSurveyEntry
 } from './types';
 import { 
   loadPotensiList, 
@@ -30,8 +33,14 @@ import {
   saveLibraryList, 
   loadCurrentUser, 
   saveCurrentUser,
+  loadSpreadsheetConfig,
+  saveSpreadsheetConfig,
+  loadIkmList,
+  saveIkmList,
+  ConnectedSpreadsheetConfig,
   DEFAULT_USERS
 } from './services/storage';
+import { GoogleWorkspaceService } from './services/googleWorkspace';
 import { 
   testFirestoreConnection, 
   logoutGoogle, 
@@ -47,9 +56,12 @@ export function App() {
   const [pbbList, setPbbList] = useState<PbbP2Entry[]>([]);
   const [retribusiList, setRetribusiList] = useState<RetribusiDaerahEntry[]>([]);
   const [libraryList, setLibraryList] = useState<LibraryBerkasEntry[]>([]);
+  const [ikmList, setIkmList] = useState<IkmSurveyEntry[]>([]);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
 
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isSpreadsheetModalOpen, setIsSpreadsheetModalOpen] = useState(false);
+  const [spreadsheetConfig, setSpreadsheetConfig] = useState<ConnectedSpreadsheetConfig | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [libraryCategoryFilter, setLibraryCategoryFilter] = useState<'all' | LibraryCategory>('all');
 
@@ -59,6 +71,8 @@ export function App() {
     setPbbList(loadPbbList());
     setRetribusiList(loadRetribusiList());
     setLibraryList(loadLibraryList());
+    setIkmList(loadIkmList());
+    setSpreadsheetConfig(loadSpreadsheetConfig());
     
     // Default logged in as admin for ease of testing government features
     const user = loadCurrentUser() || DEFAULT_USERS[0];
@@ -246,11 +260,32 @@ export function App() {
     showToast(`Status retribusi berhasil diubah menjadi: "${newStatus}"`);
   };
 
+  const triggerAutoSync = (pList = potensiList, rList = retribusiList, pbList = pbbList) => {
+    const cfg = loadSpreadsheetConfig();
+    if (cfg?.spreadsheetId && cfg.autoSync) {
+      GoogleWorkspaceService.syncAllToConnectedSheet(cfg.spreadsheetId, {
+        potensi: pList,
+        retribusi: rList,
+        pbb: pbList,
+      }).then(res => {
+        saveSpreadsheetConfig({
+          ...cfg,
+          lastSyncedAt: res.timestamp,
+          syncedCounts: res.syncedCounts,
+        });
+        setSpreadsheetConfig(loadSpreadsheetConfig());
+      }).catch(err => {
+        console.warn('Auto-sync to Google Spreadsheet notice:', err);
+      });
+    }
+  };
+
   const handleSavePotensi = (newEntry: PotensiPajakEntry) => {
     const updated = [newEntry, ...potensiList];
     setPotensiList(updated);
     savePotensiList(updated);
     syncEntryToFirestore('potensi_pajak', newEntry);
+    triggerAutoSync(updated, retribusiList, pbbList);
 
     // Otomatis sinkronkan file DPA/ARKAS dan Foto Objek PJRD ke Library Berkas (Kategori Internal)
     const newLibraryEntries: LibraryBerkasEntry[] = [];
@@ -364,6 +399,7 @@ export function App() {
       saveLibraryList(updatedLib);
     }
 
+    triggerAutoSync(potensiList, retribusiList, updated);
     showToast(`Data SPPT NOP ${newEntry.nop} berhasil disimpan & disinkronkan ke Firebase!`);
     setActiveTab('laporan');
   };
@@ -373,6 +409,7 @@ export function App() {
     setRetribusiList(updated);
     saveRetribusiList(updated);
     syncEntryToFirestore('retribusi_daerah', newEntry);
+    triggerAutoSync(potensiList, updated, pbbList);
 
     // Jika ada foto objek retribusi, sinkronkan juga ke Library Berkas (Kategori Internal)
     if (newEntry.fotoObjekRetribusiName && newEntry.fotoObjekRetribusiUrl) {
@@ -419,6 +456,19 @@ export function App() {
     showToast('Berkas berhasil dihapus');
   };
 
+  const handleSaveIkmSurvey = (newEntry: IkmSurveyEntry) => {
+    const updated = [newEntry, ...ikmList];
+    setIkmList(updated);
+    saveIkmList(updated);
+    // Sync to Firestore under collection 'survei_ikm'
+    try {
+      syncEntryToFirestore('survei_ikm', newEntry);
+    } catch (e) {
+      console.warn('Sync IKM to Firestore note:', e);
+    }
+    showToast(`Survei IKM dari ${newEntry.nama} berhasil disimpan (Skor: ${newEntry.totalNilai}/100)!`);
+  };
+
   const handleOpenLibraryWithCategory = (cat: 'all' | LibraryCategory) => {
     setLibraryCategoryFilter(cat);
     setActiveTab('library');
@@ -449,6 +499,9 @@ export function App() {
         potensiCount={potensiList.length}
         pbbCount={pbbList.length}
         retribusiCount={retribusiList.length}
+        ikmCount={ikmList.length}
+        onOpenSpreadsheetModal={() => setIsSpreadsheetModalOpen(true)}
+        isSpreadsheetConnected={!!spreadsheetConfig?.spreadsheetId}
       />
 
       {/* Toast Notification */}
@@ -483,6 +536,7 @@ export function App() {
           <PetaGeospasialHsu
             potensiList={potensiList}
             pbbList={pbbList}
+            retribusiList={retribusiList}
             currentUser={currentUser}
             onNavigateToForm={(type) => setActiveTab(type)}
           />
@@ -540,6 +594,15 @@ export function App() {
           />
         )}
 
+        {/* Tab Indeks Kepuasan Masyarakat (IKM) */}
+        {activeTab === 'ikm' && (
+          <IndeksKepuasanMasyarakat
+            ikmList={ikmList}
+            onSaveSurvey={handleSaveIkmSurvey}
+            currentUser={currentUser}
+          />
+        )}
+
         {/* Tab Manajemen Laporan (Hanya tampil & dapat diakses pada login admin dan user) */}
         {activeTab === 'laporan' && (
           isInternalUser ? (
@@ -554,6 +617,7 @@ export function App() {
               onDeletePotensi={handleDeletePotensi}
               onDeletePbb={handleDeletePbb}
               onDeleteRetribusi={handleDeleteRetribusi}
+              onOpenSpreadsheetModal={() => setIsSpreadsheetModalOpen(true)}
             />
           ) : (
             <div className="max-w-xl mx-auto my-20 p-8 bg-slate-900 border border-amber-500/40 rounded-3xl text-center shadow-2xl">
@@ -649,6 +713,23 @@ export function App() {
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
         onLogin={handleLogin}
+      />
+
+      {/* Google Spreadsheet Database Sync Modal */}
+      <GoogleSpreadsheetSyncModal
+        isOpen={isSpreadsheetModalOpen}
+        onClose={() => {
+          setIsSpreadsheetModalOpen(false);
+          setSpreadsheetConfig(loadSpreadsheetConfig());
+        }}
+        currentUser={currentUser}
+        potensiList={potensiList}
+        retribusiList={retribusiList}
+        pbbList={pbbList}
+        onSyncSuccess={(msg) => {
+          showToast(msg);
+          setSpreadsheetConfig(loadSpreadsheetConfig());
+        }}
       />
 
     </div>

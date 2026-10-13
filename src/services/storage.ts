@@ -153,6 +153,12 @@ export const INITIAL_POTENSI_DATA: PotensiPajakEntry[] = [
     catatanVerifikasi: 'Ketetapan potensi jasa perhotelan telah disetujui sesuai tarif perda.',
     petugasPendata: 'Rija, S.STP, M.IP',
     catatanPetugas: 'Memiliki 32 kamar aktif, tingkat okupansi rata-rata 68% per bulan.',
+    fotoObjekUrl: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80',
+    fotoObjekName: 'Foto_Fisik_Hotel_Bersaudara_Amuntai.jpg',
+    fotoObjekSize: '2.4 MB',
+    dpaFileUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80',
+    dpaFileName: 'DPA_Kertas_Kerja_Hotel_Bersaudara_2026.pdf',
+    dpaFileSize: '1.2 MB',
     createdAt: '2026-03-28T11:40:00Z',
     updatedAt: '2026-03-29T09:00:00Z',
   },
@@ -182,6 +188,11 @@ export const INITIAL_PBB_DATA: PbbP2Entry[] = [
     tanggalBayar: '2026-03-10',
     bankTempatBayar: 'Bank Kalsel Cabang Amuntai',
     nomorStruk: 'STRUK-BKS/HSU/2026/03/4982',
+    strukBayarUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80',
+    strukBayarName: 'Struk_Bayar_Lunas_Bank_Kalsel_4982.pdf',
+    fotoObjekPbbUrl: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=800&q=80',
+    fotoObjekPbbName: 'Foto_Persil_Rumah_Empu_Jatmika.jpg',
+    fotoObjekPbbSize: '1.8 MB',
     latitude: -2.425120,
     longitude: 115.246890,
     akurasiGps: 5,
@@ -623,6 +634,9 @@ export const INITIAL_RETRIBUSI_DATA: RetribusiDaerahEntry[] = [
     akurasiGps: 5,
     statusVerifikasi: 'Setuju',
     petugasPendata: 'Rija, S.STP, M.IP',
+    fotoObjekRetribusiUrl: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=800&q=80',
+    fotoObjekRetribusiName: 'Foto_Fisik_Kios_Pasar_Induk_Amuntai.jpg',
+    fotoObjekRetribusiSize: '2.1 MB',
     verifiedBy: 'Rija, S.STP, M.IP (BP2RD HSU)',
     verifiedAt: '2026-04-03T09:00:00Z',
     catatanVerifikasi: 'Potensi retribusi pelayanan pasar telah diverifikasi sesuai Perda HSU No. 1/2024.',
@@ -706,6 +720,118 @@ export const INITIAL_RETRIBUSI_DATA: RetribusiDaerahEntry[] = [
     petugasPendata: 'Ahmad Faisal, S.AP',
     createdAt: '2026-04-10T09:30:00Z',
     updatedAt: '2026-04-10T09:30:00Z',
+  },
+  {
+    id: 'ret-005',
+    nomorRegister: 'REG-RET/2026/04/005',
+    tanggalPendataan: '2026-04-11',
+    golonganRetribusi: 'Retribusi Jasa Usaha',
+    subRekening: 'Retribusi Pelayanan Kepelabuhanan / Dermaga Sungai HSU',
+    subObjekRetribusi: 'Dermaga Sungai Danau Panggang',
+    keterangan: 'Retribusi tambat kapal motor, jukung dagang, dan speedboat jalur sungai Danau Panggang - Paminggir.',
+    namaPengelola: 'UPTD Perhubungan Sungai Dishub HSU & Pengelola Dermaga',
+    tarifSatuan: 20000,
+    jumlahSatuan: 25,
+    satuanTarif: 'Per Kapal/Hari',
+    potensiPerbulan: 15000000,
+    potensiPertahun: 180000000,
+    kecamatan: 'Kecamatan Danau Panggang',
+    kelurahanDesa: 'Danau Panggang',
+    alamatLengkap: 'Dermaga Utama Jalur Rawa Danau Panggang, HSU',
+    latitude: -2.535200,
+    longitude: 115.092400,
+    akurasiGps: 5,
+    fotoObjekRetribusiUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=800&q=80',
+    fotoObjekRetribusiName: 'Foto_Fisik_Dermaga_Danau_Panggang.jpg',
+    fotoObjekRetribusiSize: '2.4 MB',
+    statusVerifikasi: 'Setuju',
+    petugasPendata: 'Rija, S.STP, M.IP',
+    verifiedBy: 'Rija, S.STP, M.IP (BP2RD HSU)',
+    verifiedAt: '2026-04-11T14:00:00Z',
+    catatanVerifikasi: 'Potensi retribusi tambat dermaga perairan Danau Panggang telah tervalidasi.',
+    createdAt: '2026-04-11T10:00:00Z',
+    updatedAt: '2026-04-11T14:00:00Z',
+  },
+  {
+    id: 'ret-006',
+    nomorRegister: 'REG-RET/2026/04/006',
+    tanggalPendataan: '2026-04-12',
+    golonganRetribusi: 'Retribusi Jasa Umum',
+    subRekening: 'Retribusi Pelayanan Pasar',
+    subObjekRetribusi: 'Kios & Los Pasar Babirik',
+    keterangan: 'Perekaman 45 los pedagang ikan, anyaman purun, dan sembako hari pasar Babirik.',
+    namaPengelola: 'Pengelola Pasar Babirik & BP2RD HSU',
+    tarifSatuan: 100000,
+    jumlahSatuan: 45,
+    satuanTarif: 'Per Kios/Bulan',
+    potensiPerbulan: 4500000,
+    potensiPertahun: 54000000,
+    kecamatan: 'Kecamatan Babirik',
+    kelurahanDesa: 'Babirik Hilir',
+    alamatLengkap: 'Kawasan Pasar Babirik, Kec. Babirik, Kab. HSU',
+    latitude: -2.571400,
+    longitude: 115.143200,
+    akurasiGps: 6,
+    statusVerifikasi: 'Verifikasi',
+    petugasPendata: 'Siti Nurhaliza, A.Md',
+    createdAt: '2026-04-12T08:00:00Z',
+    updatedAt: '2026-04-12T08:00:00Z',
+  },
+  {
+    id: 'ret-007',
+    nomorRegister: 'REG-RET/2026/04/007',
+    tanggalPendataan: '2026-04-12',
+    golonganRetribusi: 'Retribusi Jasa Usaha',
+    subRekening: 'Retribusi Pemanfaatan Barang Milik Daerah',
+    subObjekRetribusi: 'Sentra Kuliner Tepian Candi Agung',
+    keterangan: 'Sewa lapak sentra UMKM dan kuliner khas Amuntai itik panggang di area wisata sejarah Candi Agung.',
+    namaPengelola: 'Disporapar HSU & Paguyuban UMKM',
+    tarifSatuan: 250000,
+    jumlahSatuan: 20,
+    satuanTarif: 'Per Lapak/Bulan',
+    potensiPerbulan: 5000000,
+    potensiPertahun: 60000000,
+    kecamatan: 'Kecamatan Amuntai Tengah',
+    kelurahanDesa: 'Sungai Malang',
+    alamatLengkap: 'Kawasan Wisata Sejarah Candi Agung, Sungai Malang, Amuntai',
+    latitude: -2.418900,
+    longitude: 115.239100,
+    akurasiGps: 4,
+    statusVerifikasi: 'Setuju',
+    petugasPendata: 'Rija, S.STP, M.IP',
+    verifiedBy: 'Rija, S.STP, M.IP (BP2RD HSU)',
+    verifiedAt: '2026-04-12T16:00:00Z',
+    catatanVerifikasi: 'Sewa lahan sentra kuliner aktif beroperasi.',
+    createdAt: '2026-04-12T11:00:00Z',
+    updatedAt: '2026-04-12T16:00:00Z',
+  },
+  {
+    id: 'ret-008',
+    nomorRegister: 'REG-RET/2026/04/008',
+    tanggalPendataan: '2026-04-13',
+    golonganRetribusi: 'Retribusi Jasa Usaha',
+    subRekening: 'Retribusi Tempat Khusus Parkir / Terminal',
+    subObjekRetribusi: 'Tempat Parkir Khusus RSUD Pambalah Batung',
+    keterangan: 'Pengelolaan tempat parkir khusus kendaraan roda dua dan roda empat pengunjung RSUD Pambalah Batung Amuntai.',
+    namaPengelola: 'RSUD Pambalah Batung & Dinas Perhubungan HSU',
+    tarifSatuan: 3000,
+    jumlahSatuan: 150,
+    satuanTarif: 'Per Kendaraan/Hari',
+    potensiPerbulan: 13500000,
+    potensiPertahun: 162000000,
+    kecamatan: 'Kecamatan Amuntai Tengah',
+    kelurahanDesa: 'Murung Sari',
+    alamatLengkap: 'Jl. Basuki Rahmat No. 1, Kawasan RSUD Pambalah Batung Amuntai',
+    latitude: -2.427800,
+    longitude: 115.249100,
+    akurasiGps: 5,
+    statusVerifikasi: 'Setuju',
+    petugasPendata: 'Ahmad Faisal, S.AP',
+    verifiedBy: 'Ahmad Faisal, S.AP',
+    verifiedAt: '2026-04-13T10:00:00Z',
+    catatanVerifikasi: 'Pengelolaan parkir khusus RSUD resmi.',
+    createdAt: '2026-04-13T09:00:00Z',
+    updatedAt: '2026-04-13T10:00:00Z',
   }
 ];
 
@@ -716,7 +842,16 @@ export function loadRetribusiList(): RetribusiDaerahEntry[] {
       localStorage.setItem(RETRIBUSI_KEY, JSON.stringify(INITIAL_RETRIBUSI_DATA));
       return INITIAL_RETRIBUSI_DATA;
     }
-    return JSON.parse(raw);
+    const parsed: RetribusiDaerahEntry[] = JSON.parse(raw);
+    // Merge any missing initial items by ID so users get rich geospatial data
+    const existingIds = new Set(parsed.map(item => item.id));
+    const missing = INITIAL_RETRIBUSI_DATA.filter(item => !existingIds.has(item.id));
+    if (missing.length > 0) {
+      const merged = [...parsed, ...missing];
+      localStorage.setItem(RETRIBUSI_KEY, JSON.stringify(merged));
+      return merged;
+    }
+    return parsed;
   } catch (e) {
     console.error('Error loading retribusi list:', e);
     return INITIAL_RETRIBUSI_DATA;
@@ -730,4 +865,149 @@ export function saveRetribusiList(data: RetribusiDaerahEntry[]) {
     console.error('Error saving retribusi list:', e);
   }
 }
+
+export interface ConnectedSpreadsheetConfig {
+  spreadsheetId: string;
+  spreadsheetUrl: string;
+  title: string;
+  lastSyncedAt?: string;
+  autoSync: boolean;
+  syncedCounts?: {
+    potensi: number;
+    retribusi: number;
+    pbb: number;
+  };
+}
+
+export const SPREADSHEET_CONFIG_KEY = 'sipotensi_spreadsheet_config';
+
+export function loadSpreadsheetConfig(): ConnectedSpreadsheetConfig | null {
+  try {
+    const raw = localStorage.getItem(SPREADSHEET_CONFIG_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    console.error('Error loading spreadsheet config:', e);
+    return null;
+  }
+}
+
+export function saveSpreadsheetConfig(config: ConnectedSpreadsheetConfig | null) {
+  try {
+    if (config) {
+      localStorage.setItem(SPREADSHEET_CONFIG_KEY, JSON.stringify(config));
+    } else {
+      localStorage.removeItem(SPREADSHEET_CONFIG_KEY);
+    }
+  } catch (e) {
+    console.error('Error saving spreadsheet config:', e);
+  }
+}
+
+// ==========================================
+// INDEKS KEPUASAN MASYARAKAT (IKM) STORAGE
+// ==========================================
+export const IKM_KEY = 'sipotensi_ikm_surveys';
+
+export const INITIAL_IKM_DATA: import('../types').IkmSurveyEntry[] = [
+  {
+    id: 'ikm-001',
+    nomorResponden: 'IKM/2026/04/001',
+    nama: 'H. Muhammad Arsyad',
+    alamat: 'Jl. Basuki Rahmat No. 12, Kel. Murung Sari, Amuntai Tengah',
+    kegiatan: 'Pelayanan Pendaftaran Objek & Validasi Potensi Pajak Restoran',
+    nomorKontak: '0812-5432-8899',
+    tanggalSurvey: '2026-04-05',
+    pernyataan1: 20, // Sangat Baik
+    pernyataan2: 20, // Sangat Baik
+    pernyataan3: 20, // Sangat Baik
+    pernyataan4: 20, // Sangat Baik
+    pernyataan5: 20, // Sangat Baik
+    saranMasukan: 'Pelayanan aparatur BP2RD sangat ramah dan proses survei lapangan berbasis GPS sangat cepat serta transparan.',
+    totalNilai: 100,
+    predikat: 'Sangat Baik',
+    petugasPencatat: 'Rija, S.STP, M.IP',
+    createdAt: '2026-04-05T09:30:00Z',
+  },
+  {
+    id: 'ikm-002',
+    nomorResponden: 'IKM/2026/04/002',
+    nama: 'Hj. Siti Marhamah',
+    alamat: 'Desa Alabio Pasar RT 02, Kec. Sungai Pandan',
+    kegiatan: 'Konsultasi Ketetapan SPPT PBB-P2 & Pembayaran Online',
+    nomorKontak: '0852-4890-1123',
+    tanggalSurvey: '2026-04-07',
+    pernyataan1: 20, // Sangat Baik
+    pernyataan2: 15, // Baik
+    pernyataan3: 20, // Sangat Baik
+    pernyataan4: 20, // Sangat Baik
+    pernyataan5: 20, // Sangat Baik
+    saranMasukan: 'Penjelasan petugas loket sangat jelas mengenai rincian NJOP dan tata cara pelunasan di Bank Kalsel.',
+    totalNilai: 95,
+    predikat: 'Sangat Baik',
+    petugasPencatat: 'Ahmad Faisal, S.AP',
+    createdAt: '2026-04-07T10:15:00Z',
+  },
+  {
+    id: 'ikm-003',
+    nomorResponden: 'IKM/2026/04/003',
+    nama: 'Gusti Rahmadi, S.E.',
+    alamat: 'Jl. Norman Umar No. 44, Antasari, Amuntai Tengah',
+    kegiatan: 'Perekaman Potensi & Perizinan Retribusi Tempat Usaha / Reklame',
+    nomorKontak: '0813-7721-0044',
+    tanggalSurvey: '2026-04-09',
+    pernyataan1: 15, // Baik
+    pernyataan2: 20, // Sangat Baik
+    pernyataan3: 20, // Sangat Baik
+    pernyataan4: 15, // Baik
+    pernyataan5: 20, // Sangat Baik
+    saranMasukan: 'Aplikasi SIPOTENSI HSU sangat memudahkan pengecekan berkas dan titik lokasi geospasial.',
+    totalNilai: 90,
+    predikat: 'Sangat Baik',
+    petugasPencatat: 'Siti Nurhaliza, A.Md',
+    createdAt: '2026-04-09T11:45:00Z',
+  },
+  {
+    id: 'ikm-004',
+    nomorResponden: 'IKM/2026/04/004',
+    nama: 'Bahruddin Noor',
+    alamat: 'Dermaga Danau Panggang RT 01, Kec. Danau Panggang',
+    kegiatan: 'Pelayanan Retribusi Terminal & Tambat Perahu Wisata Rawa',
+    nomorKontak: '0821-9988-3311',
+    tanggalSurvey: '2026-04-11',
+    pernyataan1: 20, // Sangat Baik
+    pernyataan2: 15, // Baik
+    pernyataan3: 15, // Baik
+    pernyataan4: 15, // Baik
+    pernyataan5: 15, // Baik
+    saranMasukan: 'Petugas lapangan datang tepat waktu saat pendataan perahu dan los dermaga.',
+    totalNilai: 80,
+    predikat: 'Baik',
+    petugasPencatat: 'Rija, S.STP, M.IP',
+    createdAt: '2026-04-11T14:00:00Z',
+  },
+];
+
+export function loadIkmList(): import('../types').IkmSurveyEntry[] {
+  try {
+    const raw = localStorage.getItem(IKM_KEY);
+    if (!raw) {
+      localStorage.setItem(IKM_KEY, JSON.stringify(INITIAL_IKM_DATA));
+      return INITIAL_IKM_DATA;
+    }
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error('Error loading IKM list:', e);
+    return INITIAL_IKM_DATA;
+  }
+}
+
+export function saveIkmList(data: import('../types').IkmSurveyEntry[]) {
+  try {
+    localStorage.setItem(IKM_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error('Error saving IKM list:', e);
+  }
+}
+
+
 

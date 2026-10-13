@@ -31,7 +31,9 @@ import {
   UserCheck,
   Trash2,
   Coins,
-  Camera
+  Camera,
+  Paperclip,
+  FileDown
 } from 'lucide-react';
 import { PotensiPajakEntry, PbbP2Entry, RetribusiDaerahEntry, AppUser, VerificationStatus } from '../types';
 import { KABUPATEN_HSU, KECAMATAN_HSU_OPTIONS } from '../constants/wilayahHsu';
@@ -47,6 +49,7 @@ interface RealtimeReportsManagerProps {
   onDeletePotensi?: (id: string) => void;
   onDeletePbb?: (id: string) => void;
   onDeleteRetribusi?: (id: string) => void;
+  onOpenSpreadsheetModal?: () => void;
 }
 
 export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
@@ -60,6 +63,7 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
   onDeletePotensi,
   onDeletePbb,
   onDeleteRetribusi,
+  onOpenSpreadsheetModal,
 }) => {
   // Main view mode: 'hasil_inputan' (Aksi Lihat Hasil Inputan & Status) or 'rekap_cetak' (Rekapitulasi & Cetak)
   const [activeViewMode, setActiveViewMode] = useState<'hasil_inputan' | 'rekap_cetak'>('hasil_inputan');
@@ -106,10 +110,20 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
   const [verifikasiNoteInput, setVerifikasiNoteInput] = useState('');
 
   // Filters for Rekap Cetak Laporan
-  const [selectedReportType, setSelectedReportType] = useState<'gabungan' | 'potensi' | 'pbb'>('gabungan');
+  const [selectedReportType, setSelectedReportType] = useState<'gabungan' | 'potensi' | 'retribusi' | 'pbb'>('gabungan');
   const [filterKecamatan, setFilterKecamatan] = useState<string>('all');
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [copiedSuccess, setCopiedSuccess] = useState(false);
+
+  // File Preview Modal State (Lihat File Hasil Inputan)
+  const [previewFileModal, setPreviewFileModal] = useState<{
+    title: string;
+    fileName: string;
+    fileUrl: string;
+    fileType: 'image' | 'pdf' | 'doc' | 'other';
+    fileSize?: string;
+    sourceInfo?: string;
+  } | null>(null);
 
   const formatRupiah = (val: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -284,8 +298,13 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
     return filterKecamatan === 'all' || p.kecamatan === filterKecamatan;
   });
 
+  const filteredRetribusi = (retribusiList || []).filter((r) => {
+    return filterKecamatan === 'all' || r.kecamatan === filterKecamatan;
+  });
+
   // Aggregated calculations for Rekap Cetak
   const totalPotensiRupiah = filteredPotensi.reduce((acc, curr) => acc + (curr.potensiRupiahTahunan || 0), 0);
+  const totalRetribusiRupiah = filteredRetribusi.reduce((acc, curr) => acc + (curr.potensiPertahun || 0), 0);
   const totalPbbTerhutang = filteredPbb.reduce((acc, curr) => acc + (curr.pbbTerhutang || 0), 0);
   const totalPbbLunas = filteredPbb
     .filter((p) => p.statusPembayaran === 'LUNAS')
@@ -315,6 +334,15 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
       csvContent += "\n";
     }
 
+    if (selectedReportType === 'retribusi' || selectedReportType === 'gabungan') {
+      csvContent += "DATA HASIL INPUT POTENSI RETRIBUSI DAERAH BP2RD HSU\n";
+      csvContent += "No Register,Tanggal,Golongan Retribusi,Sub Objek Retribusi,Sub Rekening,Pengelola,Kecamatan,Kelurahan,Tarif Satuan,Jumlah Satuan,Potensi Bulanan,Potensi Tahunan,Status Verifikasi,Petugas\n";
+      filteredRetribusi.forEach((r) => {
+        csvContent += `"${r.nomorRegister}","${r.tanggalPendataan}","${r.golonganRetribusi}","${r.subObjekRetribusi}","${r.subRekening || '-'}","${r.namaPengelola || '-'}","${r.kecamatan}","${r.kelurahanDesa}",${r.tarifSatuan},${r.jumlahSatuan},${r.potensiPerbulan},${r.potensiPertahun},"${normalizeStatus(r.statusVerifikasi)}","${r.petugasPendata}"\n`;
+      });
+      csvContent += "\n";
+    }
+
     if (selectedReportType === 'pbb' || selectedReportType === 'gabungan') {
       csvContent += "DATA KETETAPAN DAN PEMBAYARAN PBB-P2 HSU\n";
       csvContent += "NOP,Tahun,Wajib Pajak,Kecamatan,Kelurahan,Luas Bumi (m2),Luas Bangunan (m2),PBB Terhutang,Status Pembayaran,Status Verifikasi,Tanggal Bayar\n";
@@ -335,9 +363,11 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
   // Standalone HTML Download
   const handleDownloadHtmlReport = () => {
     const reportTitle = selectedReportType === 'gabungan'
-      ? 'REKAPITULASI GABUNGAN POTENSI PAJAK DAERAH & PBB-P2'
+      ? 'REKAPITULASI GABUNGAN POTENSI PAJAK DAERAH, RETRIBUSI DAERAH & PBB-P2'
       : selectedReportType === 'potensi'
       ? 'LAPORAN HASIL PENDATAAN POTENSI PAJAK DAERAH'
+      : selectedReportType === 'retribusi'
+      ? 'LAPORAN REKAPITULASI HASIL INPUT RETRIBUSI DAERAH'
       : 'LAPORAN REALISASI & PIUTANG PBB-P2';
 
     const officerName = currentUser?.name || 'Rija, S.STP, M.IP';
@@ -350,24 +380,24 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
   <meta charset="UTF-8">
   <title>${reportTitle} - BP2RD HSU</title>
   <style>
-    @page { size: A4 portrait; margin: 15mm; }
+    @page { size: A4 landscape; margin: 12mm; }
     body { font-family: 'Times New Roman', Times, serif; color: #000; background: #fff; margin: 0; padding: 20px; line-height: 1.3; }
     .kop { text-align: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 20px; }
-    .kop h3 { margin: 0; font-size: 14pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
-    .kop h2 { margin: 3px 0; font-size: 16pt; font-weight: bold; text-transform: uppercase; }
-    .kop p { margin: 2px 0; font-size: 10pt; }
+    .kop h3 { margin: 0; font-size: 13pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+    .kop h2 { margin: 3px 0; font-size: 15pt; font-weight: bold; text-transform: uppercase; }
+    .kop p { margin: 2px 0; font-size: 9.5pt; font-family: Arial, sans-serif; }
     .judul-laporan { text-align: center; margin: 15px 0 20px 0; }
-    .judul-laporan h4 { margin: 0; font-size: 12pt; text-transform: uppercase; text-decoration: underline; }
-    .judul-laporan p { margin: 4px 0 0 0; font-size: 10pt; }
-    .summary-box { display: flex; justify-content: space-between; margin-bottom: 20px; border: 1px solid #000; padding: 10px; font-size: 10pt; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 9pt; }
-    th, td { border: 1px solid #000; padding: 5px 8px; text-align: left; }
+    .judul-laporan h4 { margin: 0; font-size: 12pt; text-transform: uppercase; text-decoration: underline; font-weight: bold; }
+    .judul-laporan p { margin: 4px 0 0 0; font-size: 9.5pt; font-family: Arial, sans-serif; }
+    .summary-box { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-bottom: 20px; border: 1px solid #000; padding: 10px; font-size: 9.5pt; font-family: Arial, sans-serif; background: #fbfbfb; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 8.5pt; font-family: Arial, sans-serif; }
+    th, td { border: 1px solid #000; padding: 5px 6px; text-align: left; }
     th { background-color: #f2f2f2; text-align: center; font-weight: bold; }
     .text-right { text-align: right; }
     .text-center { text-align: center; }
-    .ttd-container { display: flex; justify-content: space-between; margin-top: 30px; page-break-inside: avoid; }
-    .ttd-box { width: 45%; text-align: center; font-size: 10pt; }
-    .ttd-space { height: 70px; }
+    .ttd-container { display: flex; justify-content: space-between; margin-top: 30px; page-break-inside: avoid; font-family: Arial, sans-serif; }
+    .ttd-box { width: 45%; text-align: center; font-size: 9.5pt; }
+    .ttd-space { height: 60px; }
     @media print {
       body { padding: 0; }
       .no-print { display: none; }
@@ -375,7 +405,7 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
   </style>
 </head>
 <body>
-  <div class="no-print" style="margin-bottom: 20px; padding: 12px; background: #e0f2fe; border: 1px solid #0284c7; text-align: center;">
+  <div class="no-print" style="margin-bottom: 20px; padding: 12px; background: #e0f2fe; border: 1px solid #0284c7; text-align: center; font-family: Arial, sans-serif;">
     <strong>Dokumen Siap Cetak BP2RD Kab. Hulu Sungai Utara</strong> &bull; 
     <button onclick="window.print()" style="padding: 6px 14px; font-weight: bold; background: #0284c7; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">Cetak Sekarang (Print / Save PDF)</button>
   </div>
@@ -389,57 +419,110 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
 
   <div class="judul-laporan">
     <h4>${reportTitle}</h4>
-    <p>Wilayah: ${filterKecamatan === 'all' ? 'Seluruh Wilayah Kabupaten Hulu Sungai Utara' : filterKecamatan} | Tanggal Cetak: ${currentDateFormatted}</p>
+    <p>Wilayah: ${filterKecamatan === 'all' ? 'Seluruh Wilayah Kabupaten Hulu Sungai Utara (10 Kecamatan)' : filterKecamatan} | Tanggal Cetak: ${currentDateFormatted}</p>
   </div>
 
   <div class="summary-box">
-    <div><strong>Total Potensi Terdata:</strong> ${formatRupiah(totalPotensiRupiah)} (${filteredPotensi.length} Objek)</div>
-    <div><strong>Realisasi Lunas PBB-P2:</strong> ${formatRupiah(totalPbbLunas)}</div>
-    <div><strong>Sisa Piutang PBB-P2:</strong> ${formatRupiah(totalPbbPiutang)}</div>
+    ${(selectedReportType === 'gabungan' || selectedReportType === 'potensi') ? `<div><strong>Potensi Pajak Daerah:</strong> ${formatRupiah(totalPotensiRupiah)} (${filteredPotensi.length} Objek)</div>` : ''}
+    ${(selectedReportType === 'gabungan' || selectedReportType === 'retribusi') ? `<div><strong>Potensi Retribusi Daerah:</strong> ${formatRupiah(totalRetribusiRupiah)} (${filteredRetribusi.length} Objek)</div>` : ''}
+    ${(selectedReportType === 'gabungan' || selectedReportType === 'pbb') ? `
+      <div><strong>Ketetapan PBB-P2:</strong> ${formatRupiah(totalPbbTerhutang)}</div>
+      <div><strong>Realisasi Lunas PBB-P2:</strong> ${formatRupiah(totalPbbLunas)}</div>
+      <div><strong>Sisa Piutang PBB-P2:</strong> ${formatRupiah(totalPbbPiutang)}</div>
+    ` : ''}
   </div>
 
   ${(selectedReportType === 'gabungan' || selectedReportType === 'potensi') ? `
-    <h5 style="margin: 10px 0 6px 0; font-size: 10pt; text-transform: uppercase;">A. Rincian Objek Potensi Pajak Daerah</h5>
+    <h5 style="margin: 10px 0 6px 0; font-size: 10pt; text-transform: uppercase; font-family: Arial, sans-serif;">
+      ${selectedReportType === 'gabungan' ? 'I. ' : ''}Rincian Objek Potensi Pajak Daerah (${filteredPotensi.length} Data)
+    </h5>
     <table>
       <thead>
         <tr>
           <th width="4%">No</th>
-          <th width="16%">Nomor Form</th>
+          <th width="14%">Nomor Form</th>
           <th width="20%">Nama Wajib Pajak / Usaha</th>
-          <th width="18%">Jenis Pajak</th>
-          <th width="15%">Kecamatan</th>
+          <th width="16%">Jenis Pajak</th>
+          <th width="16%">Kecamatan / Desa</th>
           <th width="15%" class="text-right">Potensi Tahunan</th>
-          <th width="12%" class="text-center">Status Verifikasi</th>
+          <th width="15%" class="text-center">Status Verifikasi</th>
         </tr>
       </thead>
       <tbody>
         ${filteredPotensi.map((p, idx) => `
           <tr>
             <td class="text-center">${idx + 1}</td>
-            <td>${p.nomorFormulir}</td>
+            <td style="font-family: monospace;">${p.nomorFormulir}</td>
             <td><strong>${p.namaWajibPajak}</strong><br><small>${p.namaUsaha}</small></td>
             <td>${p.jenisPajak}</td>
-            <td>${p.kecamatan}</td>
-            <td class="text-right">${formatRupiah(p.potensiRupiahTahunan)}</td>
+            <td>${p.kecamatan}<br><small>${p.kelurahanDesa}</small></td>
+            <td class="text-right" style="font-weight: bold;">${formatRupiah(p.potensiRupiahTahunan)}</td>
             <td class="text-center"><strong>${normalizeStatus(p.statusVerifikasi)}</strong></td>
           </tr>
         `).join('')}
       </tbody>
+      <tfoot>
+        <tr style="background: #f2f2f2; font-weight: bold;">
+          <td colspan="5" class="text-right">TOTAL POTENSI PAJAK DAERAH:</td>
+          <td class="text-right">${formatRupiah(totalPotensiRupiah)}</td>
+          <td class="text-center">${filteredPotensi.length} Objek</td>
+        </tr>
+      </tfoot>
     </table>
   ` : ''}
 
-  ${(selectedReportType === 'gabungan' || selectedReportType === 'pbb') ? `
-    <h5 style="margin: 15px 0 6px 0; font-size: 10pt; text-transform: uppercase;">${selectedReportType === 'gabungan' ? 'B.' : 'A.'} Rincian Ketetapan & Pembayaran PBB-P2</h5>
+  ${(selectedReportType === 'gabungan' || selectedReportType === 'retribusi') ? `
+    <h5 style="margin: 15px 0 6px 0; font-size: 10pt; text-transform: uppercase; font-family: Arial, sans-serif;">
+      ${selectedReportType === 'gabungan' ? 'II. ' : ''}Rincian Hasil Input Potensi Retribusi Daerah (${filteredRetribusi.length} Data)
+    </h5>
     <table>
       <thead>
         <tr>
           <th width="4%">No</th>
-          <th width="20%">NOP (18 Digit)</th>
+          <th width="14%">No. Register</th>
+          <th width="22%">Sub Objek Retribusi & Pengelola</th>
+          <th width="16%">Golongan Retribusi</th>
+          <th width="16%">Kecamatan / Desa</th>
+          <th width="14%" class="text-right">Tarif & Volume</th>
+          <th width="14%" class="text-right">Potensi Tahunan</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${filteredRetribusi.map((r, idx) => `
+          <tr>
+            <td class="text-center">${idx + 1}</td>
+            <td style="font-family: monospace;">${r.nomorRegister}</td>
+            <td><strong>${r.subObjekRetribusi}</strong><br><small>${r.namaPengelola || '-'}</small></td>
+            <td>${r.golonganRetribusi}</td>
+            <td>${r.kecamatan}<br><small>${r.kelurahanDesa}</small></td>
+            <td class="text-right">${formatRupiah(r.tarifSatuan)} / ${r.satuanTarif} (${r.jumlahSatuan})</td>
+            <td class="text-right" style="font-weight: bold;">${formatRupiah(r.potensiPertahun)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+      <tfoot>
+        <tr style="background: #f2f2f2; font-weight: bold;">
+          <td colspan="6" class="text-right">TOTAL POTENSI RETRIBUSI DAERAH:</td>
+          <td class="text-right">${formatRupiah(totalRetribusiRupiah)}</td>
+        </tr>
+      </tfoot>
+    </table>
+  ` : ''}
+
+  ${(selectedReportType === 'gabungan' || selectedReportType === 'pbb') ? `
+    <h5 style="margin: 15px 0 6px 0; font-size: 10pt; text-transform: uppercase; font-family: Arial, sans-serif;">
+      ${selectedReportType === 'gabungan' ? 'III. ' : ''}Rincian Ketetapan & Pembayaran PBB-P2 (${filteredPbb.length} Data)
+    </h5>
+    <table>
+      <thead>
+        <tr>
+          <th width="4%">No</th>
+          <th width="18%">NOP (18 Digit)</th>
           <th width="20%">Nama Wajib Pajak</th>
           <th width="16%">Kecamatan / Desa</th>
           <th width="14%" class="text-right">Ketetapan PBB</th>
           <th width="14%" class="text-center">Status Pembayaran</th>
-          <th width="12%">Status Verifikasi</th>
+          <th width="14%" class="text-center">Status Verifikasi</th>
         </tr>
       </thead>
       <tbody>
@@ -449,12 +532,19 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
             <td style="font-family: monospace;">${p.nop}</td>
             <td>${p.namaWajibPajak}</td>
             <td>${p.kecamatan}<br><small>${p.kelurahanDesa}</small></td>
-            <td class="text-right">${formatRupiah(p.pbbTerhutang)}</td>
+            <td class="text-right" style="font-weight: bold;">${formatRupiah(p.pbbTerhutang)}</td>
             <td class="text-center"><strong>${p.statusPembayaran}</strong></td>
             <td class="text-center">${normalizeStatus(p.statusVerifikasi)}</td>
           </tr>
         `).join('')}
       </tbody>
+      <tfoot>
+        <tr style="background: #f2f2f2; font-weight: bold;">
+          <td colspan="4" class="text-right">TOTAL KETETAPAN PBB-P2:</td>
+          <td class="text-right">${formatRupiah(totalPbbTerhutang)}</td>
+          <td colspan="2" class="text-center">Lunas: ${formatRupiah(totalPbbLunas)} | Piutang: ${formatRupiah(totalPbbPiutang)}</td>
+        </tr>
+      </tfoot>
     </table>
   ` : ''}
 
@@ -471,7 +561,7 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
       <p><strong>Petugas Verifikator / Surveyor Lapangan</strong></p>
       <div class="ttd-space"></div>
       <p style="text-decoration: underline; font-weight: bold; margin: 0;">( .................................................... )</p>
-      <p style="margin: 2px 0 0 0;">Petugas Tim Penggalian Potensi HSU</p>
+      <p style="margin: 2px 0 0 0;">Petugas Tim Pendataan Pajak & Retribusi HSU</p>
     </div>
   </div>
 </body>
@@ -500,10 +590,11 @@ STATUS HASIL INPUTAN:
 - Disetujui (Setuju)  : ${totalSetujuCount} Berkas
 
 RINGKASAN FISKAL:
-- Total Objek Potensi Terdata : ${filteredPotensi.length} Usaha (${formatRupiah(totalPotensiRupiah)})
-- Total Ketetapan PBB-P2      : ${formatRupiah(totalPbbTerhutang)}
-- Realisasi Lunas PBB-P2      : ${formatRupiah(totalPbbLunas)}
-- Sisa Piutang PBB-P2         : ${formatRupiah(totalPbbPiutang)}
+- Potensi Pajak Daerah : ${filteredPotensi.length} Usaha (${formatRupiah(totalPotensiRupiah)})
+- Potensi Retribusi    : ${filteredRetribusi.length} Objek (${formatRupiah(totalRetribusiRupiah)})
+- Total Ketetapan PBB  : ${formatRupiah(totalPbbTerhutang)}
+- Realisasi Lunas PBB  : ${formatRupiah(totalPbbLunas)}
+- Sisa Piutang PBB     : ${formatRupiah(totalPbbPiutang)}
 
 Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
 
@@ -560,6 +651,17 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
             <Printer className="w-4 h-4" />
             <span>Rekap &amp; Cetak Laporan</span>
           </button>
+
+          {onOpenSpreadsheetModal && (
+            <button
+              onClick={onOpenSpreadsheetModal}
+              title="Hubungkan atau Sinkronkan Database ke Google Spreadsheet"
+              className="px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-500/40 shadow-sm shadow-emerald-950/40 cursor-pointer active:scale-95"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+              <span>Koneksi Spreadsheet</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -756,16 +858,37 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
 
           {/* Table of Results */}
           <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl overflow-hidden">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2">
                 <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
                 <h3 className="text-base font-extrabold text-white">
                   Daftar Hasil Inputan Lapangan ({filteredInputList.length})
                 </h3>
               </div>
-              <span className="text-xs text-slate-400">
-                Pilih aksi status pada masing-masing data untuk memvalidasi
-              </span>
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (inputTypeFilter === 'retribusi') {
+                      setSelectedReportType('retribusi');
+                    } else if (inputTypeFilter === 'potensi') {
+                      setSelectedReportType('potensi');
+                    } else if (inputTypeFilter === 'pbb') {
+                      setSelectedReportType('pbb');
+                    } else {
+                      setSelectedReportType('gabungan');
+                    }
+                    setIsPrintModalOpen(true);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-950/40 transition-all cursor-pointer active:scale-95"
+                >
+                  <Printer className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Cetak Rekap Input {inputTypeFilter === 'retribusi' ? 'Retribusi' : inputTypeFilter === 'potensi' ? 'Pajak' : inputTypeFilter === 'pbb' ? 'PBB' : 'Semua'}</span>
+                </button>
+                <span className="text-xs text-slate-400 hidden md:inline">
+                  Pilih aksi status pada masing-masing data untuk memvalidasi
+                </span>
+              </div>
             </div>
 
             {filteredInputList.length === 0 ? (
@@ -904,6 +1027,94 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                                 <span>Lihat</span>
                               </button>
 
+                              {/* Lihat File Hasil Inputan (Foto Objek / DPA / Struk Bayar) */}
+                              {(() => {
+                                const hasPhoto = Boolean(
+                                  isPotensi
+                                    ? pot?.fotoObjekUrl
+                                    : isRetribusi
+                                    ? ret?.fotoObjekRetribusiUrl
+                                    : pbb?.fotoObjekPbbUrl
+                                );
+                                const hasDpa = Boolean(isPotensi && pot?.dpaFileUrl);
+                                const hasStruk = Boolean(isPbb && pbb?.strukBayarUrl);
+                                const hasAnyFile = hasPhoto || hasDpa || hasStruk;
+
+                                return (
+                                  <button
+                                    onClick={() => {
+                                      if (isPotensi) {
+                                        if (pot?.fotoObjekUrl) {
+                                          setPreviewFileModal({
+                                            title: `Foto Objek Pajak: ${pot.namaUsaha}`,
+                                            fileName: pot.fotoObjekName || 'Foto_Objek_PJRD.jpg',
+                                            fileUrl: pot.fotoObjekUrl,
+                                            fileType: 'image',
+                                            fileSize: pot.fotoObjekSize || 'Foto Lapangan',
+                                            sourceInfo: `No. Form: ${pot.nomorFormulir} • ${pot.jenisPajak} • ${pot.kecamatan}`,
+                                          });
+                                        } else if (pot?.dpaFileUrl) {
+                                          setPreviewFileModal({
+                                            title: `Dokumen DPA / Kertas Kerja: ${pot.namaUsaha}`,
+                                            fileName: pot.dpaFileName || 'Dokumen_DPA.pdf',
+                                            fileUrl: pot.dpaFileUrl,
+                                            fileType: 'pdf',
+                                            fileSize: pot.dpaFileSize || 'Dokumen Valid',
+                                            sourceInfo: `No. Form: ${pot.nomorFormulir} • ${pot.jenisPajak}`,
+                                          });
+                                        } else {
+                                          handleOpenDetailModal(item);
+                                        }
+                                      } else if (isRetribusi) {
+                                        if (ret?.fotoObjekRetribusiUrl) {
+                                          setPreviewFileModal({
+                                            title: `Foto Objek Retribusi: ${ret.subObjekRetribusi}`,
+                                            fileName: ret.fotoObjekRetribusiName || 'Foto_Objek_Retribusi.jpg',
+                                            fileUrl: ret.fotoObjekRetribusiUrl,
+                                            fileType: 'image',
+                                            fileSize: ret.fotoObjekRetribusiSize || 'Foto Lapangan',
+                                            sourceInfo: `No. Register: ${ret.nomorRegister} • ${ret.subRekening} • ${ret.kecamatan}`,
+                                          });
+                                        } else {
+                                          handleOpenDetailModal(item);
+                                        }
+                                      } else {
+                                        if (pbb?.fotoObjekPbbUrl) {
+                                          setPreviewFileModal({
+                                            title: `Foto Objek Persil PBB NOP: ${pbb.nop}`,
+                                            fileName: pbb.fotoObjekPbbName || 'Foto_Persil_PBB.jpg',
+                                            fileUrl: pbb.fotoObjekPbbUrl,
+                                            fileType: 'image',
+                                            fileSize: pbb.fotoObjekPbbSize || 'Foto Lapangan',
+                                            sourceInfo: `NOP: ${pbb.nop} • ${pbb.namaWajibPajak} • ${pbb.kecamatan}`,
+                                          });
+                                        } else if (pbb?.strukBayarUrl) {
+                                          setPreviewFileModal({
+                                            title: `Struk Bayar PBB NOP: ${pbb.nop}`,
+                                            fileName: pbb.strukBayarName || 'Struk_Bayar_PBB.pdf',
+                                            fileUrl: pbb.strukBayarUrl,
+                                            fileType: 'pdf',
+                                            fileSize: 'Struk Sah',
+                                            sourceInfo: `NOP: ${pbb.nop} • ${pbb.namaWajibPajak}`,
+                                          });
+                                        } else {
+                                          handleOpenDetailModal(item);
+                                        }
+                                      }
+                                    }}
+                                    title={hasAnyFile ? "Lihat Berkas / Foto Hasil Inputan Lapangan" : "Buka Detail Berkas Inputan"}
+                                    className={`px-2.5 py-1.5 rounded-xl font-bold text-[11px] flex items-center gap-1 border transition-all ${
+                                      hasAnyFile
+                                        ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/30 hover:border-amber-500/50'
+                                        : 'bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border-slate-700'
+                                    }`}
+                                  >
+                                    <Paperclip className="w-3.5 h-3.5 text-amber-400" />
+                                    <span>Lihat File</span>
+                                  </button>
+                                );
+                              })()}
+
                               {/* Action: Ubah Status Cepat */}
                               {status !== 'Verifikasi' && (
                                 <button
@@ -1009,7 +1220,7 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                     : 'bg-slate-950/70 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-800'
                 }`}
               >
-                Rekap Gabungan
+                Rekap Gabungan PAD
               </button>
               <button
                 onClick={() => setSelectedReportType('potensi')}
@@ -1020,6 +1231,17 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                 }`}
               >
                 Potensi Pajak Daerah
+              </button>
+              <button
+                onClick={() => setSelectedReportType('retribusi')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  selectedReportType === 'retribusi'
+                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-950/40 font-extrabold'
+                    : 'bg-slate-950/70 text-amber-300 hover:text-white hover:bg-slate-800 border border-amber-500/30'
+                }`}
+              >
+                <Coins className="w-3.5 h-3.5" />
+                <span>Input Retribusi Daerah</span>
               </button>
               <button
                 onClick={() => setSelectedReportType('pbb')}
@@ -1051,15 +1273,26 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
 
               <button
                 onClick={() => setIsPrintModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg transition-all"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg transition-all cursor-pointer active:scale-95"
               >
                 <Printer className="w-4 h-4 text-amber-300" />
                 <span>Cetak Rekap</span>
               </button>
 
+              {onOpenSpreadsheetModal && (
+                <button
+                  onClick={onOpenSpreadsheetModal}
+                  title="Koneksi & Sinkronisasi ke Google Spreadsheet"
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-950/70 hover:bg-emerald-900/70 border border-emerald-500/50 text-emerald-300 text-xs font-bold transition-all shadow-md shadow-emerald-950/40 cursor-pointer active:scale-95"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                  <span>Spreadsheet</span>
+                </button>
+              )}
+
               <button
                 onClick={handleExportCsv}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold cursor-pointer"
               >
                 <Download className="w-4 h-4 text-emerald-400" />
                 <span>CSV</span>
@@ -1067,7 +1300,7 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
 
               <button
                 onClick={handleCopySummary}
-                className="flex items-center gap-1 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold"
+                className="flex items-center gap-1 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold cursor-pointer"
               >
                 {copiedSuccess ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>{copiedSuccess ? 'Disalin' : 'Salin'}</span>
@@ -1077,12 +1310,16 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
           </div>
 
           {/* Summary Stat Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-lg">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+            <div className={`p-4 rounded-2xl border shadow-lg transition-all ${
+              selectedReportType === 'potensi'
+                ? 'bg-emerald-500/15 border-emerald-500'
+                : 'bg-slate-900/80 border-slate-800'
+            }`}>
               <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
                 Potensi Pajak Daerah
               </span>
-              <p className="mt-2 text-2xl font-black text-emerald-400">
+              <p className="mt-2 text-xl font-black text-emerald-400">
                 {formatRupiah(totalPotensiRupiah)}
               </p>
               <p className="mt-1 text-xs text-slate-500">
@@ -1090,11 +1327,32 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
               </p>
             </div>
 
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-lg">
+            <div className={`p-4 rounded-2xl border shadow-lg transition-all ${
+              selectedReportType === 'retribusi'
+                ? 'bg-amber-500/15 border-amber-500 ring-2 ring-amber-500/30'
+                : 'bg-slate-900/80 border-slate-800'
+            }`}>
+              <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                <Coins className="w-3.5 h-3.5" />
+                <span>Potensi Retribusi Daerah</span>
+              </span>
+              <p className="mt-2 text-xl font-black text-amber-300">
+                {formatRupiah(totalRetribusiRupiah)}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                {filteredRetribusi.length} Objek terdata
+              </p>
+            </div>
+
+            <div className={`p-4 rounded-2xl border shadow-lg transition-all ${
+              selectedReportType === 'pbb'
+                ? 'bg-blue-500/15 border-blue-500'
+                : 'bg-slate-900/80 border-slate-800'
+            }`}>
               <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
                 Ketetapan PBB-P2
               </span>
-              <p className="mt-2 text-2xl font-black text-white">
+              <p className="mt-2 text-xl font-black text-white">
                 {formatRupiah(totalPbbTerhutang)}
               </p>
               <p className="mt-1 text-xs text-slate-500">
@@ -1102,11 +1360,11 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
               </p>
             </div>
 
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-lg">
+            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-lg">
               <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-                PBB-P2 Terbayar Lunas
+                PBB-P2 Lunas
               </span>
-              <p className="mt-2 text-2xl font-black text-blue-400">
+              <p className="mt-2 text-xl font-black text-blue-400">
                 {formatRupiah(totalPbbLunas)}
               </p>
               <p className="mt-1 text-xs text-slate-500">
@@ -1114,15 +1372,15 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
               </p>
             </div>
 
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-lg">
+            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-lg">
               <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
                 Sisa Piutang PBB
               </span>
-              <p className="mt-2 text-2xl font-black text-amber-400">
+              <p className="mt-2 text-xl font-black text-amber-400">
                 {formatRupiah(totalPbbPiutang)}
               </p>
               <p className="mt-1 text-xs text-slate-500">
-                {filteredPbb.filter(p => p.statusPembayaran !== 'LUNAS').length} NOP perlu penagihan
+                {filteredPbb.filter(p => p.statusPembayaran !== 'LUNAS').length} NOP belum bayar
               </p>
             </div>
           </div>
@@ -1163,6 +1421,57 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                           <td className="py-2.5 px-3 text-center">
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 border border-slate-700">
                               {normalizeStatus(p.statusVerifikasi)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {(selectedReportType === 'gabungan' || selectedReportType === 'retribusi') && (
+              <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl overflow-hidden">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
+                    <Coins className="w-4 h-4 text-amber-400" />
+                    <span>Rincian Hasil Input Potensi Retribusi Daerah ({filteredRetribusi.length})</span>
+                  </h3>
+                  <span className="text-[11px] text-amber-400 font-bold bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+                    Kab. HSU
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-950/80 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800">
+                      <tr>
+                        <th className="py-2.5 px-3">No. Register</th>
+                        <th className="py-2.5 px-3">Sub Objek &amp; Pengelola</th>
+                        <th className="py-2.5 px-3">Golongan Retribusi</th>
+                        <th className="py-2.5 px-3">Kecamatan</th>
+                        <th className="py-2.5 px-3 text-right">Tarif &amp; Satuan</th>
+                        <th className="py-2.5 px-3 text-right">Potensi Tahunan</th>
+                        <th className="py-2.5 px-3 text-center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                      {filteredRetribusi.map(r => (
+                        <tr key={r.id} className="hover:bg-slate-800/40">
+                          <td className="py-2.5 px-3 font-mono font-bold text-amber-400">{r.nomorRegister}</td>
+                          <td className="py-2.5 px-3">
+                            <span className="font-semibold text-white block">{r.subObjekRetribusi}</span>
+                            {r.namaPengelola && <span className="text-[10px] text-slate-400 block">Pengelola: {r.namaPengelola}</span>}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-300">{r.golonganRetribusi}</td>
+                          <td className="py-2.5 px-3">{r.kecamatan}</td>
+                          <td className="py-2.5 px-3 text-right font-mono text-slate-300">
+                            {formatRupiah(r.tarifSatuan)} / {r.satuanTarif} ({r.jumlahSatuan})
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-bold text-white">{formatRupiah(r.potensiPertahun)}</td>
+                          <td className="py-2.5 px-3 text-center">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 border border-slate-700">
+                              {normalizeStatus(r.statusVerifikasi)}
                             </span>
                           </td>
                         </tr>
@@ -1625,46 +1934,188 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
 
             </div>
 
-            {/* Foto Dokumentasi Objek (Jika Ada) */}
+            {/* Berkas & Dokumen Lampiran Hasil Input Lapangan (Foto Objek, Dokumen DPA/ARKAS, Struk Bayar PBB) */}
             {(() => {
-              const fotoUrl = selectedItem.type === 'potensi'
+              const isPot = selectedItem.type === 'potensi';
+              const isRet = selectedItem.type === 'retribusi';
+              const isPbb = selectedItem.type === 'pbb';
+
+              const fotoUrl = isPot
                 ? selectedItem.potensi?.fotoObjekUrl
-                : selectedItem.type === 'retribusi'
+                : isRet
                 ? selectedItem.retribusi?.fotoObjekRetribusiUrl
                 : selectedItem.pbb?.fotoObjekPbbUrl;
-              
-              const fotoName = selectedItem.type === 'potensi'
+
+              const fotoName = isPot
                 ? selectedItem.potensi?.fotoObjekName
-                : selectedItem.type === 'retribusi'
+                : isRet
                 ? selectedItem.retribusi?.fotoObjekRetribusiName
                 : selectedItem.pbb?.fotoObjekPbbName;
 
-              const fotoSize = selectedItem.type === 'potensi'
+              const fotoSize = isPot
                 ? selectedItem.potensi?.fotoObjekSize
-                : selectedItem.type === 'retribusi'
+                : isRet
                 ? selectedItem.retribusi?.fotoObjekRetribusiSize
                 : selectedItem.pbb?.fotoObjekPbbSize;
 
-              if (!fotoUrl) return null;
+              const dpaUrl = isPot ? selectedItem.potensi?.dpaFileUrl : undefined;
+              const dpaName = isPot ? selectedItem.potensi?.dpaFileName : undefined;
+              const dpaSize = isPot ? selectedItem.potensi?.dpaFileSize : undefined;
+
+              const strukUrl = isPbb ? selectedItem.pbb?.strukBayarUrl : undefined;
+              const strukName = isPbb ? selectedItem.pbb?.strukBayarName : undefined;
+              const nomorStruk = isPbb ? selectedItem.pbb?.nomorStruk : undefined;
+
+              const hasFiles = Boolean(fotoUrl || dpaUrl || strukUrl);
 
               return (
-                <div className="mt-4 p-4 rounded-2xl bg-slate-950/70 border border-slate-800">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                      <Camera className="w-4 h-4 text-emerald-400" />
-                      <span>Dokumentasi Foto Fisik Objek</span>
+                <div className="mt-4 p-5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
+                    <span className="text-xs font-bold text-slate-200 flex items-center gap-2">
+                      <Paperclip className="w-4 h-4 text-amber-400" />
+                      <span>Berkas &amp; Foto Hasil Upload Lapangan</span>
                     </span>
-                    <span className="text-[11px] text-slate-400">
-                      {fotoName || 'Foto Lapangan'} {fotoSize ? `(${fotoSize})` : ''}
+                    <span className="text-[11px] font-bold text-emerald-400 bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                      {isPot ? 'Input Potensi' : isRet ? 'Input Retribusi' : 'PBB-P2'}
                     </span>
                   </div>
-                  <div className="relative rounded-xl overflow-hidden border border-slate-800 bg-slate-900 max-h-64 flex items-center justify-center p-2">
-                    <img
-                      src={fotoUrl}
-                      alt={fotoName || 'Foto Fisik Objek'}
-                      className="max-h-60 rounded-lg object-contain"
-                    />
-                  </div>
+
+                  {!hasFiles ? (
+                    <div className="py-4 text-center text-xs text-slate-400 italic">
+                      Tidak ada file foto/berkas yang diunggah saat inputan lapangan ini.
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* 1. Foto Objek Fisik Lapangan */}
+                      {fotoUrl && (
+                        <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                              <Camera className="w-4 h-4 text-emerald-400" />
+                              <span>Foto Objek Fisik Lapangan: <span className="text-white font-normal">{fotoName || 'Foto Lapangan'}</span></span>
+                            </span>
+                            <div className="flex items-center gap-2">
+                              {fotoSize && <span className="text-[10px] font-mono text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">{fotoSize}</span>}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPreviewFileModal({
+                                    title: isPot
+                                      ? `Foto Objek: ${selectedItem.potensi?.namaUsaha}`
+                                      : isRet
+                                      ? `Foto Objek: ${selectedItem.retribusi?.subObjekRetribusi}`
+                                      : `Foto Persil: NOP ${selectedItem.pbb?.nop}`,
+                                    fileName: fotoName || 'Foto_Objek_Lapangan.jpg',
+                                    fileUrl: fotoUrl,
+                                    fileType: 'image',
+                                    fileSize: fotoSize || 'Foto Lapangan',
+                                    sourceInfo: isPot
+                                      ? `${selectedItem.potensi?.jenisPajak} • ${selectedItem.potensi?.kecamatan}`
+                                      : isRet
+                                      ? `${selectedItem.retribusi?.subRekening} • ${selectedItem.retribusi?.kecamatan}`
+                                      : `NOP ${selectedItem.pbb?.nop}`,
+                                  });
+                                }}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                              >
+                                <Eye className="w-3 h-3" />
+                                <span>Lihat Foto Penuh</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="relative rounded-xl overflow-hidden border border-slate-800 bg-slate-950 max-h-56 flex items-center justify-center p-2">
+                            <img
+                              src={fotoUrl}
+                              alt={fotoName || 'Foto Fisik Objek'}
+                              className="max-h-52 rounded-lg object-contain cursor-pointer hover:scale-[1.01] transition-transform"
+                              onClick={() => {
+                                setPreviewFileModal({
+                                  title: isPot
+                                    ? `Foto Objek: ${selectedItem.potensi?.namaUsaha}`
+                                    : isRet
+                                    ? `Foto Objek: ${selectedItem.retribusi?.subObjekRetribusi}`
+                                    : `Foto Persil: NOP ${selectedItem.pbb?.nop}`,
+                                  fileName: fotoName || 'Foto_Objek_Lapangan.jpg',
+                                  fileUrl: fotoUrl,
+                                  fileType: 'image',
+                                  fileSize: fotoSize || 'Foto Lapangan',
+                                });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 2. Berkas Dokumen DPA / Kertas Kerja Potensi */}
+                      {dpaUrl && (
+                        <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0">
+                              <FileText className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <strong className="text-xs text-white block">{dpaName || 'Dokumen_DPA_ARKAS.pdf'}</strong>
+                              <span className="text-[10px] text-slate-400">
+                                Dokumen DPA / Kertas Kerja Survei Potensi {dpaSize ? `(${dpaSize})` : ''}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPreviewFileModal({
+                                title: `Dokumen DPA: ${selectedItem.potensi?.namaUsaha}`,
+                                fileName: dpaName || 'Dokumen_DPA.pdf',
+                                fileUrl: dpaUrl,
+                                fileType: 'pdf',
+                                fileSize: dpaSize || 'Dokumen Valid',
+                                sourceInfo: `No. Form: ${selectedItem.potensi?.nomorFormulir}`,
+                              });
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                          >
+                            <Eye className="w-3 h-3" />
+                            <span>Lihat Berkas</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {/* 3. Struk / Bukti Bayar PBB-P2 */}
+                      {strukUrl && (
+                        <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
+                              <Receipt className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <strong className="text-xs text-white block">{strukName || 'Struk_Bayar_PBB.pdf'}</strong>
+                              <span className="text-[10px] text-slate-400">
+                                Bukti Pembayaran Sah {nomorStruk ? `(No: ${nomorStruk})` : ''}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPreviewFileModal({
+                                title: `Struk Bayar PBB NOP: ${selectedItem.pbb?.nop}`,
+                                fileName: strukName || 'Struk_Bayar_PBB.pdf',
+                                fileUrl: strukUrl,
+                                fileType: strukUrl.startsWith('data:image') ? 'image' : 'pdf',
+                                fileSize: 'Bukti Bayar Sah',
+                                sourceInfo: `NOP: ${selectedItem.pbb?.nop} • ${selectedItem.pbb?.namaWajibPajak}`,
+                              });
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                          >
+                            <Eye className="w-3 h-3" />
+                            <span>Lihat Struk</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -1838,7 +2289,116 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
           </div>
         </div>
       )}
+      {/* MODAL LIHAT FILE HASIL INPUTAN (FOTO FISIK OBJEK / DPA / STRUK BAYAR) */}
+      {previewFileModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-6 bg-slate-950/90 backdrop-blur-md overflow-y-auto animate-in fade-in">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-2xl w-full p-6 shadow-2xl relative my-8 max-h-[90vh] flex flex-col">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                  <Paperclip className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <span>Lihat File Hasil Inputan</span>
+                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                      Tersimpan Valid
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5 font-medium">
+                    {previewFileModal.title}
+                  </p>
+                </div>
+              </div>
 
+              <button
+                onClick={() => setPreviewFileModal(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Sub-info banner */}
+            <div className="my-3 px-4 py-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 flex items-center justify-between text-xs text-slate-300">
+              <div className="truncate max-w-[400px]">
+                <span className="text-slate-500 font-bold mr-1.5">Keterangan:</span>
+                <span>{previewFileModal.sourceInfo || previewFileModal.fileName}</span>
+              </div>
+              {previewFileModal.fileSize && (
+                <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-500/20 shrink-0">
+                  {previewFileModal.fileSize}
+                </span>
+              )}
+            </div>
+
+            {/* File Viewer Body */}
+            <div className="flex-1 my-2 min-h-[300px] max-h-[55vh] overflow-y-auto rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center p-4">
+              {previewFileModal.fileType === 'image' || previewFileModal.fileUrl.startsWith('data:image') || previewFileModal.fileName.match(/\.(jpg|jpeg|png|webp)$/i) ? (
+                <div className="flex flex-col items-center justify-center gap-2 w-full h-full">
+                  <img
+                    src={previewFileModal.fileUrl}
+                    alt={previewFileModal.fileName}
+                    className="max-h-[48vh] max-w-full rounded-xl object-contain shadow-2xl border border-slate-800"
+                  />
+                  <span className="text-[11px] text-slate-500 mt-1 font-mono">
+                    {previewFileModal.fileName}
+                  </span>
+                </div>
+              ) : (
+                <div className="text-center p-8 space-y-4 max-w-md">
+                  <div className="w-16 h-16 rounded-3xl bg-slate-900 border border-slate-700 mx-auto flex items-center justify-center text-emerald-400">
+                    <FileText className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white mb-1">
+                      {previewFileModal.fileName}
+                    </h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Dokumen resmi lampiran hasil inputan lapangan tersimpan dalam format berkas digital aman SIPOTENSI HSU.
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300 font-mono text-left">
+                    <div className="text-slate-500 font-bold mb-1">DATA DOKUMEN:</div>
+                    <div>Nama: {previewFileModal.fileName}</div>
+                    <div>Format: Dokumen Digital Valid (PDF/DPA)</div>
+                    <div>Status: Terverifikasi Lapangan</div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="pt-4 border-t border-slate-800 flex items-center justify-between gap-3">
+              <span className="text-[11px] text-slate-400 font-mono truncate max-w-[260px]">
+                {previewFileModal.fileName}
+              </span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPreviewFileModal(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Tutup
+                </button>
+                <a
+                  href={previewFileModal.fileUrl}
+                  download={previewFileModal.fileName}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-950/40 transition-all cursor-pointer active:scale-95"
+                >
+                  <FileDown className="w-4 h-4" />
+                  <span>Unduh File</span>
+                </a>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
       {/* MODAL CETAK REKAP LAPORAN RESMI (Kop Surat Pemkab HSU & BP2RD) */}
       {isPrintModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-md overflow-y-auto">
@@ -1890,7 +2450,13 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
               {/* Judul Laporan */}
               <div className="text-center my-4 font-sans">
                 <h3 className="text-sm font-bold underline uppercase tracking-wide">
-                  REKAPITULASI LAPORAN POTENSI PAJAK DAERAH &amp; PBB-P2
+                  {selectedReportType === 'retribusi'
+                    ? 'REKAPITULASI HASIL INPUT POTENSI RETRIBUSI DAERAH'
+                    : selectedReportType === 'potensi'
+                    ? 'REKAPITULASI LAPORAN POTENSI PAJAK DAERAH'
+                    : selectedReportType === 'pbb'
+                    ? 'REKAPITULASI KETETAPAN & PEMBAYARAN PBB-P2'
+                    : 'REKAPITULASI GABUNGAN POTENSI PAJAK DAERAH, RETRIBUSI DAERAH & PBB-P2'}
                 </h3>
                 <p className="text-[10px] text-slate-600 mt-1">
                   Wilayah: <strong>{filterKecamatan === 'all' ? 'Seluruh Kecamatan di Kab. HSU (10 Kecamatan)' : filterKecamatan}</strong> &bull; Per: {currentDateFormatted}
@@ -1898,52 +2464,246 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
               </div>
 
               {/* Rangkuman Angka */}
-              <div className="grid grid-cols-3 gap-2 p-3 border border-black text-[10px] font-sans mb-4">
-                <div>
-                  <span className="text-slate-600 block">Total Potensi Pajak:</span>
-                  <strong className="text-xs">{formatRupiah(totalPotensiRupiah)}</strong>
-                </div>
-                <div>
-                  <span className="text-slate-600 block">Realisasi Lunas PBB:</span>
-                  <strong className="text-xs text-blue-700">{formatRupiah(totalPbbLunas)}</strong>
-                </div>
-                <div>
-                  <span className="text-slate-600 block">Sisa Piutang PBB:</span>
-                  <strong className="text-xs text-amber-700">{formatRupiah(totalPbbPiutang)}</strong>
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-3 border border-black text-[10px] font-sans mb-4 bg-slate-50">
+                {selectedReportType === 'retribusi' ? (
+                  <>
+                    <div>
+                      <span className="text-slate-600 block">Total Potensi Retribusi:</span>
+                      <strong className="text-xs text-amber-800">{formatRupiah(totalRetribusiRupiah)}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-600 block">Jumlah Objek Terdata:</span>
+                      <strong className="text-xs">{filteredRetribusi.length} Lokasi / Objek</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-600 block">Status Validasi:</span>
+                      <strong className="text-xs text-emerald-700">
+                        {filteredRetribusi.filter(r => normalizeStatus(r.statusVerifikasi) === 'Setuju').length} Setuju &bull; {filteredRetribusi.filter(r => normalizeStatus(r.statusVerifikasi) === 'Verifikasi').length} Verifikasi
+                      </strong>
+                    </div>
+                  </>
+                ) : selectedReportType === 'potensi' ? (
+                  <>
+                    <div>
+                      <span className="text-slate-600 block">Total Potensi Pajak:</span>
+                      <strong className="text-xs text-emerald-800">{formatRupiah(totalPotensiRupiah)}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-600 block">Jumlah Wajib Pajak:</span>
+                      <strong className="text-xs">{filteredPotensi.length} Usaha Terdaftar</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-600 block">Status Verifikasi:</span>
+                      <strong className="text-xs text-blue-700">
+                        {filteredPotensi.filter(p => normalizeStatus(p.statusVerifikasi) === 'Setuju').length} Disetujui
+                      </strong>
+                    </div>
+                  </>
+                ) : selectedReportType === 'pbb' ? (
+                  <>
+                    <div>
+                      <span className="text-slate-600 block">Ketetapan PBB-P2:</span>
+                      <strong className="text-xs">{formatRupiah(totalPbbTerhutang)}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-600 block">Realisasi Lunas PBB:</span>
+                      <strong className="text-xs text-blue-700">{formatRupiah(totalPbbLunas)}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-600 block">Sisa Piutang PBB:</span>
+                      <strong className="text-xs text-amber-700">{formatRupiah(totalPbbPiutang)}</strong>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <span className="text-slate-600 block">Potensi Pajak Daerah:</span>
+                      <strong className="text-xs text-emerald-800">{formatRupiah(totalPotensiRupiah)} ({filteredPotensi.length})</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-600 block">Potensi Retribusi Daerah:</span>
+                      <strong className="text-xs text-amber-800">{formatRupiah(totalRetribusiRupiah)} ({filteredRetribusi.length})</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-600 block">Ketetapan PBB-P2:</span>
+                      <strong className="text-xs text-blue-800">{formatRupiah(totalPbbTerhutang)}</strong>
+                    </div>
+                  </>
+                )}
               </div>
 
-              {/* Mini Table Preview */}
-              <div className="font-sans text-[10px] mb-6">
-                <table className="w-full border-collapse border border-black">
-                  <thead>
-                    <tr className="bg-slate-100">
-                      <th className="border border-black p-1 text-center">No</th>
-                      <th className="border border-black p-1">Identitas Wajib Pajak</th>
-                      <th className="border border-black p-1">Jenis Pajak / NOP</th>
-                      <th className="border border-black p-1">Kecamatan</th>
-                      <th className="border border-black p-1 text-right">Nilai Fiskal</th>
-                      <th className="border border-black p-1 text-center">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredPotensi.slice(0, 5).map((p, idx) => (
-                      <tr key={p.id}>
-                        <td className="border border-black p-1 text-center">{idx + 1}</td>
-                        <td className="border border-black p-1"><strong>{p.namaWajibPajak}</strong> ({p.namaUsaha})</td>
-                        <td className="border border-black p-1">{p.jenisPajak}</td>
-                        <td className="border border-black p-1">{p.kecamatan}</td>
-                        <td className="border border-black p-1 text-right">{formatRupiah(p.potensiRupiahTahunan)}</td>
-                        <td className="border border-black p-1 text-center">{normalizeStatus(p.statusVerifikasi)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {filteredPotensi.length > 5 && (
-                  <p className="text-[9px] text-slate-500 italic mt-1 text-center">
-                    ...dan {filteredPotensi.length - 5} data lainnya tercetak lengkap pada dokumen unduhan / printout resmi.
-                  </p>
+              {/* Table Data Preview & Print */}
+              <div className="font-sans text-[10px] mb-6 space-y-4">
+                
+                {/* Tabel Retribusi Daerah */}
+                {(selectedReportType === 'retribusi' || selectedReportType === 'gabungan') && (
+                  <div>
+                    {selectedReportType === 'gabungan' && (
+                      <h5 className="font-bold uppercase text-[11px] mb-1.5 text-slate-800">
+                        II. Rincian Hasil Input Potensi Retribusi Daerah ({filteredRetribusi.length} Data)
+                      </h5>
+                    )}
+                    <table className="w-full border-collapse border border-black print-table">
+                      <thead>
+                        <tr className="bg-slate-100">
+                          <th className="border border-black p-1 text-center w-8">No</th>
+                          <th className="border border-black p-1 text-left">No. Register</th>
+                          <th className="border border-black p-1 text-left">Sub Objek &amp; Pengelola</th>
+                          <th className="border border-black p-1 text-left">Golongan Retribusi</th>
+                          <th className="border border-black p-1 text-left">Kecamatan / Desa</th>
+                          <th className="border border-black p-1 text-right">Tarif &amp; Satuan</th>
+                          <th className="border border-black p-1 text-right">Potensi Tahunan (Rp)</th>
+                          <th className="border border-black p-1 text-center">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredRetribusi.length === 0 ? (
+                          <tr>
+                            <td colSpan={8} className="border border-black p-2 text-center text-slate-500 italic">
+                              Tidak ada data retribusi daerah untuk wilayah ini.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredRetribusi.map((r, idx) => (
+                            <tr key={r.id}>
+                              <td className="border border-black p-1 text-center">{idx + 1}</td>
+                              <td className="border border-black p-1 font-mono font-bold">{r.nomorRegister}</td>
+                              <td className="border border-black p-1">
+                                <strong>{r.subObjekRetribusi}</strong>
+                                {r.namaPengelola && <div className="text-[9px] text-slate-600">Pengelola: {r.namaPengelola}</div>}
+                              </td>
+                              <td className="border border-black p-1">{r.golonganRetribusi}</td>
+                              <td className="border border-black p-1">{r.kecamatan}, {r.kelurahanDesa}</td>
+                              <td className="border border-black p-1 text-right text-[9px]">
+                                {formatRupiah(r.tarifSatuan)} / {r.satuanTarif} ({r.jumlahSatuan})
+                              </td>
+                              <td className="border border-black p-1 text-right font-bold">{formatRupiah(r.potensiPertahun)}</td>
+                              <td className="border border-black p-1 text-center">{normalizeStatus(r.statusVerifikasi)}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                      <tfoot>
+                        <tr className="bg-slate-100 font-bold">
+                          <td colSpan={6} className="border border-black p-1 text-right">TOTAL POTENSI RETRIBUSI DAERAH:</td>
+                          <td className="border border-black p-1 text-right">{formatRupiah(totalRetribusiRupiah)}</td>
+                          <td className="border border-black p-1 text-center">{filteredRetribusi.length} Objek</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
                 )}
+
+                {/* Tabel Potensi Pajak Daerah */}
+                {(selectedReportType === 'potensi' || selectedReportType === 'gabungan') && (
+                  <div>
+                    {selectedReportType === 'gabungan' && (
+                      <h5 className="font-bold uppercase text-[11px] mb-1.5 text-slate-800">
+                        I. Rincian Objek Potensi Pajak Daerah ({filteredPotensi.length} Data)
+                      </h5>
+                    )}
+                    <table className="w-full border-collapse border border-black print-table">
+                      <thead>
+                        <tr className="bg-slate-100">
+                          <th className="border border-black p-1 text-center w-8">No</th>
+                          <th className="border border-black p-1 text-left">No. Formulir</th>
+                          <th className="border border-black p-1 text-left">Wajib Pajak &amp; Usaha</th>
+                          <th className="border border-black p-1 text-left">Jenis Pajak</th>
+                          <th className="border border-black p-1 text-left">Kecamatan</th>
+                          <th className="border border-black p-1 text-right">Potensi Tahunan (Rp)</th>
+                          <th className="border border-black p-1 text-center">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredPotensi.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="border border-black p-2 text-center text-slate-500 italic">
+                              Tidak ada data potensi pajak untuk wilayah ini.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredPotensi.map((p, idx) => (
+                            <tr key={p.id}>
+                              <td className="border border-black p-1 text-center">{idx + 1}</td>
+                              <td className="border border-black p-1 font-mono">{p.nomorFormulir}</td>
+                              <td className="border border-black p-1">
+                                <strong>{p.namaWajibPajak}</strong> ({p.namaUsaha})
+                              </td>
+                              <td className="border border-black p-1">{p.jenisPajak}</td>
+                              <td className="border border-black p-1">{p.kecamatan}</td>
+                              <td className="border border-black p-1 text-right font-bold">{formatRupiah(p.potensiRupiahTahunan)}</td>
+                              <td className="border border-black p-1 text-center">{normalizeStatus(p.statusVerifikasi)}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                      <tfoot>
+                        <tr className="bg-slate-100 font-bold">
+                          <td colSpan={5} className="border border-black p-1 text-right">TOTAL POTENSI PAJAK DAERAH:</td>
+                          <td className="border border-black p-1 text-right">{formatRupiah(totalPotensiRupiah)}</td>
+                          <td className="border border-black p-1 text-center">{filteredPotensi.length} Objek</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                )}
+
+                {/* Tabel PBB-P2 */}
+                {(selectedReportType === 'pbb' || selectedReportType === 'gabungan') && (
+                  <div>
+                    {selectedReportType === 'gabungan' && (
+                      <h5 className="font-bold uppercase text-[11px] mb-1.5 text-slate-800">
+                        III. Rincian Ketetapan &amp; Pembayaran PBB-P2 ({filteredPbb.length} Data)
+                      </h5>
+                    )}
+                    <table className="w-full border-collapse border border-black print-table">
+                      <thead>
+                        <tr className="bg-slate-100">
+                          <th className="border border-black p-1 text-center w-8">No</th>
+                          <th className="border border-black p-1 text-left">NOP (18 Digit)</th>
+                          <th className="border border-black p-1 text-left">Nama Wajib Pajak</th>
+                          <th className="border border-black p-1 text-left">Kecamatan / Desa</th>
+                          <th className="border border-black p-1 text-right">Ketetapan PBB (Rp)</th>
+                          <th className="border border-black p-1 text-center">Status Bayar</th>
+                          <th className="border border-black p-1 text-center">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredPbb.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="border border-black p-2 text-center text-slate-500 italic">
+                              Tidak ada data PBB-P2 untuk wilayah ini.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredPbb.map((p, idx) => (
+                            <tr key={p.id}>
+                              <td className="border border-black p-1 text-center">{idx + 1}</td>
+                              <td className="border border-black p-1 font-mono">{p.nop}</td>
+                              <td className="border border-black p-1">{p.namaWajibPajak}</td>
+                              <td className="border border-black p-1">{p.kecamatan}, {p.kelurahanDesa}</td>
+                              <td className="border border-black p-1 text-right font-bold">{formatRupiah(p.pbbTerhutang)}</td>
+                              <td className="border border-black p-1 text-center font-bold">
+                                {p.statusPembayaran === 'LUNAS' ? 'LUNAS' : 'TERTUNGGAK'}
+                              </td>
+                              <td className="border border-black p-1 text-center">{normalizeStatus(p.statusVerifikasi)}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                      <tfoot>
+                        <tr className="bg-slate-100 font-bold">
+                          <td colSpan={4} className="border border-black p-1 text-right">TOTAL KETETAPAN PBB-P2:</td>
+                          <td className="border border-black p-1 text-right">{formatRupiah(totalPbbTerhutang)}</td>
+                          <td colSpan={2} className="border border-black p-1 text-center">
+                            Lunas: {formatRupiah(totalPbbLunas)}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                )}
+
               </div>
 
               {/* Kolom Tanda Tangan */}

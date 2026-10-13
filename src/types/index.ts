@@ -195,3 +195,38 @@ export interface GpsCoordinateResult {
   source: 'gps_device' | 'preset_kecamatan' | 'preset_landmark' | 'manual_picker';
   timestamp: number;
 }
+
+// ==========================================
+// INDEKS KEPUASAN MASYARAKAT (IKM) BP2RD HSU
+// ==========================================
+export type IkmRatingValue = 20 | 15 | 10 | 5;
+export type IkmRatingLevel = 'Sangat Baik' | 'Baik' | 'Cukup' | 'Kurang';
+
+export interface IkmPernyataanItem {
+  id: number;
+  pernyataan: string;
+  nilai: IkmRatingValue; // 20: Sangat Baik, 15: Baik, 10: Cukup, 5: Kurang
+  keterangan: IkmRatingLevel;
+}
+
+export interface IkmSurveyEntry {
+  id: string;
+  nomorResponden: string;
+  nama: string;
+  alamat: string;
+  kegiatan: string; // Misal: Konsultasi PBB-P2, Pendataan Potensi Pajak Reklame, Pengurusan Retribusi Pasar, dll.
+  nomorKontak?: string;
+  tanggalSurvey: string;
+  // 5 Pernyataan Evaluasi Kepuasan
+  pernyataan1: IkmRatingValue; // Persyaratan & Kemudahan Prosedur Layanan
+  pernyataan2: IkmRatingValue; // Kecepatan & Ketepatan Respon Petugas
+  pernyataan3: IkmRatingValue; // Kesopanan, Keramahan & Kejelasan Informasi
+  pernyataan4: IkmRatingValue; // Kualitas Sarana, Transparansi & Aplikasi SIPOTENSI
+  pernyataan5: IkmRatingValue; // Penanganan Konsultasi & Kepuasan Hasil Layanan
+  saranMasukan?: string;
+  totalNilai: number; // Max 100 (5 * 20)
+  predikat: 'Sangat Baik' | 'Baik' | 'Cukup' | 'Kurang';
+  petugasPencatat?: string;
+  createdAt: string;
+}
+
