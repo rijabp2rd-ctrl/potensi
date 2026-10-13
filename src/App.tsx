@@ -37,8 +37,7 @@ import {
   saveSpreadsheetConfig,
   loadIkmList,
   saveIkmList,
-  ConnectedSpreadsheetConfig,
-  DEFAULT_USERS
+  ConnectedSpreadsheetConfig
 } from './services/storage';
 import { GoogleWorkspaceService } from './services/googleWorkspace';
 import { 
@@ -74,10 +73,10 @@ export function App() {
     setIkmList(loadIkmList());
     setSpreadsheetConfig(loadSpreadsheetConfig());
     
-    // Default logged in as admin for ease of testing government features
-    const user = loadCurrentUser() || DEFAULT_USERS[0];
-    setCurrentUser(user);
-    saveCurrentUser(user);
+    // Sesuai permintaan pengguna: Saat aplikasi dibuka jangan login admin (Mulai dalam mode publik / tamu)
+    // Pengguna dapat login kapan saja melalui tombol "Login Petugas / Admin" di Navbar
+    saveCurrentUser(null);
+    setCurrentUser(null);
 
     // Test Firestore Connection on Boot (Requirement from skill)
     testFirestoreConnection().then((connected) => {
