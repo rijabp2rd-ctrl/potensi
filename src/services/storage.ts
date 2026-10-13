@@ -1,947 +1,733 @@
-import { PotensiPajakEntry, PbbP2Entry, IkmEntry, AppUser, GoogleSheetsConfig, LibraryBerkasEntry } from '../types';
+import { PotensiPajakEntry, PbbP2Entry, LibraryBerkasEntry, AppUser, RetribusiDaerahEntry } from '../types';
 
-const STORAGE_KEYS = {
-  POTENSI: 'sipotensi_data_potensi_v1',
-  PBB: 'sipotensi_data_pbb_v1',
-  IKM: 'sipotensi_data_ikm_v1',
-  USER: 'sipotensi_current_user_v1',
-  SHEETS_CONFIG: 'sipotensi_sheets_config_v1',
-  LIBRARY: 'sipotensi_data_library_v1',
-};
+export const CURRENT_USER_KEY = 'sipotensi_current_user';
+export const POTENSI_KEY = 'sipotensi_potensi_list';
+export const PBB_KEY = 'sipotensi_pbb_list';
+export const LIBRARY_KEY = 'sipotensi_library_list';
+export const RETRIBUSI_KEY = 'sipotensi_retribusi_list';
 
-// Initial Seed Data to make dashboards, charts, tables, and libraries instantly dynamic
-const SEED_POTENSI: PotensiPajakEntry[] = [
+export const DEFAULT_USERS: AppUser[] = [
   {
-    id: 'POT-2026-001',
-    tanggal: '2026-09-28',
-    namaObjek: 'Pajak Restoran - Cafe & Roastery Senja Kopi',
-    kategoriObjek: 'Pajak Restoran / Rumah Makan',
-    namaWajibPajak: 'Hendra Gunawan',
-    alamat: 'Jl. Merdeka No. 45, Sentra Kuliner',
-    kecamatan: 'Kecamatan Kota Selatan',
-    kelurahan: 'Kelurahan Sukadamai',
-    noWhatsapp: '081234567890',
-    estimasiPotensiTahunan: 48000000,
-    fileDpaArkas: {
-      name: 'DPA_Pendataan_Usaha_Komersil_2026.pdf',
-      size: 1450000,
-      type: 'application/pdf',
-      dataUrl: '',
-    },
-    fileObjek: {
-      name: 'foto_tampak_depan_cafe_senja.jpg',
-      size: 890000,
-      type: 'image/jpeg',
-      dataUrl: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=600&q=80',
-    },
-    koordinatLat: -6.917464,
-    koordinatLng: 107.619123,
-    alamatGps: 'Jl. Merdeka No.45, Sukadamai (-6.9175, 107.6191)',
-    statusValidasi: 'Tervalidasi Otomatis',
-    skorKelayakan: 95,
-    catatanValidasi: [
-      'Nomor WhatsApp terverifikasi standar seluler RI',
-      'Dokumen DPA/ARKAS terunggah lengkap',
-      'Foto fisik objek teridentifikasi jelas',
-      'Koordinat geospasial presisi GPS (< 15 meter)',
-    ],
-    statusAdmin: 'Diverifikasi',
-    catatanPetugas: 'Omzet rata-rata Rp 40jt/bulan. Potensi pajak PB1 10% sebesar Rp 4.000.000/bulan telah diverifikasi tim penetapan.',
-    petugasSurvey: 'Budi Santoso, S.STP (NIP. 198504122008011004)',
-    sumberData: 'Form Publik',
-    createdAt: '2026-09-28T09:30:00Z',
-    syncedToGoogleSheets: true,
+    id: 'user-admin-1',
+    name: 'Rija, S.STP, M.IP',
+    email: 'rija.bp2rd@gmail.com',
+    role: 'admin',
+    nip: '19880512 201001 1 003',
+    jabatan: 'Kepala Bidang Pendataan, Penilaian & Penggalian Potensi Pajak',
+    wilayahTugas: 'Seluruh Wilayah Kabupaten Hulu Sungai Utara',
   },
   {
-    id: 'POT-2026-002',
-    tanggal: '2026-09-29',
-    namaObjek: 'Pajak Reklame - Billboard Digital Videotron Simpang Empat',
-    kategoriObjek: 'Pajak Reklame / Billboard',
-    namaWajibPajak: 'PT Media Megah Reklameindo (Bambang S.)',
-    alamat: 'Perempatan Ringroad Barat - Sudirman',
-    kecamatan: 'Kecamatan Kota Barat',
-    kelurahan: 'Kelurahan Karang Mekar',
-    noWhatsapp: '085712348899',
-    estimasiPotensiTahunan: 120000000,
-    fileDpaArkas: {
-      name: 'ARKAS_Perizinan_Reklame_Titik_A12.pdf',
-      size: 2100000,
-      type: 'application/pdf',
-      dataUrl: '',
-    },
-    fileObjek: {
-      name: 'videotron_simpang_utama.jpg',
-      size: 1200000,
-      type: 'image/jpeg',
-      dataUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=600&q=80',
-    },
-    koordinatLat: -6.921345,
-    koordinatLng: 107.608765,
-    alamatGps: 'Simpang Ringroad Barat (-6.9213, 107.6088)',
-    statusValidasi: 'Tervalidasi Otomatis',
-    skorKelayakan: 100,
-    catatanValidasi: [
-      'Nomor WhatsApp valid dan responsif',
-      'Dokumen izin tayang & DPA lengkap',
-      'Foto sudut pandang reklame optimal',
-      'Titik koordinat cocok dengan peta tata ruang reklame kota',
-    ],
-    statusAdmin: 'Disetujui',
-    catatanPetugas: 'SKPD Reklame Elektronik telah diterbitkan untuk masa tayang 12 bulan.',
-    petugasSurvey: 'Rian Pratama, S.E.',
-    sumberData: 'Petugas Lapangan',
-    createdAt: '2026-09-29T11:15:00Z',
-    syncedToGoogleSheets: true,
+    id: 'user-field-1',
+    name: 'Ahmad Faisal, S.AP',
+    email: 'petugas.hsu@bp2rd-hsu.go.id',
+    role: 'user',
+    nip: '19920814 201902 1 004',
+    jabatan: 'Petugas Surveyor & Pendataan Objek Pajak Lapangan',
+    wilayahTugas: 'Kecamatan Amuntai Tengah & Sungai Pandan (Alabio)',
   },
   {
-    id: 'POT-2026-003',
-    tanggal: '2026-09-30',
-    namaObjek: 'Pajak Hotel - Wisma Graha Nirwana Boutique',
-    kategoriObjek: 'Pajak Hotel / Wisma / Penginapan',
-    namaWajibPajak: 'Siti Aminah, M.M.',
-    alamat: 'Jl. Pemuda Asri Kavling 18',
-    kecamatan: 'Kecamatan Kota Utara',
-    kelurahan: 'Kelurahan Cempaka Baru',
-    noWhatsapp: '082199887766',
-    estimasiPotensiTahunan: 84000000,
-    fileDpaArkas: {
-      name: 'DPA_Pendataan_Perhotelan_Q3.pdf',
-      size: 980000,
-      type: 'application/pdf',
-      dataUrl: '',
-    },
-    fileObjek: {
-      name: 'gedung_hotel_nirwana.jpg',
-      size: 1050000,
-      type: 'image/jpeg',
-      dataUrl: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80',
-    },
-    koordinatLat: -6.905678,
-    koordinatLng: 107.623456,
-    alamatGps: 'Jl. Pemuda Asri 18 (-6.9057, 107.6235)',
-    statusValidasi: 'Tervalidasi Otomatis',
-    skorKelayakan: 90,
-    catatanValidasi: [
-      'Identitas WP & Nomor WhatsApp sesuai',
-      'File pendukung valid',
-      'Objek operasional dengan 24 kamar aktif',
-    ],
-    statusAdmin: 'Perlu Survey Lapangan',
-    catatanPetugas: 'Dijadwalkan uji petik tingkat okupansi kamar minggu depan oleh Tim UPT Wilayah Utara.',
-    sumberData: 'Form Publik',
-    createdAt: '2026-09-30T14:20:00Z',
-    syncedToGoogleSheets: true,
-  },
-  {
-    id: 'POT-2026-004',
-    tanggal: '2026-10-01',
-    namaObjek: 'Pajak Parkir - Area Parkir Khusus Plaza Sentosa',
-    kategoriObjek: 'Pajak Parkir Swasta',
-    namaWajibPajak: 'CV Sentosa Secure Parking',
-    alamat: 'Kawasan Komersial Sentosa Megah Blok B',
-    kecamatan: 'Kecamatan Kota Timur',
-    kelurahan: 'Kelurahan Margajaya',
-    noWhatsapp: '081344556677',
-    estimasiPotensiTahunan: 36000000,
-    fileDpaArkas: {
-      name: 'ARKAS_Audit_Kapasitas_Parkir.pdf',
-      size: 850000,
-      type: 'application/pdf',
-      dataUrl: '',
-    },
-    fileObjek: {
-      name: 'gerbang_parkir_otomatis.jpg',
-      size: 720000,
-      type: 'image/jpeg',
-      dataUrl: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=600&q=80',
-    },
-    koordinatLat: -6.932109,
-    koordinatLng: 107.634567,
-    alamatGps: 'Sentosa Megah Blok B (-6.9321, 107.6346)',
-    statusValidasi: 'Tervalidasi Otomatis',
-    skorKelayakan: 85,
-    catatanValidasi: [
-      'Nomor WhatsApp aktif',
-      'Kapasitas parkir tertera: 120 motor, 45 mobil',
-      'Bukti gate barrier otomatis terlampir',
-    ],
-    statusAdmin: 'Menunggu Validasi',
-    catatanPetugas: 'Menunggu konfirmasi tarif flat vs tarif jam-jaman.',
-    sumberData: 'Form Publik',
-    createdAt: '2026-10-01T08:10:00Z',
-    syncedToGoogleSheets: true,
-  },
-  {
-    id: 'POT-2026-005',
-    tanggal: '2026-10-01',
-    namaObjek: 'Pajak Air Tanah - Sumur Dalam Industri PT Tekstil Makmur',
-    kategoriObjek: 'Pajak Air Tanah (ABT)',
-    namaWajibPajak: 'PT Tekstil Makmur Sejahtera',
-    alamat: 'Kawasan Industri Timur Km 14',
-    kecamatan: 'Kecamatan Kota Timur',
-    kelurahan: 'Kelurahan Cipadung',
-    noWhatsapp: '081122334455',
-    estimasiPotensiTahunan: 72000000,
-    fileDpaArkas: {
-      name: 'DPA_Meteran_ABT_Q3.pdf',
-      size: 1300000,
-      type: 'application/pdf',
-      dataUrl: '',
-    },
-    fileObjek: {
-      name: 'water_meter_industri.jpg',
-      size: 940000,
-      type: 'image/jpeg',
-      dataUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80',
-    },
-    koordinatLat: -6.938901,
-    koordinatLng: 107.645678,
-    alamatGps: 'Kawasan Industri Km 14 (-6.9389, 107.6457)',
-    statusValidasi: 'Tervalidasi Otomatis',
-    skorKelayakan: 90,
-    catatanValidasi: [
-      'Water meter digital terverifikasi',
-      'SIPA (Surat Izin Pengambilan Air) berlaku',
-    ],
-    statusAdmin: 'Diverifikasi',
-    catatanPetugas: 'Volume pengambilan rata-rata 1.500 m3/bulan.',
-    petugasSurvey: 'Budi Santoso, S.STP',
-    sumberData: 'Petugas Lapangan',
-    createdAt: '2026-10-01T09:45:00Z',
-    syncedToGoogleSheets: true,
+    id: 'user-field-2',
+    name: 'Siti Nurhaliza, A.Md',
+    email: 'siti.lapangan@bp2rd-hsu.go.id',
+    role: 'user',
+    nip: '19950322 202104 2 006',
+    jabatan: 'Verifikator PBB-P2 & Validasi Titik Geospasial',
+    wilayahTugas: 'Kecamatan Danau Panggang & Babirik',
   },
 ];
 
-const SEED_PBB: PbbP2Entry[] = [
+export const INITIAL_POTENSI_DATA: PotensiPajakEntry[] = [
   {
-    id: 'PBB-2026-101',
-    tanggal: '2026-09-27',
-    namaWajibPajak: 'Dr. Agus Wibowo, M.Si.',
-    nik: '3273011504800003',
-    statusNop: 'ada',
-    nop: '32.73.010.002.015-0089.0',
-    lokasiObjek: 'Perumahan Griya Indah Blok C2 No. 14',
-    rtRw: 'RT 04 / RW 08',
-    kelurahanDesa: 'Kelurahan Sukadamai',
-    kecamatan: 'Kecamatan Kota Selatan',
-    tahunPajak: 2026,
-    nominalBayar: 1450000,
-    buktiBayar: {
-      name: 'struk_pembayaran_pbb_bjb_2026.jpg',
-      size: 420000,
-      type: 'image/jpeg',
-      dataUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=600&q=80',
-    },
-    statusVerifikasi: 'Lunas & Sah',
-    catatanVerifikasi: 'Tercatat lunas di Sistem Informasi Pendapatan Daerah (SISMIOP) melalui kanal Bank BJB Virtual Account.',
-    createdAt: '2026-09-27T10:00:00Z',
-    syncedToGoogleSheets: true,
+    id: 'pot-001',
+    nomorFormulir: 'FORM-POT/2026/03/001',
+    tanggalPendataan: '2026-03-12',
+    namaWajibPajak: 'Haji Mansyur (RM Wong Solo Amuntai)',
+    npwpd: 'P.2.0019283.08.2024',
+    namaUsaha: 'Restoran Wong Solo Amuntai & Catering',
+    jenisPajak: 'Pajak Restoran / PBJT Makanan & Minuman',
+    kecamatan: 'Kecamatan Amuntai Tengah',
+    kelurahanDesa: 'Murung Sari',
+    alamatLengkap: 'Jl. Basuki Rahmat No. 45, Depan Taman Putri Junjung Buih',
+    latitude: -2.424458,
+    longitude: 115.247231,
+    akurasiGps: 6,
+    potensiRupiahBulanan: 14500000,
+    potensiRupiahTahunan: 174000000,
+    statusVerifikasi: 'Setuju',
+    verifiedBy: 'Rija, S.STP, M.IP (Kabid Pendataan)',
+    verifiedAt: '2026-03-13T10:00:00Z',
+    catatanVerifikasi: 'Hasil survei dan potensi omzet telah diverifikasi akurat dan disetujui.',
+    petugasPendata: 'Ahmad Faisal, S.AP',
+    catatanPetugas: 'Omzet bulanan stabil 145 juta, potensi pajak 10% PBJT terealisasi tertib.',
+    createdAt: '2026-03-12T08:30:00Z',
+    updatedAt: '2026-03-13T10:00:00Z',
   },
   {
-    id: 'PBB-2026-102',
-    tanggal: '2026-09-29',
-    namaWajibPajak: 'Hj. Rohimah',
-    nik: '3273026207750001',
-    statusNop: 'ada',
-    nop: '32.73.020.004.022-0145.0',
-    lokasiObjek: 'Jl. Melati Kencana No. 89',
-    rtRw: 'RT 02 / RW 03',
-    kelurahanDesa: 'Kelurahan Karang Mekar',
-    kecamatan: 'Kecamatan Kota Barat',
-    tahunPajak: 2026,
-    nominalBayar: 875000,
-    buktiBayar: {
-      name: 'bukti_qris_pbb_posindonesia.png',
-      size: 380000,
-      type: 'image/png',
-      dataUrl: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=600&q=80',
-    },
-    statusVerifikasi: 'Lunas & Sah',
-    catatanVerifikasi: 'Transaksi QRIS Dinamis telah terkonfirmasi lunas.',
-    createdAt: '2026-09-29T14:40:00Z',
-    syncedToGoogleSheets: true,
+    id: 'pot-002',
+    nomorFormulir: 'FORM-POT/2026/03/002',
+    tanggalPendataan: '2026-03-15',
+    namaWajibPajak: 'PT Borneo Reklame Media Pratama',
+    npwpd: 'P.1.0028192.08.2023',
+    namaUsaha: 'Billboard Raksasa Bundaran Patung Itik Amuntai',
+    jenisPajak: 'Pajak Reklame',
+    kecamatan: 'Kecamatan Amuntai Tengah',
+    kelurahanDesa: 'Antasari',
+    alamatLengkap: 'Simpang Empat Bundaran Itik Amuntai',
+    latitude: -2.421500,
+    longitude: 115.249200,
+    akurasiGps: 4,
+    potensiRupiahBulanan: 4800000,
+    potensiRupiahTahunan: 57600000,
+    statusVerifikasi: 'Verifikasi',
+    verifiedBy: 'Ahmad Faisal, S.AP (Petugas Tim I)',
+    verifiedAt: '2026-03-16T11:00:00Z',
+    catatanVerifikasi: 'Sedang dalam proses verifikasi dimensi papan dan sudut pandang ruas jalan protokol.',
+    petugasPendata: 'Rija, S.STP, M.IP',
+    catatanPetugas: 'Ukuran 8x4 meter dua muka vertikal, penayangan produk telekomunikasi komersial.',
+    createdAt: '2026-03-15T09:15:00Z',
+    updatedAt: '2026-03-16T11:00:00Z',
   },
   {
-    id: 'PBB-2026-103',
-    tanggal: '2026-10-01',
-    namaWajibPajak: 'Wawan Setiawan',
-    nik: '3273031008890004',
-    statusNop: 'tidak_ada',
-    lokasiObjek: 'Pecahan Tanah Waris, Jl. Pesantren Baru No. 12',
-    rtRw: 'RT 05 / RW 01',
-    kelurahanDesa: 'Kelurahan Cempaka Baru',
-    kecamatan: 'Kecamatan Kota Utara',
-    tahunPajak: 2026,
-    nominalBayar: 0,
-    buktiBayar: {
-      name: 'surat_keterangan_kepemilikan_tanah.pdf',
-      size: 1100000,
-      type: 'application/pdf',
-      dataUrl: '',
-    },
+    id: 'pot-003',
+    nomorFormulir: 'FORM-POT/2026/03/018',
+    tanggalPendataan: '2026-03-20',
+    namaWajibPajak: 'Hj. Mardiah (Pusat Kerajinan Anyaman Purun)',
+    npwpd: 'P.2.0039482.08.2025',
+    namaUsaha: 'Sentra Grosir Hasil Kerajinan & Bebek Alabio',
+    jenisPajak: 'Pajak Restoran / PBJT Makanan & Minuman',
+    kecamatan: 'Kecamatan Sungai Pandan (Alabio)',
+    kelurahanDesa: 'Alabio Pasar',
+    alamatLengkap: 'Kawasan Pasar Alabio RT 03 No. 12',
+    latitude: -2.482345,
+    longitude: 115.187654,
+    akurasiGps: 8,
+    potensiRupiahBulanan: 6200000,
+    potensiRupiahTahunan: 74400000,
     statusVerifikasi: 'Menunggu Verifikasi',
-    catatanVerifikasi: 'Permohonan Pendaftaran NOP Baru (Objek Baru). Tim Pelayanan sedang memverifikasi batas bidang tanah di peta ZNT.',
-    createdAt: '2026-10-01T07:15:00Z',
-    syncedToGoogleSheets: true,
+    petugasPendata: 'Ahmad Faisal, S.AP',
+    catatanPetugas: 'Sentra usaha kuliner itik khas Alabio dan pusat oleh-oleh kerajinan HSU.',
+    createdAt: '2026-03-20T10:00:00Z',
+    updatedAt: '2026-03-20T10:00:00Z',
+  },
+  {
+    id: 'pot-004',
+    nomorFormulir: 'FORM-POT/2026/03/025',
+    tanggalPendataan: '2026-03-24',
+    namaWajibPajak: 'Pengelola Wisata Rawa Kerbau Danau Panggang',
+    npwpd: 'P.3.0048123.08.2025',
+    namaUsaha: 'Resto Terapung Danau Panggang & Wisata Rawa',
+    jenisPajak: 'Pajak Hiburan / Jasa Kesenian',
+    kecamatan: 'Kecamatan Danau Panggang',
+    kelurahanDesa: 'Danau Panggang',
+    alamatLengkap: 'Dermaga Wisata Danau Panggang RT 02',
+    latitude: -2.498765,
+    longitude: 115.098432,
+    akurasiGps: 10,
+    potensiRupiahBulanan: 3500000,
+    potensiRupiahTahunan: 42000000,
+    statusVerifikasi: 'Menunggu Verifikasi',
+    petugasPendata: 'Siti Nurhaliza, A.Md',
+    catatanPetugas: 'Pengembangan objek wisata unggulan kerbau rawa HSU, verifikasi intensitas kunjungan.',
+    createdAt: '2026-03-24T14:20:00Z',
+    updatedAt: '2026-03-24T14:20:00Z',
+  },
+  {
+    id: 'pot-005',
+    nomorFormulir: 'FORM-POT/2026/03/031',
+    tanggalPendataan: '2026-03-28',
+    namaWajibPajak: 'Hotel Bersaudara Amuntai',
+    npwpd: 'P.4.0051289.08.2023',
+    namaUsaha: 'Hotel & Penginapan Bersaudara HSU',
+    jenisPajak: 'Pajak Hotel / Jasa Perhotelan',
+    kecamatan: 'Kecamatan Amuntai Tengah',
+    kelurahanDesa: 'Kebun Sari',
+    alamatLengkap: 'Jl. Ahmad Yani No. 88, Amuntai',
+    latitude: -2.423100,
+    longitude: 115.245800,
+    akurasiGps: 5,
+    potensiRupiahBulanan: 18500000,
+    potensiRupiahTahunan: 222000000,
+    statusVerifikasi: 'Setuju',
+    verifiedBy: 'Rija, S.STP, M.IP (Kabid Pendataan)',
+    verifiedAt: '2026-03-29T09:00:00Z',
+    catatanVerifikasi: 'Ketetapan potensi jasa perhotelan telah disetujui sesuai tarif perda.',
+    petugasPendata: 'Rija, S.STP, M.IP',
+    catatanPetugas: 'Memiliki 32 kamar aktif, tingkat okupansi rata-rata 68% per bulan.',
+    createdAt: '2026-03-28T11:40:00Z',
+    updatedAt: '2026-03-29T09:00:00Z',
   },
 ];
 
-const SEED_IKM: IkmEntry[] = [
+export const INITIAL_PBB_DATA: PbbP2Entry[] = [
   {
-    id: 'IKM-2026-201',
-    tanggal: '2026-09-28',
-    namaWajibPajak: 'Ahmad Fauzi',
-    alamat: 'Jl. Merdeka No. 12',
-    bidangUsaha: 'Usaha Kuliner / Restoran',
-    nomorKontak: '081299887711',
-    skorKemudahan: 5,
-    skorKecepatan: 5,
-    skorKesopanan: 5,
-    skorTransparansi: 4,
-    skorSarana: 5,
-    skorRataRata: 4.8,
-    nilaiKonversi: 96,
-    kategoriMutu: 'A (Sangat Baik)',
-    saranMasukan: 'Sangat praktis dengan adanya formulir online ini! Proses verifikasi cepat dan petugas ramah.',
-    createdAt: '2026-09-28T16:00:00Z',
-    syncedToGoogleSheets: true,
+    id: 'pbb-001',
+    nop: '63.08.010.001.002-0045.0',
+    tahunPajak: 2026,
+    namaWajibPajak: 'H. Rusliansyah, S.Pd',
+    nikWajibPajak: '6308011204780001',
+    kecamatan: 'Kecamatan Amuntai Tengah',
+    kelurahanDesa: 'Murung Sari',
+    alamatObjek: 'Jl. Empu Jatmika No. 14 RT 04, Amuntai',
+    luasBumiM2: 450,
+    njopBumiPerM2: 850000,
+    luasBangunanM2: 240,
+    njopBangunanPerM2: 1200000,
+    njopTotal: 670500000,
+    pbbTerhutang: 835250,
+    statusPembayaran: 'LUNAS',
+    statusVerifikasi: 'Setuju',
+    verifiedBy: 'Rija, S.STP, M.IP',
+    verifiedAt: '2026-03-11T10:00:00Z',
+    catatanVerifikasi: 'Ketetapan PBB dan bukti bayar lunas Bank Kalsel telah diverifikasi dan disetujui.',
+    tanggalBayar: '2026-03-10',
+    bankTempatBayar: 'Bank Kalsel Cabang Amuntai',
+    nomorStruk: 'STRUK-BKS/HSU/2026/03/4982',
+    latitude: -2.425120,
+    longitude: 115.246890,
+    akurasiGps: 5,
+    petugasValidasi: 'Rija, S.STP, M.IP',
+    createdAt: '2026-03-10T09:00:00Z',
+    updatedAt: '2026-03-11T10:00:00Z',
   },
   {
-    id: 'IKM-2026-202',
-    tanggal: '2026-09-29',
-    namaWajibPajak: 'Dewi Lestari',
-    alamat: 'Kawasan Bisnis Sudirman Kav. 9',
-    bidangUsaha: 'Periklanan / Agency',
-    nomorKontak: '085811223344',
-    skorKemudahan: 4,
-    skorKecepatan: 4,
-    skorKesopanan: 5,
-    skorTransparansi: 5,
-    skorSarana: 4,
-    skorRataRata: 4.4,
-    nilaiKonversi: 88,
-    kategoriMutu: 'A (Sangat Baik)',
-    saranMasukan: 'Penetapan pajak reklame sekarang jauh lebih transparan. Mohon pertahankan kecepatan respon WA center.',
-    createdAt: '2026-09-29T10:30:00Z',
-    syncedToGoogleSheets: true,
+    id: 'pbb-002',
+    nop: '63.08.020.003.001-0112.0',
+    tahunPajak: 2026,
+    namaWajibPajak: 'Hj. Masitah',
+    nikWajibPajak: '6308024508820003',
+    kecamatan: 'Kecamatan Amuntai Utara',
+    kelurahanDesa: 'Pakacangan',
+    alamatObjek: 'Jl. Trans Kalimantan RT 02, Pakacangan',
+    luasBumiM2: 600,
+    njopBumiPerM2: 420000,
+    luasBangunanM2: 180,
+    njopBangunanPerM2: 890000,
+    njopTotal: 412200000,
+    pbbTerhutang: 462200,
+    statusPembayaran: 'LUNAS',
+    statusVerifikasi: 'Verifikasi',
+    verifiedBy: 'Ahmad Faisal, S.AP',
+    verifiedAt: '2026-03-19T09:30:00Z',
+    catatanVerifikasi: 'Pengecekan slip setoran Pos Indonesia dan pemutakhiran data wajib pajak.',
+    tanggalBayar: '2026-03-18',
+    bankTempatBayar: 'Pos Indonesia Amuntai',
+    nomorStruk: 'STRUK-POS/HSU/2026/03/1182',
+    latitude: -2.378912,
+    longitude: 115.263445,
+    akurasiGps: 6,
+    petugasValidasi: 'Ahmad Faisal, S.AP',
+    createdAt: '2026-03-18T10:30:00Z',
+    updatedAt: '2026-03-19T09:30:00Z',
   },
   {
-    id: 'IKM-2026-203',
-    tanggal: '2026-09-30',
-    namaWajibPajak: 'Surya Pratama',
-    alamat: 'Perum Cempaka Indah B-1',
-    bidangUsaha: 'Wajib Pajak Pribadi (PBB-P2)',
-    nomorKontak: '082155667788',
-    skorKemudahan: 4,
-    skorKecepatan: 4,
-    skorKesopanan: 4,
-    skorTransparansi: 4,
-    skorSarana: 4,
-    skorRataRata: 4.0,
-    nilaiKonversi: 80,
-    kategoriMutu: 'B (Baik)',
-    saranMasukan: 'Aplikasi mudah diakses lewat ponsel. Semoga ada fitur pengingat jatuh tempo PBB otomatis lewat WhatsApp.',
-    createdAt: '2026-09-30T13:45:00Z',
-    syncedToGoogleSheets: true,
+    id: 'pbb-003',
+    nop: '63.08.040.002.004-0078.0',
+    tahunPajak: 2026,
+    namaWajibPajak: 'Koperasi Usaha Bersama Alabio',
+    nikWajibPajak: '6308041005750002',
+    kecamatan: 'Kecamatan Sungai Pandan (Alabio)',
+    kelurahanDesa: 'Pandulangan',
+    alamatObjek: 'Jl. Kebun Purun RT 01, Alabio',
+    luasBumiM2: 1200,
+    njopBumiPerM2: 350000,
+    luasBangunanM2: 380,
+    njopBangunanPerM2: 950000,
+    njopTotal: 781000000,
+    pbbTerhutang: 976250,
+    statusPembayaran: 'BELUM LUNAS',
+    statusVerifikasi: 'Menunggu Verifikasi',
+    latitude: -2.482345,
+    longitude: 115.187654,
+    akurasiGps: 8,
+    petugasValidasi: 'Siti Nurhaliza, A.Md',
+    createdAt: '2026-03-22T13:45:00Z',
+    updatedAt: '2026-03-22T13:45:00Z',
+  },
+  {
+    id: 'pbb-004',
+    nop: '63.08.050.001.003-0091.0',
+    tahunPajak: 2026,
+    namaWajibPajak: 'Drs. H. M. Arsyad',
+    nikWajibPajak: '6308051909650001',
+    kecamatan: 'Kecamatan Danau Panggang',
+    kelurahanDesa: 'Danau Panggang',
+    alamatObjek: 'Jl. Dermaga Rawa No. 05 RT 03',
+    luasBumiM2: 520,
+    njopBumiPerM2: 280000,
+    luasBangunanM2: 150,
+    njopBangunanPerM2: 750000,
+    njopTotal: 258100000,
+    pbbTerhutang: 283910,
+    statusPembayaran: 'LUNAS',
+    statusVerifikasi: 'Setuju',
+    verifiedBy: 'Siti Nurhaliza, A.Md',
+    verifiedAt: '2026-03-27T14:00:00Z',
+    catatanVerifikasi: 'Objek persil dan ketetapan lunas Bank Kalsel Danau Panggang terverifikasi disetujui.',
+    tanggalBayar: '2026-03-27',
+    bankTempatBayar: 'Bank Kalsel Unit Danau Panggang',
+    nomorStruk: 'STRUK-BKS/DPG/2026/03/0073',
+    latitude: -2.498765,
+    longitude: 115.098432,
+    akurasiGps: 7,
+    petugasValidasi: 'Siti Nurhaliza, A.Md',
+    createdAt: '2026-03-27T08:15:00Z',
+    updatedAt: '2026-03-27T14:00:00Z',
   },
 ];
 
-const SEED_LIBRARY: LibraryBerkasEntry[] = [
+export const INITIAL_LIBRARY_DATA: LibraryBerkasEntry[] = [
+  // 1. KATEGORI REGULASI (TAMPIL DI LANDING PAGE / PUBLIK)
   {
-    id: 'REG-2026-001',
-    title: 'Peraturan Daerah (Perda) Pajak Daerah & Retribusi Daerah No. 1 Tahun 2026',
+    id: 'lib-reg-01',
+    title: 'Peraturan Daerah Kab. Hulu Sungai Utara No. 01 Tahun 2024 tentang Pajak Daerah dan Retribusi Daerah',
     category: 'regulasi',
-    nomorSurat: 'Perda No. 01/2026',
-    fileType: 'PDF Document',
-    sizeStr: '3.4 MB',
-    date: '2026-01-15',
-    authorOrWp: 'Pemerintah Daerah & DPRD',
-    status: 'Berlaku Efektif',
-    statusColor: 'bg-emerald-950 text-emerald-300 border-emerald-500/30',
-    description: 'Ketentuan umum tarif pajak restoran, reklame, perhotelan, parkir, dan air tanah sesuai UU No. 1/2022 HKPD.',
-    previewUrl: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=600&q=80',
+    categoryLabel: 'Perda dan Regulasi',
+    nomorBerkas: 'PERDA-HSU/01/2024',
+    description: 'Payung hukum fundamental pemungutan Pajak Daerah (PBB-P2, BPHTB, PBJT, Reklame, Air Tanah, MBLB) dan Retribusi Daerah terintegrasi UU HKPD.',
+    fileName: 'Perda_HSU_No_01_2024_PDRD.pdf',
+    fileSize: '4.8 MB',
+    fileType: 'pdf',
     isPublic: true,
-    tags: ['Perda', 'HKPD', 'Tarif Pajak', 'Regulasi'],
-    statusVerifikasi: 'Terverifikasi & Sah',
-    catatanVerifikasi: 'Perda resmi telah diundangkan dalam Lembaran Daerah Tahun 2026.',
-    verifiedBy: 'Rija (Administrator BP2RD)',
-    verifiedAt: '2026-01-16T10:00:00Z',
-    createdAt: '2026-01-15T08:00:00Z',
+    uploadedBy: 'BP2RD HSU Official',
+    uploadedRole: 'admin',
+    tanggalUpload: '2026-01-15',
+    statusVerifikasi: 'Aktif',
+    tags: ['Perda', 'PDRD', 'Regulasi Utama', 'Hukum'],
   },
   {
-    id: 'REG-2026-002',
-    title: 'Petunjuk Teknis (Juknis) Operasional Penggalian Potensi Objek Baru BP2RD',
+    id: 'lib-reg-02',
+    title: 'Peraturan Bupati Hulu Sungai Utara tentang Tata Cara Pemungutan dan Pengelolaan PBB Perdesaan dan Perkotaan (PBB-P2)',
+    category: 'regulasi',
+    categoryLabel: 'Perda dan Regulasi',
+    nomorBerkas: 'PERBUP-HSU/18/2024',
+    description: 'Pedoman teknis penetapan NJOP, penerbitan SPPT, mekanisme keberatan, dan pelimpahan insentif pemungutan PBB-P2 ke desa/kelurahan.',
+    fileName: 'Perbup_HSU_Tata_Cara_PBB_P2.pdf',
+    fileSize: '2.4 MB',
+    fileType: 'pdf',
+    isPublic: true,
+    uploadedBy: 'Bagian Hukum & BP2RD HSU',
+    uploadedRole: 'admin',
+    tanggalUpload: '2026-02-01',
+    statusVerifikasi: 'Aktif',
+    tags: ['Perbup', 'PBB-P2', 'Tata Cara'],
+  },
+  {
+    id: 'lib-reg-03',
+    title: 'Instruksi Bupati HSU tentang Optimalisasi Penerimaan Asli Daerah (PAD) dan Penilaian Potensi Pajak Lapangan',
+    category: 'regulasi',
+    categoryLabel: 'Perda dan Regulasi',
+    nomorBerkas: 'INBUP-HSU/04/2025',
+    description: 'Instruksi percepatan digitalisasi pajak daerah, pendataan potensi geospasial di 10 kecamatan, dan kolaborasi aparat desa.',
+    fileName: 'Instruksi_Bupati_PAD_HSU_2025.pdf',
+    fileSize: '1.2 MB',
+    fileType: 'pdf',
+    isPublic: true,
+    uploadedBy: 'Sekretariat Daerah HSU',
+    uploadedRole: 'admin',
+    tanggalUpload: '2026-02-10',
+    statusVerifikasi: 'Aktif',
+    tags: ['Inbup', 'Optimalisasi PAD', 'Survei Lapangan'],
+  },
+
+  // 2. KATEGORI SOP & JUKNIS (TAMPIL DI LANDING PAGE / PUBLIK)
+  {
+    id: 'lib-sop-01',
+    title: 'SOP Pendataan dan Pemetaan Titik Koordinat Geospasial Objek Pajak Baru BP2RD HSU',
     category: 'sop',
-    nomorSurat: 'Juknis BP2RD-04/2026',
-    fileType: 'PDF Document',
-    sizeStr: '2.1 MB',
-    date: '2026-03-01',
-    authorOrWp: 'Bidang Pendataan & Penetapan',
-    status: 'SOP Resmi',
-    statusColor: 'bg-blue-950 text-blue-300 border-blue-500/30',
-    description: 'Pedoman operasional verifikasi titik GPS, verifikasi berkas DPA/ARKAS, dan formulasi proyeksi omzet uji petik.',
-    previewUrl: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=600&q=80',
+    categoryLabel: 'SOP & Juknis',
+    nomorBerkas: 'SOP/BP2RD-HSU/BID-I/001',
+    description: 'Standar operasional prosedur survei lapangan tim surveyor, perekaman titik koordinat GPS akurasi <10 meter, dan verifikasi foto objek.',
+    fileName: 'SOP_Pendataan_Geospasial_Pajak_HSU.pdf',
+    fileSize: '3.1 MB',
+    fileType: 'pdf',
     isPublic: true,
-    tags: ['Juknis', 'SOP', 'Pendataan', 'GPS'],
-    statusVerifikasi: 'Terverifikasi & Sah',
-    catatanVerifikasi: 'SOP disahkan Kepala Badan untuk pedoman tim survey lapangan.',
-    verifiedBy: 'Rija (Administrator BP2RD)',
-    verifiedAt: '2026-03-02T09:30:00Z',
-    createdAt: '2026-03-01T09:00:00Z',
+    uploadedBy: 'Bidang Pendataan & Penilaian',
+    uploadedRole: 'admin',
+    tanggalUpload: '2026-02-14',
+    statusVerifikasi: 'Aktif',
+    tags: ['SOP', 'Geospasial', 'GPS Lapangan', 'Surveyor'],
   },
   {
-    id: 'REG-2026-003',
-    title: 'Peta Zona Nilai Tanah (ZNT) & Klasifikasi Penetapan NJOP PBB-P2 2026',
-    category: 'regulasi',
-    nomorSurat: 'Kepbapenda No. 89/2026',
-    fileType: 'Spatial Map PDF',
-    sizeStr: '12.8 MB',
-    date: '2026-02-10',
-    authorOrWp: 'UPT Pemetaan & Penilaian Pajak',
-    status: 'Referensi Pemetaan',
-    statusColor: 'bg-purple-950 text-purple-300 border-purple-500/30',
-    description: 'Zonasi nilai pasar tanah per blok kecamatan untuk perhitungan SPPT PBB tahun berjalan.',
-    previewUrl: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=600&q=80',
+    id: 'lib-sop-02',
+    title: 'Petunjuk Teknis Verifikasi dan Validasi Data Piutang PBB-P2 Berbasis Wilayah Desa/Kelurahan',
+    category: 'sop',
+    categoryLabel: 'SOP & Juknis',
+    nomorBerkas: 'JUKNIS/BP2RD-HSU/2026/007',
+    description: 'Pedoman penyisiran SPPT PBB-P2 tidak terdistribusi, pemutakhiran NOP ganda, dan prosedur cleansing data wajib pajak.',
+    fileName: 'Juknis_Validasi_PBB_P2_Desa_HSU.pdf',
+    fileSize: '1.9 MB',
+    fileType: 'pdf',
     isPublic: true,
-    tags: ['PBB-P2', 'ZNT', 'NJOP', 'Peta Geospasial'],
-    statusVerifikasi: 'Terverifikasi & Sah',
-    catatanVerifikasi: 'Peta digital telah sinkron dengan data spasial BPN & Pemkot.',
-    verifiedBy: 'Rija (Administrator BP2RD)',
-    verifiedAt: '2026-02-11T11:15:00Z',
-    createdAt: '2026-02-10T10:00:00Z',
+    uploadedBy: 'Tim Data & IT BP2RD HSU',
+    uploadedRole: 'admin',
+    tanggalUpload: '2026-02-20',
+    statusVerifikasi: 'Aktif',
+    tags: ['Juknis', 'Validasi', 'Piutang PBB', 'Cleansing'],
   },
+
+  // 3. KATEGORI FORMULIR BLANKO (TAMPIL DI LANDING PAGE / PUBLIK)
   {
-    id: 'BLK-2026-004',
-    title: 'Formulir Blangko Pendaftaran SPOP & LSPOP PBB-P2 Format Standar',
+    id: 'lib-blk-01',
+    title: 'Blanko Formulir SPOP (Surat Pemberitahuan Objek Pajak) & LSPOP PBB-P2 Resmi Kab. HSU',
     category: 'blanko',
-    nomorSurat: 'Form SPOP-2026',
-    fileType: 'Dokumen Formulir PDF/Word',
-    sizeStr: '850 KB',
-    date: '2026-02-15',
-    authorOrWp: 'Bidang Pajak Daerah BP2RD',
-    status: 'Format Standar',
-    statusColor: 'bg-amber-950 text-amber-300 border-amber-500/30',
-    description: 'Blangko resmi Surat Pemberitahuan Objek Pajak (SPOP) dan Lampiran SPOP (LSPOP) untuk mutasi dan pendaftaran objek baru.',
-    previewUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=600&q=80',
+    categoryLabel: 'Formulir Blanko',
+    nomorBerkas: 'FORM-BLANKO/SPOP/HSU-2026',
+    description: 'Format cetak resmi pengisian data subjek pajak, objek tanah, dan rincian komponen bangunan untuk pendaftaran NOP baru / mutasi.',
+    fileName: 'Blanko_Resmi_SPOP_LSPOP_HSU_2026.pdf',
+    fileSize: '850 KB',
+    fileType: 'pdf',
     isPublic: true,
-    tags: ['Blanko', 'SPOP', 'LSPOP', 'PBB'],
-    statusVerifikasi: 'Terverifikasi & Sah',
-    catatanVerifikasi: 'Blangko standar nasional sesuai format Dirjen Pajak & Kemendagri.',
-    verifiedBy: 'Rija (Administrator BP2RD)',
-    verifiedAt: '2026-02-16T08:00:00Z',
-    createdAt: '2026-02-15T11:00:00Z',
+    uploadedBy: 'Loket Pelayanan BP2RD HSU',
+    uploadedRole: 'admin',
+    tanggalUpload: '2026-01-20',
+    statusVerifikasi: 'Aktif',
+    tags: ['Blanko', 'SPOP', 'LSPOP', 'PBB-P2'],
   },
   {
-    id: 'DPA-2026-005',
-    title: 'Template & Pedoman Verifikasi Dokumen DPA / ARKAS Anggaran Sekolah & Lembaga',
-    category: 'dpa',
-    nomorSurat: 'Pedoman BP2RD-ARKAS-01',
-    fileType: 'Dokumen Standar Excel/PDF',
-    sizeStr: '1.5 MB',
-    date: '2026-01-20',
-    authorOrWp: 'Subbag Keuangan & Verifikasi',
-    status: 'Pedoman Verifikasi',
-    statusColor: 'bg-indigo-950 text-indigo-300 border-indigo-500/30',
-    description: 'Format lampiran verifikasi DPA belanja modal dan ARKAS sekolah dalam penetapan potensi pajak belanja daerah.',
-    previewUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=600&q=80',
+    id: 'lib-blk-02',
+    title: 'Blanko Surat Permohonan Pengurangan / Keringanan Ketetapan PBB-P2 Wajib Pajak Tidak Mampu',
+    category: 'blanko',
+    categoryLabel: 'Formulir Blanko',
+    nomorBerkas: 'FORM-BLANKO/KERINGANAN-PBB/2026',
+    description: 'Formulir permohonan stimulus dan keringanan pembayaran PBB-P2 untuk pensiunan, lahan pertanian rawa, dan masyarakat berpenghasilan rendah.',
+    fileName: 'Formulir_Permohonan_Keringanan_PBB_HSU.doc',
+    fileSize: '420 KB',
+    fileType: 'doc',
     isPublic: true,
-    tags: ['DPA', 'ARKAS', 'Anggaran', 'Verifikasi'],
-    statusVerifikasi: 'Terverifikasi & Sah',
-    catatanVerifikasi: 'Panduan diverifikasi untuk kesesuaian belanja modal BOS & DPA OPD.',
-    verifiedBy: 'Rija (Administrator BP2RD)',
-    verifiedAt: '2026-01-21T09:00:00Z',
-    createdAt: '2026-01-20T08:30:00Z',
+    uploadedBy: 'Subbid Keberatan & Banding',
+    uploadedRole: 'admin',
+    tanggalUpload: '2026-01-22',
+    statusVerifikasi: 'Aktif',
+    tags: ['Blanko', 'Keringanan', 'Permohonan'],
+  },
+
+  // 4. KATEGORI DPA / ARKAS (KHUSUS ADMIN & USER LOGGED IN - TIDAK TAMPIL DI LANDING PAGE)
+  {
+    id: 'lib-dpa-01',
+    title: 'Dokumen Pelaksanaan Anggaran (DPA) BP2RD Program Pengelolaan Pendapatan Daerah TA 2026',
+    category: 'dpa',
+    categoryLabel: 'DPA / ARKAS Internal',
+    nomorBerkas: 'DPA/A.1/5.02.0.00.0.00.01.0000/001/2026',
+    description: 'Alokasi pagu belanja operasional pendataan potensi lapangan, survei geospasial, dan insentif pemungutan pajak daerah Kab. HSU.',
+    fileName: 'DPA_BP2RD_HSU_TA_2026_Full.pdf',
+    fileSize: '8.5 MB',
+    fileType: 'pdf',
+    isPublic: false,
+    uploadedBy: 'Kasubag Perencanaan BP2RD HSU',
+    uploadedRole: 'admin',
+    tanggalUpload: '2026-01-08',
+    statusVerifikasi: 'Aktif',
+    tags: ['DPA', 'Anggaran', 'Internal', 'Bapenda HSU'],
+  },
+  {
+    id: 'lib-dpa-02',
+    title: 'Rincian Kertas Kerja Anggaran Kas (ARKAS) Kegiatan Pemeliharaan Sistem & GPS Geospasial',
+    category: 'dpa',
+    categoryLabel: 'DPA / ARKAS Internal',
+    nomorBerkas: 'ARKAS/BP2RD-HSU/SUB-IT/2026',
+    description: 'Jadwal penyerapan triwulanan operasional GPS handheld surveyor dan infrastruktur cloud SIPOTENSI HSU.',
+    fileName: 'ARKAS_IT_Geospasial_2026.xlsx',
+    fileSize: '1.4 MB',
+    fileType: 'xlsx',
+    isPublic: false,
+    uploadedBy: 'Bendahara Pengeluaran BP2RD',
+    uploadedRole: 'admin',
+    tanggalUpload: '2026-01-10',
+    statusVerifikasi: 'Aktif',
+    tags: ['ARKAS', 'RKA', 'Internal'],
+  },
+
+  // 5. KATEGORI FOTO OBJEK (KHUSUS ADMIN & USER LOGGED IN - TIDAK TAMPIL DI LANDING PAGE)
+  {
+    id: 'lib-obj-01',
+    title: 'Dokumentasi Visual Fisik Titik Reklame Komersial Kawasan Bundaran Itik Amuntai Tengah',
+    category: 'objek',
+    categoryLabel: 'Foto Objek Pajak',
+    nomorBerkas: 'DOK-OBJ/REK/001-AMT',
+    description: 'Foto sudut pandang barat & selatan billboard 8x4m PT Borneo Reklame, koordinat presisi (-2.421500, 115.249200).',
+    fileName: 'Foto_Fisik_Billboard_Bundaran_Itik.jpg',
+    fileSize: '3.2 MB',
+    fileType: 'image',
+    isPublic: false,
+    uploadedBy: 'Ahmad Faisal, S.AP',
+    uploadedRole: 'user',
+    tanggalUpload: '2026-03-15',
+    statusVerifikasi: 'Aktif',
+    tags: ['Foto Objek', 'Reklame', 'Amuntai Tengah', 'Survei'],
+  },
+  {
+    id: 'lib-obj-02',
+    title: 'Foto Fisik Objek Pajak Restoran & Kuliner Tradisional Kawasan Sentra Pasar Alabio',
+    category: 'objek',
+    categoryLabel: 'Foto Objek Pajak',
+    nomorBerkas: 'DOK-OBJ/PBJT/018-ALB',
+    description: 'Foto bangunan dan kapasitas tempat duduk RM Itik Alabio, koordinat presisi (-2.482345, 115.187654).',
+    fileName: 'Foto_RM_Itik_Alabio_Sentra.jpg',
+    fileSize: '2.8 MB',
+    fileType: 'image',
+    isPublic: false,
+    uploadedBy: 'Ahmad Faisal, S.AP',
+    uploadedRole: 'user',
+    tanggalUpload: '2026-03-20',
+    statusVerifikasi: 'Aktif',
+    tags: ['Foto Objek', 'Restoran', 'Sungai Pandan', 'Alabio'],
+  },
+
+  // 6. KATEGORI STRUK BAYAR PBB (KHUSUS ADMIN & USER LOGGED IN - TIDAK TAMPIL DI LANDING PAGE)
+  {
+    id: 'lib-pbb-01',
+    title: 'Arsip Struk Pembayaran Sah PBB-P2 Bank Kalsel NOP: 63.08.010.001.002-0045.0 (H. Rusliansyah)',
+    category: 'pbb',
+    categoryLabel: 'Struk Bayar PBB-P2',
+    nomorBerkas: 'STRUK-BKS/HSU/2026/03/4982',
+    description: 'Bukti validasi kas daerah penerimaan PBB-P2 Rp 835.250,- tercatat realtime di sistem rekonsiliasi.',
+    fileName: 'Struk_Validasi_BankKalsel_4982.pdf',
+    fileSize: '650 KB',
+    fileType: 'pdf',
+    isPublic: false,
+    uploadedBy: 'Rija, S.STP, M.IP',
+    uploadedRole: 'admin',
+    tanggalUpload: '2026-03-10',
+    statusVerifikasi: 'Aktif',
+    tags: ['Struk PBB', 'Bank Kalsel', 'Lunas', 'Validasi'],
+  },
+  {
+    id: 'lib-pbb-02',
+    title: 'Bukti Setor Kolektif PBB-P2 Desa Pakacangan Amuntai Utara Periode Triwulan I 2026',
+    category: 'pbb',
+    categoryLabel: 'Struk Bayar PBB-P2',
+    nomorBerkas: 'STRUK-KOL/PKC/TW1-2026',
+    description: 'Rekapitulasi setoran tunai 42 wajib pajak desa Pakacangan melalui mobil layanan keliling BP2RD HSU.',
+    fileName: 'Setoran_Kolektif_Pakacangan_TW1.pdf',
+    fileSize: '1.7 MB',
+    fileType: 'pdf',
+    isPublic: false,
+    uploadedBy: 'Siti Nurhaliza, A.Md',
+    uploadedRole: 'user',
+    tanggalUpload: '2026-03-26',
+    statusVerifikasi: 'Aktif',
+    tags: ['Struk PBB', 'Kolektif', 'Desa Pakacangan'],
   },
 ];
 
-const DEFAULT_SHEETS_CONFIG: GoogleSheetsConfig = {
-  webhookUrl: 'https://script.google.com/macros/s/AKfycbwBP2RD-Gov-Tax-Sync-Master/exec',
-  spreadsheetId: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms',
-  sheetNamePotensi: 'Data_Potensi_Pajak',
-  sheetNamePbb: 'Data_PBB_P2',
-  sheetNameIkm: 'Survei_IKM',
-  autoSync: true,
-  lastSyncTime: '2026-10-01 07:45:00 WIB',
-  syncCount: 11,
-  isConnected: true,
-};
-
-export const StorageService = {
-  // Potensi Data
-  getPotensiList(): PotensiPajakEntry[] {
-    const raw = localStorage.getItem(STORAGE_KEYS.POTENSI);
-    if (!raw) {
-      localStorage.setItem(STORAGE_KEYS.POTENSI, JSON.stringify(SEED_POTENSI));
-      return SEED_POTENSI;
-    }
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return SEED_POTENSI;
-    }
-  },
-
-  savePotensiEntry(entry: PotensiPajakEntry): PotensiPajakEntry {
-    const list = this.getPotensiList();
-    const updated = [entry, ...list];
-    localStorage.setItem(STORAGE_KEYS.POTENSI, JSON.stringify(updated));
-    this.syncToGoogleSheets('potensi', entry);
-    return entry;
-  },
-
-  updatePotensiStatus(
-    id: string,
-    statusAdmin: PotensiPajakEntry['statusAdmin'],
-    catatan?: string,
-    petugas?: string
-  ): PotensiPajakEntry | null {
-    const list = this.getPotensiList();
-    const idx = list.findIndex((item) => item.id === id);
-    if (idx === -1) return null;
-    list[idx] = {
-      ...list[idx],
-      statusAdmin,
-      ...(catatan !== undefined ? { catatanPetugas: catatan } : {}),
-      ...(petugas !== undefined ? { petugasSurvey: petugas } : {}),
-    };
-    localStorage.setItem(STORAGE_KEYS.POTENSI, JSON.stringify(list));
-    return list[idx];
-  },
-
-  deletePotensiEntry(id: string): boolean {
-    const list = this.getPotensiList();
-    const filtered = list.filter((item) => item.id !== id);
-    localStorage.setItem(STORAGE_KEYS.POTENSI, JSON.stringify(filtered));
-    return true;
-  },
-
-  // PBB-P2 Data
-  getPbbList(): PbbP2Entry[] {
-    const raw = localStorage.getItem(STORAGE_KEYS.PBB);
-    if (!raw) {
-      localStorage.setItem(STORAGE_KEYS.PBB, JSON.stringify(SEED_PBB));
-      return SEED_PBB;
-    }
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return SEED_PBB;
-    }
-  },
-
-  savePbbEntry(entry: PbbP2Entry): PbbP2Entry {
-    const list = this.getPbbList();
-    const updated = [entry, ...list];
-    localStorage.setItem(STORAGE_KEYS.PBB, JSON.stringify(updated));
-    this.syncToGoogleSheets('pbb', entry);
-    return entry;
-  },
-
-  updatePbbStatus(
-    id: string,
-    statusVerifikasi: PbbP2Entry['statusVerifikasi'],
-    catatan?: string
-  ): PbbP2Entry | null {
-    const list = this.getPbbList();
-    const idx = list.findIndex((item) => item.id === id);
-    if (idx === -1) return null;
-    list[idx] = {
-      ...list[idx],
-      statusVerifikasi,
-      ...(catatan !== undefined ? { catatanVerifikasi: catatan } : {}),
-    };
-    localStorage.setItem(STORAGE_KEYS.PBB, JSON.stringify(list));
-    return list[idx];
-  },
-
-  deletePbbEntry(id: string): boolean {
-    const list = this.getPbbList();
-    const filtered = list.filter((item) => item.id !== id);
-    localStorage.setItem(STORAGE_KEYS.PBB, JSON.stringify(filtered));
-    return true;
-  },
-
-  // IKM Data
-  getIkmList(): IkmEntry[] {
-    const raw = localStorage.getItem(STORAGE_KEYS.IKM);
-    if (!raw) {
-      localStorage.setItem(STORAGE_KEYS.IKM, JSON.stringify(SEED_IKM));
-      return SEED_IKM;
-    }
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return SEED_IKM;
-    }
-  },
-
-  saveIkmEntry(entry: IkmEntry): IkmEntry {
-    const list = this.getIkmList();
-    const updated = [entry, ...list];
-    localStorage.setItem(STORAGE_KEYS.IKM, JSON.stringify(updated));
-    this.syncToGoogleSheets('ikm', entry);
-    return entry;
-  },
-
-  deleteIkmEntry(id: string): boolean {
-    const list = this.getIkmList();
-    const filtered = list.filter((item) => item.id !== id);
-    localStorage.setItem(STORAGE_KEYS.IKM, JSON.stringify(filtered));
-    return true;
-  },
-
-  // Library Berkas & Dokumen
-  getLibraryList(): LibraryBerkasEntry[] {
-    const raw = localStorage.getItem(STORAGE_KEYS.LIBRARY);
-    if (!raw) {
-      localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(SEED_LIBRARY));
-      return SEED_LIBRARY;
-    }
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return SEED_LIBRARY;
-    }
-  },
-
-  saveLibraryEntry(entry: LibraryBerkasEntry): LibraryBerkasEntry {
-    const list = this.getLibraryList();
-    // Prepend new entry
-    const updated = [entry, ...list.filter((item) => item.id !== entry.id)];
-    localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(updated));
-    return entry;
-  },
-
-  updateLibraryEntry(entry: LibraryBerkasEntry): LibraryBerkasEntry {
-    const list = this.getLibraryList();
-    const idx = list.findIndex((item) => item.id === entry.id);
-    if (idx !== -1) {
-      list[idx] = entry;
-      localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(list));
-    } else {
-      list.unshift(entry);
-      localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(list));
-    }
-    return entry;
-  },
-
-  deleteLibraryEntry(id: string): boolean {
-    const list = this.getLibraryList();
-    const filtered = list.filter((item) => item.id !== id);
-    localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(filtered));
-    return true;
-  },
-
-  updateLibraryStatus(
-    id: string,
-    statusVerifikasi: LibraryBerkasEntry['statusVerifikasi'],
-    catatanVerifikasi?: string,
-    verifiedBy?: string
-  ): LibraryBerkasEntry | null {
-    const list = this.getLibraryList();
-    const idx = list.findIndex((item) => item.id === id);
-    if (idx === -1) return null;
-    list[idx] = {
-      ...list[idx],
-      statusVerifikasi,
-      ...(catatanVerifikasi !== undefined ? { catatanVerifikasi } : {}),
-      ...(verifiedBy !== undefined ? { verifiedBy } : {}),
-      verifiedAt: new Date().toISOString(),
-    };
-    localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(list));
-    return list[idx];
-  },
-
-  // Google Sheets Config
-  getSheetsConfig(): GoogleSheetsConfig {
-    const raw = localStorage.getItem(STORAGE_KEYS.SHEETS_CONFIG);
-    if (!raw) {
-      localStorage.setItem(STORAGE_KEYS.SHEETS_CONFIG, JSON.stringify(DEFAULT_SHEETS_CONFIG));
-      return DEFAULT_SHEETS_CONFIG;
-    }
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return DEFAULT_SHEETS_CONFIG;
-    }
-  },
-
-  saveSheetsConfig(config: GoogleSheetsConfig): void {
-    localStorage.setItem(STORAGE_KEYS.SHEETS_CONFIG, JSON.stringify(config));
-  },
-
-  // Real-time synchronization to Google Sheets Webhook
-  async syncToGoogleSheets(
-    type: 'potensi' | 'pbb' | 'ikm',
-    payload: any
-  ): Promise<{ success: boolean; message: string; timestamp: string }> {
-    const config = this.getSheetsConfig();
-    const timestamp = new Date().toLocaleString('id-ID', {
-      timeZone: 'Asia/Jakarta',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-
-    config.syncCount += 1;
-    config.lastSyncTime = `${timestamp} WIB`;
-    this.saveSheetsConfig(config);
-
-    // If a valid Google Apps Script webhook URL is present, dispatch fetch
-    if (config.webhookUrl && config.webhookUrl.startsWith('http')) {
-      try {
-        await fetch(config.webhookUrl, {
-          method: 'POST',
-          mode: 'no-cors', // standard Apps Script cross-origin POST handling
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            action: 'APPEND_ROW',
-            sheetType: type,
-            spreadsheetId: config.spreadsheetId,
-            data: payload,
-            timestamp: new Date().toISOString(),
-          }),
-        });
-      } catch (err) {
-        console.warn('Google Sheets Webhook dispatch note:', err);
-      }
-    }
-
-    return {
-      success: true,
-      message: `Berhasil tersinkronisasi ke Google Sheets (${type.toUpperCase()}) pada ${timestamp}`,
-      timestamp,
-    };
-  },
-
-  // Current User / Session
-  getCurrentUser(): AppUser | null {
-    const raw = localStorage.getItem(STORAGE_KEYS.USER);
-    if (!raw) return null;
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return null;
-    }
-  },
-
-  setCurrentUser(user: AppUser | null): void {
-    if (!user) {
-      localStorage.removeItem(STORAGE_KEYS.USER);
-    } else {
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
-    }
-  },
-
-  // Export to CSV helper
-  exportToCsv(type: 'potensi' | 'pbb' | 'ikm'): string {
-    if (type === 'potensi') {
-      const data = this.getPotensiList();
-      const headers = [
-        'ID Tiket',
-        'Tanggal',
-        'Nama Objek',
-        'Kategori',
-        'Nama Wajib Pajak',
-        'Alamat',
-        'Kecamatan',
-        'Kelurahan',
-        'No WhatsApp',
-        'Estimasi Potensi (Rp)',
-        'Latitude',
-        'Longitude',
-        'Skor Kelayakan',
-        'Status Validasi',
-        'Status Admin',
-        'Catatan Petugas',
-      ];
-      const rows = data.map((d) => [
-        `"${d.id}"`,
-        `"${d.tanggal}"`,
-        `"${d.namaObjek.replace(/"/g, '""')}"`,
-        `"${d.kategoriObjek}"`,
-        `"${d.namaWajibPajak.replace(/"/g, '""')}"`,
-        `"${d.alamat.replace(/"/g, '""')}"`,
-        `"${d.kecamatan}"`,
-        `"${d.kelurahan}"`,
-        `"${d.noWhatsapp}"`,
-        d.estimasiPotensiTahunan || 0,
-        d.koordinatLat || '',
-        d.koordinatLng || '',
-        d.skorKelayakan,
-        `"${d.statusValidasi}"`,
-        `"${d.statusAdmin}"`,
-        `"${(d.catatanPetugas || '').replace(/"/g, '""')}"`,
-      ]);
-      return [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    } else if (type === 'pbb') {
-      const data = this.getPbbList();
-      const headers = [
-        'ID PBB',
-        'Tanggal',
-        'Nama Wajib Pajak',
-        'NIK',
-        'Status NOP',
-        'NOP',
-        'Lokasi Objek',
-        'RT/RW',
-        'Kelurahan/Desa',
-        'Kecamatan',
-        'Tahun Pajak',
-        'Nominal Bayar (Rp)',
-        'Status Verifikasi',
-      ];
-      const rows = data.map((d) => [
-        `"${d.id}"`,
-        `"${d.tanggal}"`,
-        `"${d.namaWajibPajak.replace(/"/g, '""')}"`,
-        `"'${d.nik}"`,
-        `"${d.statusNop}"`,
-        `"${d.nop || '-'}"`,
-        `"${d.lokasiObjek.replace(/"/g, '""')}"`,
-        `"${d.rtRw || ''}"`,
-        `"${d.kelurahanDesa}"`,
-        `"${d.kecamatan}"`,
-        d.tahunPajak,
-        d.nominalBayar || 0,
-        `"${d.statusVerifikasi}"`,
-      ]);
-      return [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    } else {
-      const data = this.getIkmList();
-      const headers = [
-        'ID IKM',
-        'Tanggal',
-        'Nama Wajib Pajak',
-        'Alamat',
-        'Bidang Usaha',
-        'Kemudahan',
-        'Kecepatan',
-        'Kesopanan',
-        'Transparansi',
-        'Sarana',
-        'Skor Rata-Rata',
-        'Nilai Konversi',
-        'Mutu',
-        'Saran/Masukan',
-      ];
-      const rows = data.map((d) => [
-        `"${d.id}"`,
-        `"${d.tanggal}"`,
-        `"${d.namaWajibPajak.replace(/"/g, '""')}"`,
-        `"${d.alamat.replace(/"/g, '""')}"`,
-        `"${(d.bidangUsaha || '').replace(/"/g, '""')}"`,
-        d.skorKemudahan,
-        d.skorKecepatan,
-        d.skorKesopanan,
-        d.skorTransparansi,
-        d.skorSarana,
-        d.skorRataRata,
-        d.nilaiKonversi,
-        `"${d.kategoriMutu}"`,
-        `"${d.saranMasukan.replace(/"/g, '""')}"`,
-      ]);
-      return [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    }
-  },
-
-  // Generates Google Apps Script code for 1-click Google Sheet integration
-  getGoogleAppsScriptTemplate(): string {
-    return `/**
- * ========================================================
- * SIPOTENSI BP2RD / BAPENDA - GOOGLE APPS SCRIPT WEBHOOK
- * Hubungkan formulir potensi, PBB-P2, & IKM ke Google Sheets
- * ========================================================
- * CARA PEMASANGAN:
- * 1. Buat Spreadsheet baru di Google Sheets.
- * 2. Buat 3 tab nama: 'Data_Potensi_Pajak', 'Data_PBB_P2', 'Survei_IKM'
- * 3. Buka menu Extensions (Ekstensi) > Apps Script.
- * 4. Hapus isi bawaan, paste seluruh kode di bawah ini.
- * 5. Klik 'Deploy' > 'New deployment' > Select type: 'Web app'.
- * 6. Set 'Execute as': Me, dan 'Who has access': 'Anyone'.
- * 7. Salin URL Web App yang dihasilkan ke menu Pengaturan Google Sheets di SIPOTENSI.
- */
-
-function doPost(e) {
+// Helper functions for LocalStorage management
+export function loadPotensiList(): PotensiPajakEntry[] {
   try {
-    var contents = JSON.parse(e.postData.contents);
-    var sheetType = contents.sheetType;
-    var data = contents.data;
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-
-    if (sheetType === 'potensi') {
-      var sheet = ss.getSheetByName('Data_Potensi_Pajak') || ss.insertSheet('Data_Potensi_Pajak');
-      if (sheet.getLastRow() === 0) {
-        sheet.appendRow([
-          'Timestamp', 'ID Tiket', 'Tanggal', 'Nama Objek', 'Kategori',
-          'Nama WP', 'Alamat', 'Kecamatan', 'Kelurahan', 'No WhatsApp',
-          'Estimasi Potensi', 'Koordinat Lat', 'Koordinat Lng', 'Skor Kelayakan',
-          'Status Validasi', 'Status Admin', 'Petugas'
-        ]);
-        sheet.getRange(1, 1, 1, 17).setFontWeight('bold').setBackground('#1e3a8a').setFontColor('#ffffff');
-      }
-      sheet.appendRow([
-        new Date(), data.id, data.tanggal, data.namaObjek, data.kategoriObjek,
-        data.namaWajibPajak, data.alamat, data.kecamatan, data.kelurahan, "'" + data.noWhatsapp,
-        data.estimasiPotensiTahunan || 0, data.koordinatLat || '', data.koordinatLng || '',
-        data.skorKelayakan, data.statusValidasi, data.statusAdmin, data.petugasSurvey || ''
-      ]);
-    } else if (sheetType === 'pbb') {
-      var sheet = ss.getSheetByName('Data_PBB_P2') || ss.insertSheet('Data_PBB_P2');
-      if (sheet.getLastRow() === 0) {
-        sheet.appendRow([
-          'Timestamp', 'ID PBB', 'Tanggal', 'Nama WP', 'NIK', 'Status NOP',
-          'NOP', 'Lokasi Objek', 'RT/RW', 'Kelurahan/Desa', 'Kecamatan',
-          'Tahun Pajak', 'Nominal Bayar', 'Status Verifikasi'
-        ]);
-        sheet.getRange(1, 1, 1, 14).setFontWeight('bold').setBackground('#065f46').setFontColor('#ffffff');
-      }
-      sheet.appendRow([
-        new Date(), data.id, data.tanggal, data.namaWajibPajak, "'" + data.nik,
-        data.statusNop, "'" + (data.nop || '-'), data.lokasiObjek, data.rtRw || '',
-        data.kelurahanDesa, data.kecamatan, data.tahunPajak, data.nominalBayar || 0,
-        data.statusVerifikasi
-      ]);
-    } else if (sheetType === 'ikm') {
-      var sheet = ss.getSheetByName('Survei_IKM') || ss.insertSheet('Survei_IKM');
-      if (sheet.getLastRow() === 0) {
-        sheet.appendRow([
-          'Timestamp', 'ID IKM', 'Tanggal', 'Nama WP', 'Alamat', 'Bidang Usaha',
-          'Kemudahan (1-5)', 'Kecepatan (1-5)', 'Kesopanan (1-5)', 'Transparansi (1-5)',
-          'Sarana (1-5)', 'Skor Rata-Rata', 'Nilai Mutu', 'Saran & Masukan'
-        ]);
-        sheet.getRange(1, 1, 1, 14).setFontWeight('bold').setBackground('#854d0e').setFontColor('#ffffff');
-      }
-      sheet.appendRow([
-        new Date(), data.id, data.tanggal, data.namaWajibPajak, data.alamat,
-        data.bidangUsaha || '', data.skorKemudahan, data.skorKecepatan, data.skorKesopanan,
-        data.skorTransparansi, data.skorSarana, data.skorRataRata, data.kategoriMutu,
-        data.saranMasukan
-      ]);
+    const raw = localStorage.getItem(POTENSI_KEY);
+    if (!raw) {
+      localStorage.setItem(POTENSI_KEY, JSON.stringify(INITIAL_POTENSI_DATA));
+      return INITIAL_POTENSI_DATA;
     }
-
-    return ContentService.createTextOutput(JSON.stringify({
-      status: 'success',
-      message: 'Data berhasil ditambahkan ke Google Sheet'
-    })).setMimeType(ContentService.MimeType.JSON);
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({
-      status: 'error',
-      message: error.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error('Error loading potensi list:', e);
+    return INITIAL_POTENSI_DATA;
   }
 }
 
-function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({
-    status: 'online',
-    service: 'SIPOTENSI BP2RD Google Sheets API Webhook'
-  })).setMimeType(ContentService.MimeType.JSON);
-}`;
+export function savePotensiList(data: PotensiPajakEntry[]) {
+  try {
+    localStorage.setItem(POTENSI_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error('Error saving potensi list:', e);
+  }
+}
+
+export function loadPbbList(): PbbP2Entry[] {
+  try {
+    const raw = localStorage.getItem(PBB_KEY);
+    if (!raw) {
+      localStorage.setItem(PBB_KEY, JSON.stringify(INITIAL_PBB_DATA));
+      return INITIAL_PBB_DATA;
+    }
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error('Error loading pbb list:', e);
+    return INITIAL_PBB_DATA;
+  }
+}
+
+export function savePbbList(data: PbbP2Entry[]) {
+  try {
+    localStorage.setItem(PBB_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error('Error saving pbb list:', e);
+  }
+}
+
+export function loadLibraryList(): LibraryBerkasEntry[] {
+  try {
+    const raw = localStorage.getItem(LIBRARY_KEY);
+    if (!raw) {
+      localStorage.setItem(LIBRARY_KEY, JSON.stringify(INITIAL_LIBRARY_DATA));
+      return INITIAL_LIBRARY_DATA;
+    }
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error('Error loading library list:', e);
+    return INITIAL_LIBRARY_DATA;
+  }
+}
+
+export function saveLibraryList(data: LibraryBerkasEntry[]) {
+  try {
+    localStorage.setItem(LIBRARY_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error('Error saving library list:', e);
+  }
+}
+
+export function loadCurrentUser(): AppUser | null {
+  try {
+    const raw = localStorage.getItem(CURRENT_USER_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error('Error loading user:', e);
+    return null;
+  }
+}
+
+export function saveCurrentUser(user: AppUser | null) {
+  try {
+    if (!user) {
+      localStorage.removeItem(CURRENT_USER_KEY);
+    } else {
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+    }
+  } catch (e) {
+    console.error('Error saving user:', e);
+  }
+}
+
+export const INITIAL_RETRIBUSI_DATA: RetribusiDaerahEntry[] = [
+  {
+    id: 'ret-001',
+    nomorRegister: 'REG-RET/2026/04/001',
+    tanggalPendataan: '2026-04-02',
+    golonganRetribusi: 'Retribusi Jasa Umum',
+    subRekening: 'Retribusi Pelayanan Pasar',
+    subObjekRetribusi: 'Pasar Induk Amuntai',
+    keterangan: 'Perekaman potensi kios sembako & los pedagang sayur/ikan di blok A Pasar Induk Amuntai.',
+    namaPengelola: 'UPTD Pasar Amuntai & Paguyuban Pedagang',
+    tarifSatuan: 150000,
+    jumlahSatuan: 120,
+    satuanTarif: 'Per Kios/Bulan',
+    potensiPerbulan: 18000000,
+    potensiPertahun: 216000000,
+    kecamatan: 'Kecamatan Amuntai Tengah',
+    kelurahanDesa: 'Murung Sari',
+    alamatLengkap: 'Jl. Basuki Rahmat, Kawasan Pasar Induk Amuntai',
+    latitude: -2.425100,
+    longitude: 115.246800,
+    akurasiGps: 5,
+    statusVerifikasi: 'Setuju',
+    petugasPendata: 'Rija, S.STP, M.IP',
+    verifiedBy: 'Rija, S.STP, M.IP (BP2RD HSU)',
+    verifiedAt: '2026-04-03T09:00:00Z',
+    catatanVerifikasi: 'Potensi retribusi pelayanan pasar telah diverifikasi sesuai Perda HSU No. 1/2024.',
+    createdAt: '2026-04-02T08:30:00Z',
+    updatedAt: '2026-04-03T09:00:00Z',
   },
-};
+  {
+    id: 'ret-002',
+    nomorRegister: 'REG-RET/2026/04/002',
+    tanggalPendataan: '2026-04-05',
+    golonganRetribusi: 'Retribusi Jasa Usaha',
+    subRekening: 'Retribusi Tempat Khusus Parkir / Terminal',
+    subObjekRetribusi: 'Terminal Palampitan',
+    keterangan: 'Karcis retribusi parkir kendaraan angkutan pedesaan, bus antarkota, dan penitipan kendaraan Terminal Palampitan.',
+    namaPengelola: 'Dishub Kab. HSU & Pengelola Terminal',
+    tarifSatuan: 5000,
+    jumlahSatuan: 80,
+    satuanTarif: 'Per Kendaraan/Hari',
+    potensiPerbulan: 12000000,
+    potensiPertahun: 144000000,
+    kecamatan: 'Kecamatan Amuntai Tengah',
+    kelurahanDesa: 'Palampitan Hulu',
+    alamatLengkap: 'Jl. Pembalacatan, Kompleks Terminal Tipe C Palampitan',
+    latitude: -2.431200,
+    longitude: 115.253400,
+    akurasiGps: 6,
+    statusVerifikasi: 'Verifikasi',
+    petugasPendata: 'Ahmad Faisal, S.AP',
+    verifiedBy: 'Ahmad Faisal, S.AP',
+    verifiedAt: '2026-04-06T10:00:00Z',
+    catatanVerifikasi: 'Data arus harian kendaraan sedang direkonsiliasi dengan Dinas Perhubungan HSU.',
+    createdAt: '2026-04-05T10:00:00Z',
+    updatedAt: '2026-04-06T10:00:00Z',
+  },
+  {
+    id: 'ret-003',
+    nomorRegister: 'REG-RET/2026/04/003',
+    tanggalPendataan: '2026-04-08',
+    golonganRetribusi: 'Retribusi Jasa Usaha',
+    subRekening: 'Retribusi Pemanfaatan Barang Milik Daerah',
+    subObjekRetribusi: 'Rumah Dinas',
+    keterangan: 'Sewa pemanfaatan rumah dinas tipe 70 Golongan III bagi aparatur Pemkab HSU.',
+    namaPengelola: 'Bagian Umum Setda HSU / BPKAD HSU',
+    tarifSatuan: 500000,
+    jumlahSatuan: 14,
+    satuanTarif: 'Per Rumah/Bulan',
+    potensiPerbulan: 7000000,
+    potensiPertahun: 84000000,
+    kecamatan: 'Kecamatan Amuntai Tengah',
+    kelurahanDesa: 'Antasari',
+    alamatLengkap: 'Jl. Norman Umar, Kompleks Perumahan Dinas Pemkab HSU',
+    latitude: -2.420800,
+    longitude: 115.244500,
+    akurasiGps: 4,
+    statusVerifikasi: 'Menunggu Verifikasi',
+    petugasPendata: 'Siti Nurhaliza, A.Md',
+    createdAt: '2026-04-08T11:00:00Z',
+    updatedAt: '2026-04-08T11:00:00Z',
+  },
+  {
+    id: 'ret-004',
+    nomorRegister: 'REG-RET/2026/04/004',
+    tanggalPendataan: '2026-04-10',
+    golonganRetribusi: 'Retribusi Jasa Umum',
+    subRekening: 'Retribusi Pelayanan Kesehatan',
+    subObjekRetribusi: 'Puskesmas Sungai Pandan (Alabio)',
+    keterangan: 'Pelayanan poli umum, gigi, laboratorium sederhana, dan surat keterangan kesehatan puskesmas.',
+    namaPengelola: 'Dinas Kesehatan / Puskesmas Alabio',
+    tarifSatuan: 15000,
+    jumlahSatuan: 35,
+    satuanTarif: 'Per Pasien/Hari',
+    potensiPerbulan: 15750000,
+    potensiPertahun: 189000000,
+    kecamatan: 'Kecamatan Sungai Pandan (Alabio)',
+    kelurahanDesa: 'Alabio Pasar',
+    alamatLengkap: 'Jl. Kesatuan No. 12, Alabio',
+    latitude: -2.483100,
+    longitude: 115.188200,
+    akurasiGps: 5,
+    statusVerifikasi: 'Menunggu Verifikasi',
+    petugasPendata: 'Ahmad Faisal, S.AP',
+    createdAt: '2026-04-10T09:30:00Z',
+    updatedAt: '2026-04-10T09:30:00Z',
+  }
+];
+
+export function loadRetribusiList(): RetribusiDaerahEntry[] {
+  try {
+    const raw = localStorage.getItem(RETRIBUSI_KEY);
+    if (!raw) {
+      localStorage.setItem(RETRIBUSI_KEY, JSON.stringify(INITIAL_RETRIBUSI_DATA));
+      return INITIAL_RETRIBUSI_DATA;
+    }
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error('Error loading retribusi list:', e);
+    return INITIAL_RETRIBUSI_DATA;
+  }
+}
+
+export function saveRetribusiList(data: RetribusiDaerahEntry[]) {
+  try {
+    localStorage.setItem(RETRIBUSI_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error('Error saving retribusi list:', e);
+  }
+}
+

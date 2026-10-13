@@ -1,144 +1,182 @@
 {
   "entities": {
-    "UserAccount": {
-      "title": "UserAccount",
-      "description": "Profil akun petugas dan administrator BP2RD yang terautentikasi",
+    "User": {
+      "title": "User",
+      "description": "User profile with role-based access for BP2RD apparatus",
       "type": "object",
       "properties": {
-        "uid": { "type": "string", "maxLength": 128 },
-        "email": { "type": "string", "maxLength": 128 },
-        "nama": { "type": "string", "maxLength": 128 },
-        "role": { "type": "string", "enum": ["admin", "petugas", "user"] },
-        "nip": { "type": "string", "maxLength": 64 },
-        "jabatan": { "type": "string", "maxLength": 128 },
-        "unitKerja": { "type": "string", "maxLength": 128 },
-        "photoURL": { "type": "string", "maxLength": 512 },
-        "lastLogin": { "type": "string", "maxLength": 64 }
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 100 },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "nip": { "type": "string", "maxLength": 30 },
+        "jabatan": { "type": "string", "maxLength": 100 },
+        "wilayahTugas": { "type": "string", "maxLength": 100 },
+        "createdAt": { "type": "string" }
       },
-      "required": ["uid", "email", "nama", "role"]
+      "required": ["id", "name", "email", "role"]
     },
-    "LibraryBerkas": {
-      "title": "LibraryBerkas",
-      "description": "Dokumen resmi, berkas regulasi, SOP, format blanko, dan materi perpajakan BP2RD",
+    "AdminDoc": {
+      "title": "AdminDoc",
+      "description": "Admin authorization entry",
       "type": "object",
       "properties": {
-        "id": { "type": "string", "maxLength": 64 },
-        "title": { "type": "string", "maxLength": 256 },
-        "category": { "type": "string", "enum": ["regulasi", "sop", "dpa", "blanko", "objek", "pbb"] },
-        "nomorSurat": { "type": "string", "maxLength": 128 },
-        "fileType": { "type": "string", "maxLength": 64 },
-        "sizeStr": { "type": "string", "maxLength": 32 },
-        "date": { "type": "string", "maxLength": 32 },
-        "authorOrWp": { "type": "string", "maxLength": 128 },
-        "status": { "type": "string", "maxLength": 64 },
-        "statusColor": { "type": "string", "maxLength": 128 },
-        "description": { "type": "string", "maxLength": 2048 },
-        "previewUrl": { "type": "string", "maxLength": 1024 },
-        "fileData": { "type": "string" },
-        "uploadedBy": { "type": "string", "maxLength": 128 },
-        "statusVerifikasi": { "type": "string", "enum": ["Menunggu Verifikasi", "Terverifikasi & Sah", "Perlu Perbaikan", "Ditolak"] },
-        "catatanVerifikasi": { "type": "string", "maxLength": 1024 },
-        "verifiedBy": { "type": "string", "maxLength": 128 },
-        "verifiedAt": { "type": "string", "maxLength": 64 },
-        "createdAt": { "type": "string", "maxLength": 64 }
+        "uid": { "type": "string" },
+        "email": { "type": "string" }
       },
-      "required": ["id", "title", "category", "authorOrWp"]
+      "required": ["uid", "email"]
     },
     "PotensiPajak": {
       "title": "PotensiPajak",
-      "description": "Laporan potensi objek pajak daerah BP2RD",
+      "description": "Potensi Pajak Daerah recording with GPS coordinates and uploaded files",
       "type": "object",
       "properties": {
-        "id": { "type": "string", "maxLength": 64 },
-        "tanggal": { "type": "string", "maxLength": 32 },
-        "namaObjek": { "type": "string", "maxLength": 256 },
-        "kategoriObjek": { "type": "string", "maxLength": 128 },
-        "namaWajibPajak": { "type": "string", "maxLength": 128 },
-        "alamat": { "type": "string", "maxLength": 512 },
-        "kecamatan": { "type": "string", "maxLength": 128 },
-        "kelurahan": { "type": "string", "maxLength": 128 },
-        "noWhatsapp": { "type": "string", "maxLength": 32 },
-        "estimasiPotensiTahunan": { "type": "number" },
-        "koordinatLat": { "type": "number" },
-        "koordinatLng": { "type": "number" },
-        "skorKelayakan": { "type": "number" },
-        "statusValidasi": { "type": "string", "maxLength": 64 },
-        "statusAdmin": { "type": "string", "maxLength": 64 },
-        "catatanPetugas": { "type": "string", "maxLength": 1024 },
-        "petugasSurvey": { "type": "string", "maxLength": 128 },
-        "sumberData": { "type": "string", "maxLength": 64 },
-        "createdAt": { "type": "string", "maxLength": 64 }
+        "id": { "type": "string" },
+        "nomorFormulir": { "type": "string", "maxLength": 60 },
+        "namaWajibPajak": { "type": "string", "maxLength": 120 },
+        "npwpd": { "type": "string", "maxLength": 40 },
+        "namaUsaha": { "type": "string", "maxLength": 120 },
+        "jenisPajak": { "type": "string", "maxLength": 80 },
+        "kecamatan": { "type": "string", "maxLength": 80 },
+        "kelurahanDesa": { "type": "string", "maxLength": 80 },
+        "alamatLengkap": { "type": "string", "maxLength": 300 },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "gpsAccuracy": { "type": "number" },
+        "gpsSource": { "type": "string", "maxLength": 30 },
+        "omzetBulanan": { "type": "number" },
+        "tarifPajakPersen": { "type": "number" },
+        "potensiPajakBulan": { "type": "number" },
+        "potensiRupiahTahunan": { "type": "number" },
+        "tanggalPendataan": { "type": "string" },
+        "petugasPendata": { "type": "string", "maxLength": 100 },
+        "catatanPetugas": { "type": "string", "maxLength": 500 },
+        "dpaFileName": { "type": "string", "maxLength": 150 },
+        "dpaFileSize": { "type": "string", "maxLength": 50 },
+        "dpaFileUrl": { "type": "string" },
+        "fotoObjekName": { "type": "string", "maxLength": 150 },
+        "fotoObjekSize": { "type": "string", "maxLength": 50 },
+        "fotoObjekUrl": { "type": "string" },
+        "createdByUid": { "type": "string", "maxLength": 128 }
       },
-      "required": ["id", "namaObjek", "kategoriObjek", "alamat", "noWhatsapp"]
+      "required": ["id", "nomorFormulir", "namaWajibPajak", "namaUsaha", "jenisPajak", "kecamatan", "latitude", "longitude"]
     },
     "PbbP2": {
       "title": "PbbP2",
-      "description": "Data layanan dan konfirmasi pembayaran PBB-P2",
+      "description": "PBB-P2 SPPT assessment with geospatial coordinates and payment proof",
       "type": "object",
       "properties": {
-        "id": { "type": "string", "maxLength": 64 },
-        "tanggal": { "type": "string", "maxLength": 32 },
-        "namaWajibPajak": { "type": "string", "maxLength": 128 },
-        "nik": { "type": "string", "maxLength": 16 },
-        "statusNop": { "type": "string", "maxLength": 32 },
-        "nop": { "type": "string", "maxLength": 32 },
-        "lokasiObjek": { "type": "string", "maxLength": 512 },
-        "kelurahanDesa": { "type": "string", "maxLength": 128 },
-        "kecamatan": { "type": "string", "maxLength": 128 },
-        "tahunPajak": { "type": "number" },
-        "nominalBayar": { "type": "number" },
-        "statusVerifikasi": { "type": "string", "maxLength": 64 },
-        "createdAt": { "type": "string", "maxLength": 64 }
+        "id": { "type": "string" },
+        "nop": { "type": "string", "maxLength": 30 },
+        "namaWajibPajak": { "type": "string", "maxLength": 120 },
+        "nikNpwp": { "type": "string", "maxLength": 40 },
+        "alamatObjek": { "type": "string", "maxLength": 300 },
+        "kecamatan": { "type": "string", "maxLength": 80 },
+        "kelurahanDesa": { "type": "string", "maxLength": 80 },
+        "rtRw": { "type": "string", "maxLength": 20 },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "gpsAccuracy": { "type": "number" },
+        "luasBumiM2": { "type": "number" },
+        "njopBumiPerM2": { "type": "number" },
+        "luasBangunanM2": { "type": "number" },
+        "njopBangunanPerM2": { "type": "number" },
+        "totalNjop": { "type": "number" },
+        "pbbTerhutang": { "type": "number" },
+        "statusPembayaran": { "type": "string", "enum": ["LUNAS", "BELUM LUNAS"] },
+        "tahunPajak": { "type": "string", "maxLength": 10 },
+        "tanggalBayar": { "type": "string", "maxLength": 30 },
+        "bankTempatBayar": { "type": "string", "maxLength": 100 },
+        "nomorStruk": { "type": "string", "maxLength": 60 },
+        "strukBayarUrl": { "type": "string" },
+        "fotoObjekPbbName": { "type": "string", "maxLength": 150 },
+        "fotoObjekPbbSize": { "type": "string", "maxLength": 50 },
+        "fotoObjekPbbUrl": { "type": "string" },
+        "petugasValidasi": { "type": "string", "maxLength": 100 },
+        "catatan": { "type": "string", "maxLength": 500 },
+        "createdByUid": { "type": "string", "maxLength": 128 }
       },
-      "required": ["id", "namaWajibPajak", "nik", "lokasiObjek"]
+      "required": ["id", "nop", "namaWajibPajak", "kecamatan", "latitude", "longitude", "totalNjop", "pbbTerhutang", "statusPembayaran"]
     },
-    "SurveiIkm": {
-      "title": "SurveiIkm",
-      "description": "Survei Indeks Kepuasan Masyarakat (IKM) Permenpan-RB 14/2017",
+    "LibraryBerkas": {
+      "title": "LibraryBerkas",
+      "description": "Document library repository entries with public or internal visibility",
       "type": "object",
       "properties": {
-        "id": { "type": "string", "maxLength": 64 },
-        "tanggal": { "type": "string", "maxLength": 32 },
-        "namaWajibPajak": { "type": "string", "maxLength": 128 },
-        "alamat": { "type": "string", "maxLength": 512 },
-        "skorKemudahan": { "type": "number" },
-        "skorKecepatan": { "type": "number" },
-        "skorKesopanan": { "type": "number" },
-        "skorTransparansi": { "type": "number" },
-        "skorSarana": { "type": "number" },
-        "skorRataRata": { "type": "number" },
-        "nilaiKonversi": { "type": "number" },
-        "kategoriMutu": { "type": "string", "maxLength": 64 },
-        "saranMasukan": { "type": "string", "maxLength": 2048 },
-        "createdAt": { "type": "string", "maxLength": 64 }
+        "id": { "type": "string" },
+        "title": { "type": "string", "maxLength": 150 },
+        "category": { "type": "string", "enum": ["regulasi", "sop", "blanko", "dpa", "objek", "pbb"] },
+        "categoryLabel": { "type": "string", "maxLength": 60 },
+        "nomorBerkas": { "type": "string", "maxLength": 60 },
+        "description": { "type": "string", "maxLength": 500 },
+        "fileName": { "type": "string", "maxLength": 150 },
+        "fileSize": { "type": "string", "maxLength": 40 },
+        "fileType": { "type": "string", "enum": ["pdf", "spreadsheet", "image"] },
+        "fileUrl": { "type": "string" },
+        "isPublic": { "type": "boolean" },
+        "uploadedBy": { "type": "string", "maxLength": 100 },
+        "uploadedRole": { "type": "string", "enum": ["admin", "user"] },
+        "tanggalUpload": { "type": "string", "maxLength": 30 },
+        "statusVerifikasi": { "type": "string", "enum": ["Terverifikasi", "Menunggu", "Aktif"] },
+        "tags": { "type": "array" },
+        "createdByUid": { "type": "string", "maxLength": 128 }
       },
-      "required": ["id", "namaWajibPajak", "alamat", "nilaiKonversi"]
+      "required": ["id", "title", "category", "nomorBerkas", "fileUrl", "isPublic"]
+    },
+    "RetribusiDaerah": {
+      "title": "RetribusiDaerah",
+      "description": "Potensi Retribusi Daerah recording across Kabupaten Hulu Sungai Utara",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nomorRegister": { "type": "string", "maxLength": 60 },
+        "golonganRetribusi": { "type": "string", "enum": ["Retribusi Jasa Umum", "Retribusi Jasa Usaha", "Retribusi Perizinan Tertentu"] },
+        "subRekening": { "type": "string", "maxLength": 150 },
+        "subObjekRetribusi": { "type": "string", "maxLength": 150 },
+        "keterangan": { "type": "string", "maxLength": 600 },
+        "tarifSatuan": { "type": "number" },
+        "satuanTarif": { "type": "string", "maxLength": 60 },
+        "volumeUnit": { "type": "number" },
+        "potensiPerbulan": { "type": "number" },
+        "potensiPertahun": { "type": "number" },
+        "kecamatan": { "type": "string", "maxLength": 80 },
+        "kelurahanDesa": { "type": "string", "maxLength": 80 },
+        "alamatLokasi": { "type": "string", "maxLength": 300 },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "fotoObjekRetribusiUrl": { "type": "string" },
+        "fotoObjekRetribusiName": { "type": "string", "maxLength": 150 },
+        "statusVerifikasi": { "type": "string", "enum": ["Menunggu Verifikasi", "Verifikasi", "Setuju"] },
+        "petugasPendata": { "type": "string", "maxLength": 100 },
+        "tanggalPendataan": { "type": "string", "maxLength": 30 }
+      },
+      "required": ["id", "nomorRegister", "golonganRetribusi", "subRekening", "subObjekRetribusi", "potensiPerbulan", "potensiPertahun", "latitude", "longitude"]
     }
   },
   "firestore": {
+    "/admins/{uid}": {
+      "schema": "AdminDoc",
+      "description": "Lookup document identifying admin users"
+    },
     "/users/{userId}": {
-      "schema": { "$ref": "#/entities/UserAccount" },
-      "description": "Profil akun petugas dan admin BP2RD"
-    },
-    "/admins/{adminId}": {
-      "schema": { "$ref": "#/entities/UserAccount" },
-      "description": "Daftar ID Administrator berwenang"
-    },
-    "/library_berkas/{berkasId}": {
-      "schema": { "$ref": "#/entities/LibraryBerkas" },
-      "description": "Arsip perpustakaan berkas dan regulasi daerah"
+      "schema": "User",
+      "description": "User profiles with role assignment"
     },
     "/potensi_pajak/{potensiId}": {
-      "schema": { "$ref": "#/entities/PotensiPajak" },
-      "description": "Koleksi data potensi pajak daerah"
+      "schema": "PotensiPajak",
+      "description": "Surveyed tax potential entries across HSU"
     },
     "/pbb_p2/{pbbId}": {
-      "schema": { "$ref": "#/entities/PbbP2" },
-      "description": "Koleksi data pembayaran PBB-P2"
+      "schema": "PbbP2",
+      "description": "PBB-P2 property tax entries and proofs"
     },
-    "/survei_ikm/{ikmId}": {
-      "schema": { "$ref": "#/entities/SurveiIkm" },
-      "description": "Koleksi respon survei IKM"
+    "/retribusi_daerah/{retribusiId}": {
+      "schema": "RetribusiDaerah",
+      "description": "Surveyed retribusi daerah potential entries across HSU"
+    },
+    "/library_berkas/{berkasId}": {
+      "schema": "LibraryBerkas",
+      "description": "Regulatory documents and internal uploaded files"
     }
   }
 }

@@ -1,312 +1,520 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { LandingHero } from './components/LandingHero';
-import { FormPotensi } from './components/FormPotensi';
-import { FormPbbP2 } from './components/FormPbbP2';
-import { FormIkm } from './components/FormIkm';
-import { AdminDashboard } from './components/AdminDashboard';
-import { RealtimeReportsManager } from './components/RealtimeReportsManager';
 import { DocumentLibrary } from './components/DocumentLibrary';
+import { RealtimeReportsManager } from './components/RealtimeReportsManager';
+import { PotensiPajakForm } from './components/PotensiPajakForm';
+import { PbbP2Form } from './components/PbbP2Form';
+import { RetribusiDaerahForm } from './components/RetribusiDaerahForm';
+import { PetaGeospasialHsu } from './components/PetaGeospasialHsu';
+import { AdminInputLibraryBerkas } from './components/AdminInputLibraryBerkas';
+import { AnalyticsDashboard } from './components/AnalyticsDashboard';
 import { LoginModal } from './components/LoginModal';
-import { GoogleDriveSheetsHub } from './components/GoogleDriveSheetsHub';
-import { StorageService } from './services/storage';
 import { 
-  syncEntryToFirestore, 
-  auth, 
+  PotensiPajakEntry, 
+  PbbP2Entry, 
+  RetribusiDaerahEntry,
+  LibraryBerkasEntry, 
+  AppUser, 
+  LibraryCategory,
+  VerificationStatus 
+} from './types';
+import { 
+  loadPotensiList, 
+  savePotensiList, 
+  loadPbbList, 
+  savePbbList, 
+  loadRetribusiList,
+  saveRetribusiList,
+  loadLibraryList, 
+  saveLibraryList, 
+  loadCurrentUser, 
+  saveCurrentUser,
+  DEFAULT_USERS
+} from './services/storage';
+import { 
+  testFirestoreConnection, 
   logoutGoogle, 
-  db,
-  syncLibraryEntryToFirestore,
-  deleteLibraryEntryFromFirestore,
-  fetchLibraryEntriesFromFirestore,
+  subscribeToAuth, 
+  syncEntryToFirestore,
   deleteEntryFromFirestore
 } from './services/firebase';
-import { doc, getDoc } from 'firebase/firestore';
-import { PotensiPajakEntry, PbbP2Entry, IkmEntry, AppUser, GoogleSheetsConfig, LibraryBerkasEntry } from './types';
-import { CheckCircle2, FileSpreadsheet, Building2 } from 'lucide-react';
+import { ShieldCheck, LogIn, ArrowLeft } from 'lucide-react';
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState<'beranda' | 'potensi' | 'pbb' | 'ikm' | 'dashboard' | 'laporan' | 'library'>('beranda');
-  
-  // Data States
+export function App() {
+  const [activeTab, setActiveTab] = useState<string>('beranda');
   const [potensiList, setPotensiList] = useState<PotensiPajakEntry[]>([]);
   const [pbbList, setPbbList] = useState<PbbP2Entry[]>([]);
-  const [ikmList, setIkmList] = useState<IkmEntry[]>([]);
-  const [libraryList, setLibraryList] = useState<LibraryBerkasEntry[]>(StorageService.getLibraryList());
-  
-  // Config & User States
+  const [retribusiList, setRetribusiList] = useState<RetribusiDaerahEntry[]>([]);
+  const [libraryList, setLibraryList] = useState<LibraryBerkasEntry[]>([]);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
-  const [sheetsConfig, setSheetsConfig] = useState<GoogleSheetsConfig>(StorageService.getSheetsConfig());
+
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [isGoogleHubOpen, setIsGoogleHubOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [libraryCategoryFilter, setLibraryCategoryFilter] = useState<'all' | LibraryCategory>('all');
 
-  // Load Initial Data & Sync with Firebase Auth
+  // Load initial data and connect with Firebase
   useEffect(() => {
-    setPotensiList(StorageService.getPotensiList());
-    setPbbList(StorageService.getPbbList());
-    setIkmList(StorageService.getIkmList());
-    setLibraryList(StorageService.getLibraryList());
-    setCurrentUser(StorageService.getCurrentUser());
-    setSheetsConfig(StorageService.getSheetsConfig());
+    setPotensiList(loadPotensiList());
+    setPbbList(loadPbbList());
+    setRetribusiList(loadRetribusiList());
+    setLibraryList(loadLibraryList());
+    
+    // Default logged in as admin for ease of testing government features
+    const user = loadCurrentUser() || DEFAULT_USERS[0];
+    setCurrentUser(user);
+    saveCurrentUser(user);
 
-    // Fetch library items from Firestore if available
-    fetchLibraryEntriesFromFirestore().then((remoteItems) => {
-      if (remoteItems && remoteItems.length > 0) {
-        remoteItems.forEach((item) => StorageService.saveLibraryEntry(item));
-        setLibraryList(StorageService.getLibraryList());
+    // Test Firestore Connection on Boot (Requirement from skill)
+    testFirestoreConnection().then((connected) => {
+      if (connected) {
+        console.log('SIPOTENSI HSU: Terhubung ke Firebase Firestore & Auth');
       }
     });
 
-    // Listen to Firebase Auth state
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      if (user) {
-        try {
-          const userDocRef = doc(db, 'users', user.uid);
-          const snap = await getDoc(userDocRef);
-          const isSuperAdmin = user.email === 'rija.bp2rd@gmail.com';
-          const role = isSuperAdmin ? 'admin' : (snap.exists() ? snap.data().role : (user.email?.includes('admin') ? 'admin' : 'petugas'));
-          
-          const appUser: AppUser = {
-            id: user.uid,
-            email: user.email || 'petugas@bp2rd.go.id',
-            nama: (snap.exists() && snap.data().nama) || user.displayName || 'Petugas BP2RD',
-            role,
-            nip: (snap.exists() && snap.data().nip) || (role === 'admin' ? '198005122005011003' : '198709142010011002'),
-            jabatan: (snap.exists() && snap.data().jabatan) || (role === 'admin' ? 'Kepala Bidang Pendataan & Penetapan' : 'Petugas Uji Petik Lapangan'),
-            unitKerja: 'Badan Pengelola Pajak dan Retribusi Daerah (BP2RD)',
-          };
-          StorageService.setCurrentUser(appUser);
-          setCurrentUser(appUser);
-        } catch (err) {
-          console.warn('Firebase user sync note:', err);
-        }
+    // Real-time auth listener
+    const unsubscribeAuth = subscribeToAuth((appUser) => {
+      if (appUser) {
+        setCurrentUser(appUser);
+        saveCurrentUser(appUser);
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+    };
   }, []);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 4000);
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // Handlers for Form Submissions with Dual Firestore & Google Sheets Sync
-  const handlePotensiSubmit = async (entry: PotensiPajakEntry) => {
-    const saved = StorageService.savePotensiEntry(entry);
-    setPotensiList(StorageService.getPotensiList());
-    setSheetsConfig(StorageService.getSheetsConfig());
-    await syncEntryToFirestore('potensi_pajak', saved);
-    showToast(`Data potensi "${saved.namaObjek}" berhasil dikirim dan tersinkron ke Google Sheets & Firestore!`);
-  };
-
-  const handlePbbSubmit = async (entry: PbbP2Entry) => {
-    const saved = StorageService.savePbbEntry(entry);
-    setPbbList(StorageService.getPbbList());
-    setSheetsConfig(StorageService.getSheetsConfig());
-    await syncEntryToFirestore('pbb_p2', saved);
-    showToast(`Bukti setor PBB-P2 a.n. "${saved.namaWajibPajak}" berhasil dikonfirmasi ke Firestore!`);
-  };
-
-  const handleIkmSubmit = async (entry: IkmEntry) => {
-    const saved = StorageService.saveIkmEntry(entry);
-    setIkmList(StorageService.getIkmList());
-    setSheetsConfig(StorageService.getSheetsConfig());
-    await syncEntryToFirestore('survei_ikm', saved);
-    showToast(`Terima kasih! Survei kepuasan Anda tersimpan di Firestore dengan skor ${saved.nilaiKonversi}.`);
-  };
-
-  // Status updates
-  const handleUpdatePotensiStatus = (
-    id: string,
-    status: PotensiPajakEntry['statusAdmin'],
-    catatan?: string,
-    petugas?: string
-  ) => {
-    StorageService.updatePotensiStatus(id, status, catatan, petugas);
-    setPotensiList(StorageService.getPotensiList());
-    showToast(`Status objek ${id} diperbarui menjadi: ${status}`);
-  };
-
-  const handleUpdatePbbStatus = (
-    id: string,
-    status: PbbP2Entry['statusVerifikasi'],
-    catatan?: string
-  ) => {
-    StorageService.updatePbbStatus(id, status, catatan);
-    setPbbList(StorageService.getPbbList());
-    showToast(`Status verifikasi PBB ${id} diperbarui.`);
-  };
-
-  // Admin Delete Handlers
-  const handleDeletePotensi = async (id: string) => {
-    StorageService.deletePotensiEntry(id);
-    setPotensiList(StorageService.getPotensiList());
-    await deleteEntryFromFirestore('potensi_pajak', id);
-    showToast(`Data potensi ${id} berhasil dihapus dari sistem.`);
-  };
-
-  const handleDeletePbb = async (id: string) => {
-    StorageService.deletePbbEntry(id);
-    setPbbList(StorageService.getPbbList());
-    await deleteEntryFromFirestore('pbb_p2', id);
-    showToast(`Data pembayaran PBB ${id} berhasil dihapus.`);
-  };
-
-  const handleDeleteIkm = async (id: string) => {
-    StorageService.deleteIkmEntry(id);
-    setIkmList(StorageService.getIkmList());
-    await deleteEntryFromFirestore('survei_ikm', id);
-    showToast(`Data evaluasi IKM ${id} berhasil dihapus.`);
-  };
-
-  // User Auth Handlers
-  const handleLoginSuccess = (user: AppUser) => {
-    StorageService.setCurrentUser(user);
+  const handleLogin = (user: AppUser) => {
     setCurrentUser(user);
-    showToast(`Selamat datang, ${user.nama} (${user.role === 'admin' ? 'Administrator' : 'Petugas Lapangan'})!`);
+    saveCurrentUser(user);
+    showToast(`Berhasil login ke Firebase sebagai ${user.name} (${user.role.toUpperCase()})`);
   };
 
   const handleLogout = async () => {
-    await logoutGoogle();
-    StorageService.setCurrentUser(null);
-    setCurrentUser(null);
-    showToast('Anda telah keluar dari sesi.');
-  };
-
-  const handleSaveSheetsConfig = (cfg: GoogleSheetsConfig) => {
-    StorageService.saveSheetsConfig(cfg);
-    setSheetsConfig(cfg);
-    showToast('Pengaturan Google Sheets berhasil disimpan!');
-  };
-
-  // Library Handlers
-  const handleSaveLibraryEntry = async (entry: LibraryBerkasEntry) => {
-    StorageService.saveLibraryEntry(entry);
-    setLibraryList(StorageService.getLibraryList());
-    await syncLibraryEntryToFirestore(entry);
-    showToast(`Berkas "${entry.title}" berhasil diinput ke Library & Firestore!`);
-  };
-
-  const handleDeleteLibraryEntry = async (id: string) => {
-    StorageService.deleteLibraryEntry(id);
-    setLibraryList(StorageService.getLibraryList());
-    await deleteLibraryEntryFromFirestore(id);
-    showToast('Berkas berhasil dihapus dari sistem.');
-  };
-
-  const handleUpdateLibraryStatus = async (
-    id: string,
-    statusVerifikasi: LibraryBerkasEntry['statusVerifikasi'],
-    catatan?: string,
-    verifiedBy?: string
-  ) => {
-    const updated = StorageService.updateLibraryStatus(id, statusVerifikasi, catatan, verifiedBy);
-    if (updated) {
-      setLibraryList(StorageService.getLibraryList());
-      await syncLibraryEntryToFirestore(updated);
-      showToast(`Status verifikasi berkas "${updated.title}" diperbarui: ${statusVerifikasi}`);
+    try {
+      await logoutGoogle();
+    } catch (e) {
+      console.warn('Logout Firebase error:', e);
     }
+    setCurrentUser(null);
+    saveCurrentUser(null);
+    if (activeTab === 'laporan' || activeTab === 'analitik') {
+      setActiveTab('beranda');
+    }
+    showToast('Anda telah logout dari mode aparatur internal');
   };
 
-  // Stats calculation for Landing Hero
-  const totalPotensiRupiah = potensiList.reduce((acc, curr) => acc + (curr.estimasiPotensiTahunan || 0), 0);
-  const avgIkmScore = ikmList.length > 0 
-    ? ikmList.reduce((acc, curr) => acc + curr.nilaiKonversi, 0) / ikmList.length 
-    : 88.0;
+  // Status Verifikasi Update Handler for Potensi Pajak
+  const handleUpdatePotensiStatus = async (
+    id: string, 
+    newStatus: VerificationStatus, 
+    note?: string
+  ) => {
+    const updated = potensiList.map(p => {
+      if (p.id === id) {
+        const updatedEntry: PotensiPajakEntry = {
+          ...p,
+          statusVerifikasi: newStatus,
+          verifiedBy: currentUser?.name || 'Rija, S.STP, M.IP (BP2RD HSU)',
+          verifiedAt: new Date().toISOString(),
+          catatanVerifikasi: note || (
+            newStatus === 'Setuju' 
+              ? 'Hasil inputan potensi telah diverifikasi sah dan disetujui masuk ketetapan fiskal.' 
+              : newStatus === 'Verifikasi' 
+              ? 'Sedang dalam verifikasi data lapangan dan kelengkapan berkas.' 
+              : 'Menunggu verifikasi lebih lanjut.'
+          ),
+          updatedAt: new Date().toISOString(),
+        };
+        // Sync to Firestore
+        syncEntryToFirestore('potensi_pajak', updatedEntry);
+        return updatedEntry;
+      }
+      return p;
+    });
+
+    setPotensiList(updated);
+    savePotensiList(updated);
+    showToast(`Status potensi berhasil diubah menjadi: "${newStatus}"`);
+  };
+
+  // Status Verifikasi Update Handler for PBB-P2
+  const handleUpdatePbbStatus = async (
+    id: string, 
+    newStatus: VerificationStatus, 
+    note?: string
+  ) => {
+    const updated = pbbList.map(p => {
+      if (p.id === id) {
+        const updatedEntry: PbbP2Entry = {
+          ...p,
+          statusVerifikasi: newStatus,
+          verifiedBy: currentUser?.name || 'Aparatur BP2RD HSU',
+          verifiedAt: new Date().toISOString(),
+          catatanVerifikasi: note || (
+            newStatus === 'Setuju' 
+              ? 'Data SPPT dan ketetapan PBB-P2 telah diverifikasi dan disetujui.' 
+              : newStatus === 'Verifikasi' 
+              ? 'Sedang dalam penelaahan bukti setoran dan data persil.' 
+              : 'Menunggu verifikasi.'
+          ),
+          updatedAt: new Date().toISOString(),
+        };
+        // Sync to Firestore
+        syncEntryToFirestore('pbb_p2', updatedEntry);
+        return updatedEntry;
+      }
+      return p;
+    });
+
+    setPbbList(updated);
+    savePbbList(updated);
+    showToast(`Status PBB-P2 berhasil diubah menjadi: "${newStatus}"`);
+  };
+
+  // Delete Handlers for Potensi Pajak and PBB-P2
+  const handleDeletePotensi = async (id: string) => {
+    const updated = potensiList.filter(p => p.id !== id);
+    setPotensiList(updated);
+    savePotensiList(updated);
+    try {
+      await deleteEntryFromFirestore('potensi_pajak', id);
+    } catch (err) {
+      console.warn('Delete potensi firestore note:', err);
+    }
+    showToast('Data potensi pajak berhasil dihapus.');
+  };
+
+  const handleDeletePbb = async (id: string) => {
+    const updated = pbbList.filter(p => p.id !== id);
+    setPbbList(updated);
+    savePbbList(updated);
+    try {
+      await deleteEntryFromFirestore('pbb_p2', id);
+    } catch (err) {
+      console.warn('Delete PBB firestore note:', err);
+    }
+    showToast('Data ketetapan PBB-P2 berhasil dihapus.');
+  };
+
+  const handleDeleteRetribusi = async (id: string) => {
+    const updated = retribusiList.filter(r => r.id !== id);
+    setRetribusiList(updated);
+    saveRetribusiList(updated);
+    try {
+      await deleteEntryFromFirestore('retribusi_daerah', id);
+    } catch (err) {
+      console.warn('Delete retribusi firestore note:', err);
+    }
+    showToast('Data potensi retribusi daerah berhasil dihapus.');
+  };
+
+  const handleUpdateRetribusiStatus = async (
+    id: string,
+    newStatus: VerificationStatus,
+    note?: string
+  ) => {
+    const updated = retribusiList.map(r => {
+      if (r.id === id) {
+        const updatedEntry: RetribusiDaerahEntry = {
+          ...r,
+          statusVerifikasi: newStatus,
+          verifiedBy: currentUser?.name || 'Aparatur BP2RD HSU',
+          verifiedAt: new Date().toISOString(),
+          catatanVerifikasi: note || (
+            newStatus === 'Setuju'
+              ? 'Potensi retribusi daerah telah diverifikasi dan disetujui.'
+              : newStatus === 'Verifikasi'
+              ? 'Sedang dalam verifikasi data lapangan.'
+              : 'Menunggu verifikasi.'
+          ),
+          updatedAt: new Date().toISOString(),
+        };
+        syncEntryToFirestore('retribusi_daerah', updatedEntry);
+        return updatedEntry;
+      }
+      return r;
+    });
+    setRetribusiList(updated);
+    saveRetribusiList(updated);
+    showToast(`Status retribusi berhasil diubah menjadi: "${newStatus}"`);
+  };
+
+  const handleSavePotensi = (newEntry: PotensiPajakEntry) => {
+    const updated = [newEntry, ...potensiList];
+    setPotensiList(updated);
+    savePotensiList(updated);
+    syncEntryToFirestore('potensi_pajak', newEntry);
+
+    // Otomatis sinkronkan file DPA/ARKAS dan Foto Objek PJRD ke Library Berkas (Kategori Internal)
+    const newLibraryEntries: LibraryBerkasEntry[] = [];
+
+    if (newEntry.dpaFileName && newEntry.dpaFileUrl) {
+      newLibraryEntries.push({
+        id: `lib-dpa-${Date.now()}`,
+        title: `DPA / ARKAS: ${newEntry.namaUsaha} (${newEntry.jenisPajak})`,
+        category: 'dpa',
+        categoryLabel: 'DPA / ARKAS Internal',
+        nomorBerkas: `DPA/POT/${newEntry.nomorFormulir.slice(-7)}`,
+        description: `Dokumen anggaran dan kertas kerja survei potensi pajak ${newEntry.namaUsaha}, ${newEntry.kecamatan}.`,
+        fileName: newEntry.dpaFileName,
+        fileSize: 'DPA Valid',
+        fileType: 'pdf',
+        fileUrl: newEntry.dpaFileUrl,
+        isPublic: false,
+        uploadedBy: newEntry.petugasPendata,
+        uploadedRole: currentUser?.role || 'user',
+        tanggalUpload: newEntry.tanggalPendataan,
+        statusVerifikasi: 'Aktif',
+        tags: ['DPA', 'ARKAS', newEntry.kecamatan, 'Survei'],
+      });
+    }
+
+    if (newEntry.fotoObjekName && newEntry.fotoObjekUrl) {
+      newLibraryEntries.push({
+        id: `lib-obj-${Date.now() + 1}`,
+        title: `Foto Fisik Objek PJRD: ${newEntry.namaUsaha}`,
+        category: 'objek',
+        categoryLabel: 'Foto Objek Pajak',
+        nomorBerkas: `DOK-OBJ/${newEntry.nomorFormulir.slice(-7)}`,
+        description: `Dokumentasi visual fisik lokasi usaha & reklame ${newEntry.namaUsaha} di ${newEntry.alamatLengkap}, ${newEntry.kecamatan}. Koordinat: (${newEntry.latitude.toFixed(6)}, ${newEntry.longitude.toFixed(6)}).`,
+        fileName: newEntry.fotoObjekName,
+        fileSize: 'Foto Lapangan',
+        fileType: 'image',
+        fileUrl: newEntry.fotoObjekUrl,
+        isPublic: false,
+        uploadedBy: newEntry.petugasPendata,
+        uploadedRole: currentUser?.role || 'user',
+        tanggalUpload: newEntry.tanggalPendataan,
+        statusVerifikasi: 'Aktif',
+        tags: ['Foto Objek', 'PJRD', newEntry.kecamatan, 'Kamera Lapangan'],
+      });
+    }
+
+    if (newLibraryEntries.length > 0) {
+      const updatedLib = [...newLibraryEntries, ...libraryList];
+      setLibraryList(updatedLib);
+      saveLibraryList(updatedLib);
+    }
+
+    showToast(`Data potensi ${newEntry.namaUsaha} berhasil disimpan & disinkronkan ke Firebase!`);
+    setActiveTab('laporan');
+  };
+
+  const handleSavePbb = (newEntry: PbbP2Entry) => {
+    const updated = [newEntry, ...pbbList];
+    setPbbList(updated);
+    savePbbList(updated);
+    syncEntryToFirestore('pbb_p2', newEntry);
+
+    // Otomatis sinkronkan Foto Objek Pajak dan Struk Bayar ke Library Berkas (Kategori Internal)
+    const newLibraryEntries: LibraryBerkasEntry[] = [];
+
+    if (newEntry.fotoObjekPbbName && newEntry.fotoObjekPbbUrl) {
+      newLibraryEntries.push({
+        id: `lib-pbb-obj-${Date.now()}`,
+        title: `Foto Objek Tanah/Bangunan SPPT NOP: ${newEntry.nop}`,
+        category: 'objek',
+        categoryLabel: 'Foto Objek Pajak',
+        nomorBerkas: `FOTO-PBB/${newEntry.nop.slice(-6)}`,
+        description: `Dokumentasi persil tanah & bangunan Wajib Pajak ${newEntry.namaWajibPajak}, luas bumi ${newEntry.luasBumiM2} m2, bangunan ${newEntry.luasBangunanM2} m2 di ${newEntry.kecamatan}.`,
+        fileName: newEntry.fotoObjekPbbName,
+        fileSize: 'Foto Persil',
+        fileType: 'image',
+        fileUrl: newEntry.fotoObjekPbbUrl,
+        isPublic: false,
+        uploadedBy: newEntry.petugasValidasi,
+        uploadedRole: currentUser?.role || 'user',
+        tanggalUpload: new Date().toISOString().split('T')[0],
+        statusVerifikasi: 'Aktif',
+        tags: ['Foto Objek', 'PBB-P2', newEntry.kecamatan],
+      });
+    }
+
+    if (newEntry.strukBayarUrl) {
+      newLibraryEntries.push({
+        id: `lib-struk-${Date.now() + 1}`,
+        title: `Struk Pembayaran PBB NOP: ${newEntry.nop}`,
+        category: 'pbb',
+        categoryLabel: 'Struk Bayar PBB-P2',
+        nomorBerkas: newEntry.nomorStruk || `STRUK-PBB/${newEntry.nop.slice(-6)}`,
+        description: `Bukti bayar lunas PBB-P2 ${newEntry.namaWajibPajak} di ${newEntry.bankTempatBayar || 'Bank Persepsi'}.`,
+        fileName: 'Struk_Bayar_PBB.pdf',
+        fileSize: 'Struk Sah',
+        fileType: 'pdf',
+        fileUrl: newEntry.strukBayarUrl,
+        isPublic: false,
+        uploadedBy: newEntry.petugasValidasi,
+        uploadedRole: currentUser?.role || 'user',
+        tanggalUpload: newEntry.tanggalBayar || new Date().toISOString().split('T')[0],
+        statusVerifikasi: 'Aktif',
+        tags: ['Struk PBB', 'Lunas', 'Bank'],
+      });
+    }
+
+    if (newLibraryEntries.length > 0) {
+      const updatedLib = [...newLibraryEntries, ...libraryList];
+      setLibraryList(updatedLib);
+      saveLibraryList(updatedLib);
+    }
+
+    showToast(`Data SPPT NOP ${newEntry.nop} berhasil disimpan & disinkronkan ke Firebase!`);
+    setActiveTab('laporan');
+  };
+
+  const handleSaveRetribusi = (newEntry: RetribusiDaerahEntry) => {
+    const updated = [newEntry, ...retribusiList];
+    setRetribusiList(updated);
+    saveRetribusiList(updated);
+    syncEntryToFirestore('retribusi_daerah', newEntry);
+
+    // Jika ada foto objek retribusi, sinkronkan juga ke Library Berkas (Kategori Internal)
+    if (newEntry.fotoObjekRetribusiName && newEntry.fotoObjekRetribusiUrl) {
+      const newLibraryEntry: LibraryBerkasEntry = {
+        id: `lib-ret-${Date.now()}`,
+        title: `Foto Objek Retribusi: ${newEntry.subObjekRetribusi} (${newEntry.subRekening})`,
+        category: 'objek',
+        categoryLabel: 'Foto Objek Retribusi',
+        nomorBerkas: `DOK-RET/${newEntry.nomorRegister.slice(-7)}`,
+        description: `Dokumentasi visual fisik ${newEntry.subObjekRetribusi} di ${newEntry.alamatLengkap}, ${newEntry.kecamatan}. Koordinat: (${newEntry.latitude.toFixed(6)}, ${newEntry.longitude.toFixed(6)}).`,
+        fileName: newEntry.fotoObjekRetribusiName,
+        fileSize: 'Foto Lapangan',
+        fileType: 'image',
+        fileUrl: newEntry.fotoObjekRetribusiUrl,
+        isPublic: false,
+        uploadedBy: newEntry.petugasPendata,
+        uploadedRole: currentUser?.role || 'user',
+        tanggalUpload: newEntry.tanggalPendataan,
+        statusVerifikasi: 'Aktif',
+        tags: ['Retribusi', newEntry.subRekening, newEntry.kecamatan],
+      };
+      const updatedLib = [newLibraryEntry, ...libraryList];
+      setLibraryList(updatedLib);
+      saveLibraryList(updatedLib);
+    }
+
+    showToast(`Potensi retribusi "${newEntry.subObjekRetribusi}" berhasil disimpan & disinkronkan ke Firebase!`);
+    setActiveTab('laporan');
+  };
+
+  const handleSaveLibrary = (newEntry: LibraryBerkasEntry) => {
+    const updated = [newEntry, ...libraryList];
+    setLibraryList(updated);
+    saveLibraryList(updated);
+    showToast(`Berkas ${newEntry.nomorBerkas} berhasil ditambahkan ke Library!`);
+    setActiveTab('library');
+  };
+
+  const handleDeleteLibrary = (id: string) => {
+    if (!window.confirm('Apakah Anda yakin ingin menghapus berkas ini dari repositori?')) return;
+    const updated = libraryList.filter(item => item.id !== id);
+    setLibraryList(updated);
+    saveLibraryList(updated);
+    showToast('Berkas berhasil dihapus');
+  };
+
+  const handleOpenLibraryWithCategory = (cat: 'all' | LibraryCategory) => {
+    setLibraryCategoryFilter(cat);
+    setActiveTab('library');
+  };
+
+  // Calculations for stats
+  const totalPotensiRupiah = potensiList.reduce((acc, curr) => acc + (curr.potensiRupiahTahunan || 0), 0);
+  const totalPbbLunasRupiah = pbbList
+    .filter(p => p.statusPembayaran === 'LUNAS')
+    .reduce((acc, curr) => acc + (curr.pbbTerhutang || 0), 0);
+
+  // Check if current user has authorized access to internal management tabs
+  const isInternalUser = currentUser !== null && (currentUser.role === 'admin' || currentUser.role === 'user');
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-emerald-950/90 border border-emerald-500/60 rounded-2xl p-4 text-white shadow-2xl backdrop-blur-md flex items-center gap-3 animate-fade-in max-w-md">
-          <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/40">
-            <CheckCircle2 className="w-5 h-5" />
-          </div>
-          <div className="text-xs">
-            <p className="font-semibold text-white">Notifikasi Sistem</p>
-            <p className="text-emerald-200/90 mt-0.5">{toastMessage}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Navbar Component */}
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
+      
+      {/* Top Navbar */}
       <Navbar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        onSelectTab={(tab) => {
+          if (tab === 'library') setLibraryCategoryFilter('all');
+          setActiveTab(tab);
+        }}
         currentUser={currentUser}
         onOpenLogin={() => setIsLoginModalOpen(true)}
         onLogout={handleLogout}
-        sheetsConfig={sheetsConfig}
-        onOpenSheetsHub={() => setActiveTab('laporan')}
-        onOpenGoogleWorkspace={() => setIsGoogleHubOpen(true)}
+        potensiCount={potensiList.length}
+        pbbCount={pbbList.length}
+        retribusiCount={retribusiList.length}
       />
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 border border-emerald-500/50 text-white text-xs px-4 py-3 rounded-2xl shadow-2xl shadow-emerald-950/60 flex items-center gap-2.5 animate-in slide-in-from-bottom-5">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+          <span className="font-semibold">{toastMessage}</span>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <main className="flex-1">
         {activeTab === 'beranda' && (
           <LandingHero
-            onSelectTab={(tab) => setActiveTab(tab)}
+            onSelectTab={(tab) => {
+              if (tab === 'library') setLibraryCategoryFilter('all');
+              setActiveTab(tab);
+            }}
+            onOpenLibraryCategory={handleOpenLibraryWithCategory}
+            currentUser={currentUser}
+            onOpenLogin={() => setIsLoginModalOpen(true)}
             stats={{
               totalPotensiRupiah,
               totalPotensiCount: potensiList.length,
               totalPbbCount: pbbList.length,
-              avgIkmScore,
+              totalPbbLunasRupiah,
             }}
           />
         )}
 
+        {activeTab === 'peta' && (
+          <PetaGeospasialHsu
+            potensiList={potensiList}
+            pbbList={pbbList}
+            currentUser={currentUser}
+            onNavigateToForm={(type) => setActiveTab(type)}
+          />
+        )}
+
         {activeTab === 'potensi' && (
-          <FormPotensi
-            onSubmit={handlePotensiSubmit}
-            onBackToHome={() => setActiveTab('beranda')}
+          <PotensiPajakForm
+            currentUser={currentUser}
+            potensiList={potensiList}
+            onSave={handleSavePotensi}
+            onCancel={() => setActiveTab('beranda')}
           />
         )}
 
         {activeTab === 'pbb' && (
-          <FormPbbP2
-            onSubmit={handlePbbSubmit}
-            onBackToHome={() => setActiveTab('beranda')}
-          />
-        )}
-
-        {activeTab === 'ikm' && (
-          <FormIkm
-            onSubmit={handleIkmSubmit}
-            onBackToHome={() => setActiveTab('beranda')}
-          />
-        )}
-
-        {activeTab === 'dashboard' && (
-          <AdminDashboard
-            potensiList={potensiList}
-            pbbList={pbbList}
-            ikmList={ikmList}
-            onOpenReports={() => setActiveTab('laporan')}
-            onOpenLibrary={() => setActiveTab('library')}
-            onOpenInputLibrary={() => setActiveTab('laporan')}
-          />
-        )}
-
-        {activeTab === 'laporan' && (
-          <RealtimeReportsManager
-            potensiList={potensiList}
-            pbbList={pbbList}
-            ikmList={ikmList}
-            libraryList={libraryList}
+          <PbbP2Form
             currentUser={currentUser}
-            onSaveLibraryEntry={handleSaveLibraryEntry}
-            onDeleteLibraryEntry={handleDeleteLibraryEntry}
-            onUpdateLibraryStatus={handleUpdateLibraryStatus}
-            onUpdatePotensiStatus={handleUpdatePotensiStatus}
-            onUpdatePbbStatus={handleUpdatePbbStatus}
-            onDeletePotensi={handleDeletePotensi}
-            onDeletePbb={handleDeletePbb}
-            onDeleteIkm={handleDeleteIkm}
-            sheetsConfig={sheetsConfig}
-            onSaveSheetsConfig={handleSaveSheetsConfig}
-            onOpenLibrary={() => setActiveTab('library')}
-            onOpenLogin={() => setIsLoginModalOpen(true)}
+            pbbList={pbbList}
+            onSave={handleSavePbb}
+            onCancel={() => setActiveTab('beranda')}
+          />
+        )}
+
+        {activeTab === 'retribusi' && (
+          <RetribusiDaerahForm
+            currentUser={currentUser}
+            retribusiList={retribusiList}
+            onSave={handleSaveRetribusi}
+            onCancel={() => setActiveTab('beranda')}
+            onNavigateToTab={(tab) => setActiveTab(tab)}
+            onUpdateRetribusiStatus={handleUpdateRetribusiStatus}
+            onDeleteRetribusi={handleDeleteRetribusi}
           />
         )}
 
@@ -316,57 +524,135 @@ export default function App() {
             pbbList={pbbList}
             libraryList={libraryList}
             currentUser={currentUser}
+            initialCategory={libraryCategoryFilter}
             onBackToHome={() => setActiveTab('beranda')}
-            onOpenInputLibrary={() => setActiveTab('laporan')}
-            onDeleteEntry={handleDeleteLibraryEntry}
+            onOpenLogin={() => setIsLoginModalOpen(true)}
+            onOpenInputLibrary={() => setActiveTab('input-library')}
+            onDeleteEntry={handleDeleteLibrary}
           />
+        )}
+
+        {activeTab === 'input-library' && (
+          <AdminInputLibraryBerkas
+            currentUser={currentUser}
+            onSave={handleSaveLibrary}
+            onCancel={() => setActiveTab('library')}
+          />
+        )}
+
+        {/* Tab Manajemen Laporan (Hanya tampil & dapat diakses pada login admin dan user) */}
+        {activeTab === 'laporan' && (
+          isInternalUser ? (
+            <RealtimeReportsManager
+              potensiList={potensiList}
+              pbbList={pbbList}
+              retribusiList={retribusiList}
+              currentUser={currentUser}
+              onUpdatePotensiStatus={handleUpdatePotensiStatus}
+              onUpdatePbbStatus={handleUpdatePbbStatus}
+              onUpdateRetribusiStatus={handleUpdateRetribusiStatus}
+              onDeletePotensi={handleDeletePotensi}
+              onDeletePbb={handleDeletePbb}
+              onDeleteRetribusi={handleDeleteRetribusi}
+            />
+          ) : (
+            <div className="max-w-xl mx-auto my-20 p-8 bg-slate-900 border border-amber-500/40 rounded-3xl text-center shadow-2xl">
+              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 mx-auto flex items-center justify-center mb-4">
+                <ShieldCheck className="w-8 h-8" />
+              </div>
+              <h2 className="text-xl font-bold text-white">
+                Akses Terbatas: Login Admin / User Diperlukan
+              </h2>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                Menu <strong>Manajemen Laporan</strong> dan verifikasi hasil inputan hanya dapat diakses oleh Administrator dan Petugas (User) BP2RD Kabupaten Hulu Sungai Utara yang terautentikasi melalui Firebase.
+              </p>
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <button
+                  onClick={() => setIsLoginModalOpen(true)}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg transition-all"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>Login Admin / User Sekarang</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('beranda')}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Kembali ke Beranda</span>
+                </button>
+              </div>
+            </div>
+          )
+        )}
+
+        {/* Tab Dashboard Analitik (Hanya tampil & dapat diakses pada login admin dan user) */}
+        {activeTab === 'analitik' && (
+          isInternalUser ? (
+            <AnalyticsDashboard
+              potensiList={potensiList}
+              pbbList={pbbList}
+              libraryList={libraryList}
+              currentUser={currentUser}
+              onNavigateToTab={(tab) => setActiveTab(tab)}
+            />
+          ) : (
+            <div className="max-w-xl mx-auto my-20 p-8 bg-slate-900 border border-amber-500/40 rounded-3xl text-center shadow-2xl">
+              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 mx-auto flex items-center justify-center mb-4">
+                <ShieldCheck className="w-8 h-8" />
+              </div>
+              <h2 className="text-xl font-bold text-white">
+                Akses Terbatas: Login Admin / User Diperlukan
+              </h2>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                Menu <strong>Dashboard Analitik</strong> hanya dapat diakses oleh Administrator dan Petugas (User) BP2RD Kabupaten Hulu Sungai Utara yang terautentikasi melalui Firebase.
+              </p>
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <button
+                  onClick={() => setIsLoginModalOpen(true)}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg transition-all"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>Login Admin / User Sekarang</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('beranda')}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Kembali ke Beranda</span>
+                </button>
+              </div>
+            </div>
+          )
         )}
       </main>
 
-      {/* Institutional Footer */}
-      <footer className="bg-slate-900 border-t border-slate-800 text-slate-400 py-8 px-4 sm:px-6 lg:px-8 mt-12">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center border border-blue-500/30">
-              <Building2 className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="font-bold text-white">SIPOTENSI - Portal Penggalian Potensi Pajak Daerah</p>
-              <p className="text-[11px] text-slate-400">
-                Badan Pengelola Pajak dan Retribusi Daerah (BP2RD / BAPENDA) • Pemerintah Daerah
-              </p>
-            </div>
+      {/* Footer */}
+      <footer className="bg-slate-900/60 border-t border-slate-800/80 py-8 px-4 sm:px-6 lg:px-8 mt-auto">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-slate-400">SIPOTENSI BP2RD</span>
+            <span>&bull;</span>
+            <span>Pemerintah Kabupaten Hulu Sungai Utara</span>
+            <span>&bull;</span>
+            <span>Amuntai - Kalimantan Selatan</span>
           </div>
-
-          <div className="flex items-center gap-4 text-[11px]">
-            <span className="flex items-center gap-1 text-emerald-400">
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              <span>Google Sheets Integration Live</span>
-            </span>
-            <span className="text-slate-600">•</span>
-            <span>Hak Cipta © 2026 BP2RD</span>
+          <div>
+            <span>Sistem Informasi Potensi Fiskal &bull; GPS Geospasial Presisi HSU 2026</span>
           </div>
         </div>
       </footer>
 
-      {/* Login Modal */}
+      {/* Login Modal Connected to Firebase */}
       <LoginModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
-        onLoginSuccess={handleLoginSuccess}
+        onLogin={handleLogin}
       />
 
-      {/* Google Drive, Sheets & Firebase Hub Modal */}
-      {isGoogleHubOpen && (
-        <GoogleDriveSheetsHub
-          potensiList={potensiList}
-          pbbList={pbbList}
-          ikmList={ikmList}
-          sheetsConfig={sheetsConfig}
-          onUpdateSheetsConfig={handleSaveSheetsConfig}
-          onClose={() => setIsGoogleHubOpen(false)}
-        />
-      )}
     </div>
   );
 }
+export default App;
+

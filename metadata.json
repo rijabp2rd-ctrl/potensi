@@ -1,6 +1,8 @@
 {
-  "name": "SIPOTENSI BP2RD - Portal Penggalian Potensi Pajak Daerah & IKM",
-  "description": "Sistem Informasi Penggalian Potensi Pajak Daerah, Monitoring PBB-P2, Survei IKM terintegrasi Google Sheets dan Dashboard Analitik Interaktif",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "name": "SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara",
+  "description": "Sistem Informasi Potensi Pajak Daerah & PBB-P2 BP2RD Kabupaten Hulu Sungai Utara dengan Pemetaan Geospasial GPS Presisi, Library Berkas Regulasi, dan Cetak Rekapitulasi Laporan Resmi",
+  "version": "1.0.0",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

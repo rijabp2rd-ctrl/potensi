@@ -1,33 +1,50 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { 
   Building2, 
-  FileSpreadsheet, 
   MapPin, 
+  FileSpreadsheet, 
+  Receipt, 
   ShieldCheck, 
-  Sparkles, 
-  Star, 
   TrendingUp, 
   ArrowRight, 
-  CheckCircle2, 
   Layers, 
   BarChart3, 
-  ChevronRight,
-  Zap,
-  Check
+  ChevronRight, 
+  Zap, 
+  BookOpen, 
+  FileCheck, 
+  FileText, 
+  Lock, 
+  FolderArchive, 
+  LogIn, 
+  Navigation2,
+  CheckCircle2,
+  Coins
 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
+import { AppUser, LibraryCategory } from '../types';
+import { KABUPATEN_HSU, KECAMATAN_HSU } from '../constants/wilayahHsu';
 
 interface LandingHeroProps {
-  onSelectTab: (tab: 'potensi' | 'pbb' | 'ikm' | 'dashboard' | 'library') => void;
+  onSelectTab: (tab: string) => void;
+  onOpenLibraryCategory?: (category: 'all' | LibraryCategory) => void;
+  currentUser: AppUser | null;
+  onOpenLogin: () => void;
   stats: {
     totalPotensiRupiah: number;
     totalPotensiCount: number;
     totalPbbCount: number;
-    avgIkmScore: number;
+    totalPbbLunasRupiah: number;
   };
 }
 
-export const LandingHero: React.FC<LandingHeroProps> = ({ onSelectTab, stats }) => {
+export const LandingHero: React.FC<LandingHeroProps> = ({
+  onSelectTab,
+  onOpenLibraryCategory,
+  currentUser,
+  onOpenLogin,
+  stats,
+}) => {
   const formatRupiah = (val: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -37,395 +54,375 @@ export const LandingHero: React.FC<LandingHeroProps> = ({ onSelectTab, stats }) 
   };
 
   return (
-    <div className="relative overflow-hidden bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 text-white min-h-[calc(100vh-4rem)] flex flex-col justify-center">
-      {/* Animated Background Decorative Elements */}
-      <div className="absolute inset-0 bg-[radial-gradient(#3b82f6_1.5px,transparent_1.5px)] [background-size:28px_28px] opacity-15"></div>
-      
-      {/* Ambient Moving Glows */}
-      <motion.div 
-        animate={{ 
-          x: [0, 30, 0], 
-          y: [0, -30, 0],
-          scale: [1, 1.15, 1],
-        }}
-        transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute -top-32 -left-32 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl pointer-events-none"
-      />
-      <motion.div 
-        animate={{ 
-          x: [0, -40, 0], 
-          y: [0, 30, 0],
-          scale: [1, 1.2, 1],
-        }}
-        transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute -bottom-32 -right-32 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none"
-      />
+    <div className="relative overflow-hidden pt-8 pb-16">
+      {/* Background Glows */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-gradient-to-tr from-emerald-600/15 via-teal-500/15 to-transparent blur-3xl rounded-full pointer-events-none" />
+      <div className="absolute top-10 right-10 w-72 h-72 bg-amber-500/10 blur-3xl rounded-full pointer-events-none" />
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 w-full">
-        {/* Government Badge with Floating & Shimmer */}
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="flex items-center justify-center"
-        >
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-400/40 text-blue-300 text-xs font-semibold backdrop-blur-md shadow-lg shadow-blue-500/10 hover:border-blue-400 transition-colors">
-            <motion.div
-              animate={{ rotate: [0, 15, -15, 0] }}
-              transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        
+        {/* Banner Pemkab Hulu Sungai Utara */}
+        <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: -15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-slate-900 border border-emerald-500/30 text-emerald-400 text-xs font-semibold shadow-lg shadow-emerald-950/40 mb-6"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            <span>Sistem Resmi Pemkab Hulu Sungai Utara &bull; Amuntai &bull; Kalsel</span>
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight"
+          >
+            Penggalian Potensi Pajak Daerah &amp; PBB-P2 Berbasis{' '}
+            <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300 bg-clip-text text-transparent">
+              Geospasial GPS Presisi
+            </span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="mt-6 text-base sm:text-lg text-slate-300 max-w-3xl leading-relaxed"
+          >
+            Portal digital integrasi Badan Pengelola Pajak dan Retribusi Daerah (BP2RD) Kabupaten Hulu Sungai Utara. 
+            Mendata objek pajak secara akurat di 10 kecamatan dengan koordinat GPS valid, keterbukaan dokumen regulasi daerah, serta manajemen pelaporan fiskal terverifikasi.
+          </motion.p>
+
+          {/* Quick Action Buttons */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="mt-8 flex flex-wrap items-center justify-center gap-3.5"
+          >
+            <button
+              onClick={() => onSelectTab('peta')}
+              className="flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-xl shadow-emerald-950/50 hover:shadow-emerald-900/60 transition-all active:scale-95 cursor-pointer"
             >
-              <Sparkles className="w-4 h-4 text-blue-400" />
-            </motion.div>
-            <span>Sistem Informasi Penggalian Potensi Pajak Daerah Terpadu</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping"></span>
-            <span className="text-white font-bold bg-blue-600/40 px-2 py-0.5 rounded-full text-[10px] border border-blue-400/30">
-              TA 2026
-            </span>
-          </div>
-        </motion.div>
+              <Navigation2 className="w-4 h-4 text-amber-300" />
+              <span>Buka Peta Geospasial HSU</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
 
-        {/* Main Headline with Stagger Animation */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.1 }}
-          className="text-center mt-6 max-w-4xl mx-auto"
-        >
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-[1.15]">
-            Optimalisasi Pendapatan Daerah &{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-teal-300 inline-block">
-              Evaluasi Layanan Wajib Pajak
-            </span>
-          </h1>
-          <p className="mt-5 text-sm sm:text-base md:text-lg text-slate-300 leading-relaxed max-w-3xl mx-auto">
-            Portal resmi partisipasi wajib pajak dan pendataan potensi objek baru (Restoran, Reklame, Hotel, Parkir, ABT, dll.), pemutakhiran PBB-P2, serta Indeks Kepuasan Masyarakat (IKM) dengan validasi otomatis dan sinkronisasi real-time ke Google Sheets.
-          </p>
-        </motion.div>
+            <button
+              onClick={() => onSelectTab('potensi')}
+              className="flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white font-bold text-sm shadow-lg transition-all active:scale-95 cursor-pointer"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+              <span>Input Potensi Lapangan</span>
+            </button>
 
-        {/* 3 Main Action Cards with Cool Hover & Entry Animations */}
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6"
-        >
-          {/* Card 1: Form Potensi */}
-          <motion.div 
-            whileHover={{ y: -8, scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => onSelectTab('potensi')}
-            className="group relative bg-gradient-to-b from-slate-800/90 to-slate-900/90 border border-slate-700/80 hover:border-blue-500 rounded-3xl p-6 sm:p-7 transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-blue-500/20 cursor-pointer flex flex-col justify-between overflow-hidden"
-          >
-            {/* Glowing Accent Glow on hover */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/25 transition-all"></div>
-            
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <motion.div 
-                  whileHover={{ rotate: 10, scale: 1.1 }}
-                  className="w-14 h-14 rounded-2xl bg-blue-600/20 border border-blue-500/40 text-blue-400 flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300"
+            <button
+              onClick={() => onSelectTab('retribusi')}
+              className="flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-amber-500/40 text-amber-300 hover:text-white font-bold text-sm shadow-lg transition-all active:scale-95 cursor-pointer"
+            >
+              <Coins className="w-4 h-4 text-amber-400" />
+              <span>Input Potensi Retribusi</span>
+            </button>
+
+            {currentUser && (currentUser.role === 'admin' || currentUser.role === 'user') && (
+              <>
+                <button
+                  onClick={() => onSelectTab('laporan')}
+                  className="flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white font-bold text-sm shadow-lg transition-all active:scale-95 cursor-pointer"
                 >
-                  <Building2 className="w-7 h-7" />
-                </motion.div>
-                <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-blue-500/20 text-blue-300 border border-blue-500/30 tracking-wider">
-                  Formulir 01
-                </span>
-              </div>
+                  <BarChart3 className="w-4 h-4 text-amber-400" />
+                  <span>Manajemen Laporan &amp; Verifikasi</span>
+                </button>
 
-              <h3 className="text-xl font-extrabold text-white group-hover:text-blue-300 transition-colors">
-                Penggalian Potensi Pajak
-              </h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Laporkan potensi objek pajak baru: Nama Objek, Alamat, No WhatsApp, Unggah Dokumen DPA/ARKAS, Foto Objek, Titik Koordinat GPS, serta skor kelayakan data otomatis.
-              </p>
-
-              <div className="mt-4 flex flex-wrap gap-1.5">
-                <span className="text-[10px] bg-slate-800/90 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700 flex items-center gap-1">
-                  <Check className="w-3 h-3 text-blue-400" /> GPS Presisi
-                </span>
-                <span className="text-[10px] bg-slate-800/90 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700 flex items-center gap-1">
-                  <Check className="w-3 h-3 text-blue-400" /> Upload DPA & Objek
-                </span>
-                <span className="text-[10px] bg-slate-800/90 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700 flex items-center gap-1">
-                  <Check className="w-3 h-3 text-blue-400" /> Auto-Score
-                </span>
-              </div>
-            </div>
-            
-            <div className="mt-6 pt-4 border-t border-slate-700/60 flex items-center justify-between text-blue-400 font-bold text-xs group-hover:text-blue-300">
-              <span className="flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5" /> Buka Formulir Potensi
-              </span>
-              <motion.div 
-                animate={{ x: [0, 4, 0] }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                <ArrowRight className="w-4 h-4" />
-              </motion.div>
-            </div>
-          </motion.div>
-
-          {/* Card 2: Form PBB-P2 */}
-          <motion.div 
-            whileHover={{ y: -8, scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => onSelectTab('pbb')}
-            className="group relative bg-gradient-to-b from-slate-800/90 to-slate-900/90 border border-slate-700/80 hover:border-emerald-500 rounded-3xl p-6 sm:p-7 transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-emerald-500/20 cursor-pointer flex flex-col justify-between overflow-hidden"
-          >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/25 transition-all"></div>
-
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <motion.div 
-                  whileHover={{ rotate: -10, scale: 1.1 }}
-                  className="w-14 h-14 rounded-2xl bg-emerald-600/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300"
+                <button
+                  onClick={() => onSelectTab('analitik')}
+                  className="flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600/30 to-teal-600/30 hover:from-emerald-600/50 hover:to-teal-600/50 border border-emerald-500/40 text-emerald-300 hover:text-white font-bold text-sm shadow-lg transition-all active:scale-95 cursor-pointer"
                 >
-                  <ShieldCheck className="w-7 h-7" />
-                </motion.div>
-                <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 tracking-wider">
-                  Formulir 02
-                </span>
-              </div>
-
-              <h3 className="text-xl font-extrabold text-white group-hover:text-emerald-300 transition-colors">
-                Layanan & Setoran PBB-P2
-              </h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Verifikasi kepatuhan Pajak Bumi dan Bangunan: Nama, NIK 16 digit, Pilihan Status NOP (Ada NOP / Belum Ada Objek Baru), Lokasi Objek, dan Unggah Bukti Bayar Tahun Berjalan.
-              </p>
-
-              <div className="mt-4 flex flex-wrap gap-1.5">
-                <span className="text-[10px] bg-slate-800/90 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700 flex items-center gap-1">
-                  <Check className="w-3 h-3 text-emerald-400" /> NOP 18 Digit Masking
-                </span>
-                <span className="text-[10px] bg-slate-800/90 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700 flex items-center gap-1">
-                  <Check className="w-3 h-3 text-emerald-400" /> Bukti Struk Bank/QRIS
-                </span>
-                <span className="text-[10px] bg-slate-800/90 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700 flex items-center gap-1">
-                  <Check className="w-3 h-3 text-emerald-400" /> Status Lunas & Sah
-                </span>
-              </div>
-            </div>
-            
-            <div className="mt-6 pt-4 border-t border-slate-700/60 flex items-center justify-between text-emerald-400 font-bold text-xs group-hover:text-emerald-300">
-              <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Konfirmasi Bayar & NOP Baru
-              </span>
-              <motion.div 
-                animate={{ x: [0, 4, 0] }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                <ArrowRight className="w-4 h-4" />
-              </motion.div>
-            </div>
+                  <TrendingUp className="w-4 h-4 text-emerald-400" />
+                  <span>Dashboard Analitik</span>
+                </button>
+              </>
+            )}
           </motion.div>
+        </div>
 
-          {/* Card 3: Form IKM */}
-          <motion.div 
-            whileHover={{ y: -8, scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => onSelectTab('ikm')}
-            className="group relative bg-gradient-to-b from-slate-800/90 to-slate-900/90 border border-slate-700/80 hover:border-amber-500 rounded-3xl p-6 sm:p-7 transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-amber-500/20 cursor-pointer flex flex-col justify-between overflow-hidden"
-          >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/25 transition-all"></div>
-
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <motion.div 
-                  whileHover={{ rotate: 15, scale: 1.1 }}
-                  className="w-14 h-14 rounded-2xl bg-amber-600/20 border border-amber-500/40 text-amber-400 flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:bg-amber-600 group-hover:text-white transition-all duration-300"
-                >
-                  <Star className="w-7 h-7" />
-                </motion.div>
-                <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30 tracking-wider">
-                  Formulir 03
-                </span>
-              </div>
-
-              <h3 className="text-xl font-extrabold text-white group-hover:text-amber-300 transition-colors">
-                Survei Kepuasan WP (IKM)
-              </h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Suarakan kepuasan Anda: Nama, Alamat, Skala 1 - 5 untuk 5 dimensi layanan (kemudahan, kecepatan, keramahan, transparansi tarif, sarana), serta saran dan masukan langsung ke pimpinan.
-              </p>
-
-              <div className="mt-4 flex flex-wrap gap-1.5">
-                <span className="text-[10px] bg-slate-800/90 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700 flex items-center gap-1">
-                  <Check className="w-3 h-3 text-amber-400" /> Skala Bintang 1-5
-                </span>
-                <span className="text-[10px] bg-slate-800/90 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700 flex items-center gap-1">
-                  <Check className="w-3 h-3 text-amber-400" /> Nilai Mutu A/B/C
-                </span>
-                <span className="text-[10px] bg-slate-800/90 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700 flex items-center gap-1">
-                  <Check className="w-3 h-3 text-amber-400" /> Aspirasi Wajib Pajak
-                </span>
-              </div>
-            </div>
-            
-            <div className="mt-6 pt-4 border-t border-slate-700/60 flex items-center justify-between text-amber-400 font-bold text-xs group-hover:text-amber-300">
-              <span className="flex items-center gap-1.5">
-                <Star className="w-3.5 h-3.5" /> Berikan Penilaian & Saran
-              </span>
-              <motion.div 
-                animate={{ x: [0, 4, 0] }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                <ArrowRight className="w-4 h-4" />
-              </motion.div>
-            </div>
-          </motion.div>
-        </motion.div>
-
-        {/* Real-Time Stats Strip with Pulsing Cards */}
-        <motion.div 
+        {/* Real-time Stats Grid */}
+        <motion.div
           initial={{ opacity: 0, y: 25 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.3 }}
-          className="mt-12 bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl relative overflow-hidden"
+          transition={{ duration: 0.7, delay: 0.35 }}
+          className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
         >
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center divide-y md:divide-y-0 md:divide-x divide-slate-800">
-            <div className="pt-2 md:pt-0">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center justify-center gap-1">
-                <span>Total Potensi Terdata</span>
-              </p>
-              <p className="mt-2 text-2xl sm:text-3xl lg:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">
-                {formatRupiah(stats.totalPotensiRupiah)}
-              </p>
-              <p className="text-[11px] text-blue-300/80 font-medium mt-1">
-                {stats.totalPotensiCount} Objek Usaha Terpetakan
-              </p>
-            </div>
-
-            <div className="pt-4 md:pt-0">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Laporan PBB-P2
-              </p>
-              <p className="mt-2 text-2xl sm:text-3xl lg:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">
-                {stats.totalPbbCount} Berkas
-              </p>
-              <p className="text-[11px] text-emerald-300/80 font-medium mt-1">
-                Tervalidasi & NOP Terdaftar
-              </p>
-            </div>
-
-            <div className="pt-4 md:pt-0">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Indeks Kepuasan (IKM)
-              </p>
-              <p className="mt-2 text-2xl sm:text-3xl lg:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-300">
-                {stats.avgIkmScore.toFixed(1)} / 100
-              </p>
-              <p className="text-[11px] text-emerald-400 font-bold mt-1 flex items-center justify-center gap-1">
-                <CheckCircle2 className="w-3 h-3" />
-                <span>Kategori Mutu A (Sangat Baik)</span>
-              </p>
-            </div>
-
-            <div className="pt-4 md:pt-0">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Integrasi Database
-              </p>
-              <div className="mt-2 flex items-center justify-center gap-2 text-emerald-400 text-xl sm:text-2xl font-black">
-                <motion.div
-                  animate={{ rotate: [0, 360] }}
-                  transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
-                >
-                  <FileSpreadsheet className="w-6 h-6" />
-                </motion.div>
-                <span>Google Sheets</span>
+          <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-5 shadow-xl relative overflow-hidden group hover:border-emerald-500/40 transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                Total Potensi Pajak (Estimasi)
+              </span>
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <TrendingUp className="w-4 h-4" />
               </div>
-              <p className="text-[11px] text-teal-300/80 font-medium mt-1 flex items-center justify-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                <span>Real-Time Auto Synchronized</span>
-              </p>
             </div>
-          </div>
-        </motion.div>
-
-        {/* Feature Highlights: Alur Penggalian Potensi with Animated Flow */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-          className="mt-14"
-        >
-          <div className="text-center mb-8">
-            <h2 className="text-xl sm:text-2xl font-extrabold text-white">
-              Alur Penggalian Potensi & Verifikasi Cerdas
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-400 mt-1">
-              Standar Operasional Prosedur (SOP) Digital Pendataan Pajak Daerah BP2RD
+            <p className="mt-3 text-2xl font-black text-white tracking-tight">
+              {formatRupiah(stats.totalPotensiRupiah)}
+            </p>
+            <p className="mt-1 text-xs text-slate-400 flex items-center gap-1.5">
+              <span className="text-emerald-400 font-bold">{stats.totalPotensiCount} Objek Usaha</span>
+              <span>terdata aktif di HSU</span>
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              {
-                step: '1',
-                title: 'Entri Formulir',
-                desc: 'Wajib pajak atau petugas mengisi nama objek, alamat, no. WA, dan berkas.',
-                color: 'from-blue-600 to-blue-700',
-              },
-              {
-                step: '2',
-                title: 'Validasi Otomatis',
-                desc: 'Sistem mengecek format WA, presisi titik GPS, dan kelengkapan dokumen.',
-                color: 'from-indigo-600 to-indigo-700',
-              },
-              {
-                step: '3',
-                title: 'Sinkron Google Sheets',
-                desc: 'Data otomatis terkirim ke spreadsheet kantor dan tersimpan di database.',
-                color: 'from-teal-600 to-teal-700',
-              },
-              {
-                step: '4',
-                title: 'Uji Petik & SKPD',
-                desc: 'Admin memantau via dashboard analitik Chart.js & menugaskan tim survey.',
-                color: 'from-amber-600 to-amber-700',
-              },
-            ].map((item, i) => (
-              <motion.div
-                key={item.step}
-                whileHover={{ scale: 1.03 }}
-                className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 flex items-start gap-3.5 shadow-md relative overflow-hidden"
-              >
-                <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${item.color} text-white flex items-center justify-center font-black text-sm shrink-0 shadow-md`}>
-                  {item.step}
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-white">{item.title}</h4>
-                  <p className="text-xs text-slate-400 mt-1 leading-snug">
-                    {item.desc}
-                  </p>
-                </div>
-              </motion.div>
-            ))}
+          <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-5 shadow-xl relative overflow-hidden group hover:border-blue-500/40 transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                Realisasi Lunas PBB-P2
+              </span>
+              <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                <Receipt className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="mt-3 text-2xl font-black text-white tracking-tight">
+              {formatRupiah(stats.totalPbbLunasRupiah)}
+            </p>
+            <p className="mt-1 text-xs text-slate-400 flex items-center gap-1.5">
+              <span className="text-blue-400 font-bold">{stats.totalPbbCount} SPPT NOP</span>
+              <span>tervalidasi bank persepsi</span>
+            </p>
+          </div>
+
+          <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-5 shadow-xl relative overflow-hidden group hover:border-amber-500/40 transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                Cakupan Wilayah HSU
+              </span>
+              <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                <MapPin className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="mt-3 text-2xl font-black text-white tracking-tight">
+              10 Kecamatan
+            </p>
+            <p className="mt-1 text-xs text-slate-400 flex items-center gap-1.5">
+              <span className="text-amber-400 font-bold">214 Desa &amp; Kelurahan</span>
+              <span>di Kab. Hulu Sungai Utara</span>
+            </p>
+          </div>
+
+          <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-5 shadow-xl relative overflow-hidden group hover:border-teal-500/40 transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                Presisi GPS Geospasial
+              </span>
+              <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
+                <Zap className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="mt-3 text-2xl font-black text-emerald-400 tracking-tight">
+              Akurasi Tinggi &plusmn;5m
+            </p>
+            <p className="mt-1 text-xs text-slate-400 flex items-center gap-1.5">
+              <span>Validasi Koordinat Batas HSU</span>
+            </p>
           </div>
         </motion.div>
 
-        {/* Quick Action Navigation */}
-        <div className="mt-12 flex flex-wrap items-center justify-center gap-4">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => onSelectTab('dashboard')}
-            className="flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm shadow-xl shadow-blue-500/25 border border-blue-400/30 transition-all"
-          >
-            <BarChart3 className="w-4 h-4" />
-            <span>Buka Dashboard Analitik Interaktif</span>
-          </motion.button>
+        {/* PUSAT LIBRARY BERKAS & REGULASI PUBLIK SECTION */}
+        {/* Sesuai Permintaan: Landing page HANYA menampilkan Perda & Regulasi, SOP & Juknis, Formulir Blanko */}
+        {/* DPA/ARKAS, Foto Objek, dan Struk Bayar PBB tampil khusus untuk Admin & User */}
+        <motion.div
+          initial={{ opacity: 0, y: 25 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.4 }}
+          className="mt-16 bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative"
+        >
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-slate-800">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20 mb-3">
+                <FolderArchive className="w-3.5 h-3.5" />
+                <span>Pusat Regulasi &amp; Library Berkas Daerah</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black text-white">
+                Dokumen Resmi Terbuka Pemkab HSU
+              </h2>
+              <p className="text-sm text-slate-400 mt-1 max-w-2xl">
+                Kategori berkas publik yang dapat diakses langsung oleh masyarakat dan pelaku usaha: Perda dan Regulasi, SOP &amp; Juknis, serta Formulir Blanko.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                if (onOpenLibraryCategory) onOpenLibraryCategory('all');
+                else onSelectTab('library');
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 text-xs font-bold border border-slate-700 transition-colors self-start md:self-auto cursor-pointer"
+            >
+              <span>Buka Seluruh Library</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
 
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => onSelectTab('library')}
-            className="flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-slate-200 font-bold text-sm border border-slate-700 shadow-lg transition-all"
-          >
-            <Layers className="w-4 h-4 text-purple-400" />
-            <span>Jelajahi Library Berkas & Regulasi</span>
-          </motion.button>
+          {/* 3 Kartu Kategori Publik Terbuka di Landing Page */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-6">
+            
+            {/* 1. Perda dan Regulasi */}
+            <div 
+              onClick={() => onOpenLibraryCategory ? onOpenLibraryCategory('regulasi') : onSelectTab('library')}
+              className="bg-slate-950/70 border border-slate-800 hover:border-emerald-500/50 p-5 rounded-2xl transition-all duration-300 group cursor-pointer hover:shadow-lg hover:shadow-emerald-950/20 flex flex-col justify-between"
+            >
+              <div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform">
+                  <BookOpen className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-bold text-white mt-4 group-hover:text-emerald-300 transition-colors">
+                  Perda &amp; Regulasi
+                </h3>
+                <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                  Peraturan Daerah Kab. HSU No. 01 Tahun 2024 tentang Pajak &amp; Retribusi Daerah, Perbup PBB-P2, Instruksi Bupati, dan landasan hukum fiskal.
+                </p>
+              </div>
+              <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-bold text-emerald-400">
+                <span>3 Berkas Tersedia</span>
+                <span className="flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                  Lihat Dokumen <ChevronRight className="w-3.5 h-3.5" />
+                </span>
+              </div>
+            </div>
+
+            {/* 2. SOP & Juknis */}
+            <div 
+              onClick={() => onOpenLibraryCategory ? onOpenLibraryCategory('sop') : onSelectTab('library')}
+              className="bg-slate-950/70 border border-slate-800 hover:border-blue-500/50 p-5 rounded-2xl transition-all duration-300 group cursor-pointer hover:shadow-lg hover:shadow-blue-950/20 flex flex-col justify-between"
+            >
+              <div>
+                <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-105 transition-transform">
+                  <FileCheck className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-bold text-white mt-4 group-hover:text-blue-300 transition-colors">
+                  SOP &amp; Juknis
+                </h3>
+                <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                  Standar Operasional Prosedur pendataan geospasial GPS objek pajak lapangan, petunjuk teknis verifikasi desa, dan rekonsiliasi data piutang.
+                </p>
+              </div>
+              <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-bold text-blue-400">
+                <span>2 Dokumen Panduan</span>
+                <span className="flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                  Lihat Dokumen <ChevronRight className="w-3.5 h-3.5" />
+                </span>
+              </div>
+            </div>
+
+            {/* 3. Formulir Blanko */}
+            <div 
+              onClick={() => onOpenLibraryCategory ? onOpenLibraryCategory('blanko') : onSelectTab('library')}
+              className="bg-slate-950/70 border border-slate-800 hover:border-amber-500/50 p-5 rounded-2xl transition-all duration-300 group cursor-pointer hover:shadow-lg hover:shadow-amber-950/20 flex flex-col justify-between"
+            >
+              <div>
+                <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform">
+                  <FileText className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-bold text-white mt-4 group-hover:text-amber-300 transition-colors">
+                  Formulir Blanko
+                </h3>
+                <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                  Formulir SPOP &amp; LSPOP pendaftaran/mutasi PBB-P2, blanko permohonan keringanan ketetapan pajak, serta blanko permohonan NPWPD.
+                </p>
+              </div>
+              <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-bold text-amber-400">
+                <span>2 Template Blanko</span>
+                <span className="flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                  Unduh Formulir <ChevronRight className="w-3.5 h-3.5" />
+                </span>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Notifikasi Akses Internal untuk DPA/ARKAS, Foto Objek, dan Struk Bayar PBB */}
+          <div className="mt-6 p-4 rounded-2xl bg-slate-950/50 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400 shrink-0">
+                <Lock className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-200">
+                  Akses Berkas Internal: DPA/ARKAS, Foto Objek Pajak &amp; Struk Bayar PBB
+                </p>
+                <p className="text-[11px] text-slate-400">
+                  {currentUser ? (
+                    <span className="text-emerald-400">
+                      Anda login sebagai {currentUser.role.toUpperCase()} ({currentUser.name}). Seluruh berkas internal terbuka penuh untuk Anda di menu Library.
+                    </span>
+                  ) : (
+                    <span>
+                      Berkas DPA/ARKAS, Foto Objek Lapangan, dan Struk Bayar PBB hanya dapat diakses oleh Admin &amp; Petugas terverifikasi.
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {currentUser ? (
+              <button
+                onClick={() => onSelectTab('library')}
+                className="px-4 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/30 whitespace-nowrap cursor-pointer transition-colors"
+              >
+                Akses Berkas Internal
+              </button>
+            ) : (
+              <button
+                onClick={onOpenLogin}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold border border-slate-700 whitespace-nowrap cursor-pointer transition-colors flex items-center gap-1.5"
+              >
+                <LogIn className="w-3.5 h-3.5 text-amber-400" />
+                <span>Login untuk Akses</span>
+              </button>
+            )}
+          </div>
+        </motion.div>
+
+        {/* 10 KECAMATAN DI KABUPATEN HULU SUNGAI UTARA */}
+        <div className="mt-16">
+          <div className="text-center max-w-2xl mx-auto mb-8">
+            <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">
+              Wilayah Kerja Administrasi
+            </span>
+            <h2 className="text-2xl font-black text-white mt-1">
+              10 Kecamatan di Kabupaten Hulu Sungai Utara
+            </h2>
+            <p className="text-xs text-slate-400 mt-1">
+              Titik koordinat geospasial presisi dipetakan di seluruh sentra ekonomi &amp; pemukiman HSU
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {KECAMATAN_HSU.map((kec, idx) => (
+              <div
+                key={idx}
+                onClick={() => onSelectTab('peta')}
+                className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/80 hover:border-emerald-500/30 p-3.5 rounded-2xl transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-2 text-emerald-400 mb-1.5">
+                  <MapPin className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Wilayah #{idx + 1}
+                  </span>
+                </div>
+                <h4 className="text-xs font-extrabold text-white group-hover:text-emerald-300 transition-colors truncate">
+                  {kec.nama}
+                </h4>
+                <p className="text-[10px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                  {kec.deskripsi}
+                </p>
+                <div className="mt-2 text-[9px] font-mono text-slate-500 flex items-center justify-between">
+                  <span>{kec.lat.toFixed(4)}, {kec.lng.toFixed(4)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
+
       </div>
     </div>
   );

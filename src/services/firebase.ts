@@ -157,9 +157,9 @@ export const firebaseLoginOfficerOrAdmin = async (
 
   // Determine user role
   const isSuperAdminEmail = user.email === 'rija.bp2rd@gmail.com';
-  const role: 'admin' | 'petugas' = isSuperAdminEmail 
+  const role: 'admin' | 'user' = (isSuperAdminEmail || rolePreference === 'admin' || user.email?.toLowerCase().includes('admin'))
     ? 'admin' 
-    : (rolePreference || (user.email?.toLowerCase().includes('admin') ? 'admin' : 'petugas'));
+    : 'user';
 
   const userDocRef = doc(db, 'users', user.uid);
   let appUser: AppUser;
@@ -171,32 +171,34 @@ export const firebaseLoginOfficerOrAdmin = async (
       appUser = {
         id: user.uid,
         email: user.email || 'petugas@bp2rd.go.id',
-        nama: data.nama || user.displayName || 'Petugas BP2RD',
-        role: isSuperAdminEmail ? 'admin' : (data.role || role),
-        nip: data.nip || (role === 'admin' ? '198005122005011003' : '198709142010011002'),
-        jabatan: data.jabatan || (role === 'admin' ? 'Kepala Bidang Pendataan & Penetapan' : 'Petugas Survey & Uji Petik Lapangan'),
-        unitKerja: data.unitKerja || 'Badan Pengelola Pajak dan Retribusi Daerah (BP2RD)',
+        name: data.name || data.nama || user.displayName || (role === 'admin' ? 'Rija, S.STP, M.IP' : 'Petugas BP2RD HSU'),
+        role: isSuperAdminEmail ? 'admin' : (data.role === 'admin' ? 'admin' : role),
+        nip: data.nip || (role === 'admin' ? '19880512 201001 1 003' : '19920814 201902 1 004'),
+        jabatan: data.jabatan || (role === 'admin' ? 'Kepala Bidang Pendataan, Penilaian & Penggalian Potensi Pajak' : 'Petugas Surveyor & Pendataan Lapangan'),
+        wilayahTugas: data.wilayahTugas || (role === 'admin' ? 'Seluruh Wilayah Kab. HSU' : 'Kecamatan Amuntai Tengah & Sungai Pandan'),
+        photoURL: user.photoURL || undefined,
       };
-      // update lastLogin
-      await setDoc(userDocRef, { ...appUser, photoURL: user.photoURL || '', lastLogin: new Date().toISOString() }, { merge: true });
+      await setDoc(userDocRef, { ...appUser, lastLogin: new Date().toISOString() }, { merge: true });
     } else {
       appUser = {
         id: user.uid,
         email: user.email || 'petugas@bp2rd.go.id',
-        nama: user.displayName || 'Petugas BP2RD',
+        name: user.displayName || (role === 'admin' ? 'Rija, S.STP, M.IP' : 'Petugas Lapangan BP2RD HSU'),
         role,
-        nip: role === 'admin' ? '198005122005011003' : '198709142010011002',
-        jabatan: role === 'admin' ? 'Kepala Bidang Pendataan & Penetapan' : 'Petugas Survey & Uji Petik Lapangan',
-        unitKerja: 'Badan Pengelola Pajak dan Retribusi Daerah (BP2RD)',
+        nip: role === 'admin' ? '19880512 201001 1 003' : '19920814 201902 1 004',
+        jabatan: role === 'admin' ? 'Kepala Bidang Pendataan, Penilaian & Penggalian Potensi Pajak' : 'Petugas Surveyor & Pendataan Lapangan',
+        wilayahTugas: role === 'admin' ? 'Seluruh Wilayah Kab. HSU' : 'Kecamatan Amuntai Tengah & Sungai Pandan',
+        photoURL: user.photoURL || undefined,
       };
       await setDoc(userDocRef, {
         uid: user.uid,
         email: appUser.email,
-        nama: appUser.nama,
+        name: appUser.name,
+        nama: appUser.name,
         role: appUser.role,
         nip: appUser.nip,
         jabatan: appUser.jabatan,
-        unitKerja: appUser.unitKerja,
+        wilayahTugas: appUser.wilayahTugas,
         photoURL: user.photoURL || '',
         lastLogin: new Date().toISOString(),
       });
@@ -206,11 +208,12 @@ export const firebaseLoginOfficerOrAdmin = async (
     appUser = {
       id: user.uid,
       email: user.email || 'petugas@bp2rd.go.id',
-      nama: user.displayName || 'Petugas BP2RD',
+      name: user.displayName || (role === 'admin' ? 'Rija, S.STP, M.IP' : 'Petugas Lapangan BP2RD HSU'),
       role,
-      nip: role === 'admin' ? '198005122005011003' : '198709142010011002',
-      jabatan: role === 'admin' ? 'Kepala Bidang Pendataan & Penetapan' : 'Petugas Survey & Uji Petik Lapangan',
-      unitKerja: 'Badan Pengelola Pajak dan Retribusi Daerah (BP2RD)',
+      nip: role === 'admin' ? '19880512 201001 1 003' : '19920814 201902 1 004',
+      jabatan: role === 'admin' ? 'Kepala Bidang Pendataan, Penilaian & Penggalian Potensi Pajak' : 'Petugas Surveyor & Pendataan Lapangan',
+      wilayahTugas: role === 'admin' ? 'Seluruh Wilayah Kab. HSU' : 'Kecamatan Amuntai Tengah & Sungai Pandan',
+      photoURL: user.photoURL || undefined,
     };
   }
 
@@ -219,12 +222,11 @@ export const firebaseLoginOfficerOrAdmin = async (
 
 /**
  * Login Petugas / Admin via Firebase Email & Password
- * Mendukung autentikasi Firebase langsung dan pembuatan akun jika pertama kali
  */
 export const firebaseEmailPasswordLogin = async (
   email: string,
   password: string,
-  rolePreference?: 'admin' | 'petugas'
+  rolePreference?: 'admin' | 'user'
 ): Promise<{ user: User; appUser: AppUser }> => {
   let user: User;
   
@@ -232,8 +234,7 @@ export const firebaseEmailPasswordLogin = async (
     const cred = await signInWithEmailAndPassword(auth, email, password);
     user = cred.user;
   } catch (err: any) {
-    // If user does not exist yet in Firebase Auth, create it
-    if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+    if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
       try {
         const createCred = await createUserWithEmailAndPassword(auth, email, password);
         user = createCred.user;
@@ -246,9 +247,9 @@ export const firebaseEmailPasswordLogin = async (
   }
 
   const isSuperAdminEmail = user.email === 'rija.bp2rd@gmail.com';
-  const role: 'admin' | 'petugas' = isSuperAdminEmail 
+  const role: 'admin' | 'user' = (isSuperAdminEmail || rolePreference === 'admin' || user.email?.toLowerCase().includes('admin'))
     ? 'admin' 
-    : (rolePreference || (user.email?.toLowerCase().includes('admin') ? 'admin' : 'petugas'));
+    : 'user';
 
   const userDocRef = doc(db, 'users', user.uid);
   let appUser: AppUser;
@@ -260,31 +261,32 @@ export const firebaseEmailPasswordLogin = async (
       appUser = {
         id: user.uid,
         email: user.email || email,
-        nama: data.nama || (role === 'admin' ? 'Rija (Administrator BP2RD)' : 'Petugas Lapangan BP2RD'),
-        role: isSuperAdminEmail ? 'admin' : (data.role || role),
-        nip: data.nip || (role === 'admin' ? '198005122005011003' : '198709142010011002'),
-        jabatan: data.jabatan || (role === 'admin' ? 'Kepala Bidang Pendataan & Penetapan' : 'Petugas Uji Petik Lapangan'),
-        unitKerja: data.unitKerja || 'Badan Pengelola Pajak dan Retribusi Daerah (BP2RD)',
+        name: data.name || data.nama || (role === 'admin' ? 'Rija, S.STP, M.IP' : 'Petugas Lapangan BP2RD HSU'),
+        role: isSuperAdminEmail ? 'admin' : (data.role === 'admin' ? 'admin' : role),
+        nip: data.nip || (role === 'admin' ? '19880512 201001 1 003' : '19920814 201902 1 004'),
+        jabatan: data.jabatan || (role === 'admin' ? 'Kepala Bidang Pendataan, Penilaian & Penggalian Potensi Pajak' : 'Petugas Surveyor & Pendataan Lapangan'),
+        wilayahTugas: data.wilayahTugas || (role === 'admin' ? 'Seluruh Wilayah Kab. HSU' : 'Kecamatan Amuntai Tengah & Sungai Pandan'),
       };
       await setDoc(userDocRef, { ...appUser, lastLogin: new Date().toISOString() }, { merge: true });
     } else {
       appUser = {
         id: user.uid,
         email: user.email || email,
-        nama: role === 'admin' ? 'Rija (Administrator BP2RD)' : 'Petugas Lapangan BP2RD',
+        name: role === 'admin' ? 'Rija, S.STP, M.IP' : 'Petugas Lapangan BP2RD HSU',
         role,
-        nip: role === 'admin' ? '198005122005011003' : '198709142010011002',
-        jabatan: role === 'admin' ? 'Kepala Bidang Pendataan & Penetapan' : 'Petugas Uji Petik Lapangan',
-        unitKerja: 'Badan Pengelola Pajak dan Retribusi Daerah (BP2RD)',
+        nip: role === 'admin' ? '19880512 201001 1 003' : '19920814 201902 1 004',
+        jabatan: role === 'admin' ? 'Kepala Bidang Pendataan, Penilaian & Penggalian Potensi Pajak' : 'Petugas Surveyor & Pendataan Lapangan',
+        wilayahTugas: role === 'admin' ? 'Seluruh Wilayah Kab. HSU' : 'Kecamatan Amuntai Tengah & Sungai Pandan',
       };
       await setDoc(userDocRef, {
         uid: user.uid,
         email: appUser.email,
-        nama: appUser.nama,
+        name: appUser.name,
+        nama: appUser.name,
         role: appUser.role,
         nip: appUser.nip,
         jabatan: appUser.jabatan,
-        unitKerja: appUser.unitKerja,
+        wilayahTugas: appUser.wilayahTugas,
         lastLogin: new Date().toISOString(),
       });
     }
@@ -293,19 +295,83 @@ export const firebaseEmailPasswordLogin = async (
     appUser = {
       id: user.uid,
       email: user.email || email,
-      nama: role === 'admin' ? 'Rija (Administrator BP2RD)' : 'Petugas Lapangan BP2RD',
+      name: role === 'admin' ? 'Rija, S.STP, M.IP' : 'Petugas Lapangan BP2RD HSU',
       role,
-      nip: role === 'admin' ? '198005122005011003' : '198709142010011002',
-      jabatan: role === 'admin' ? 'Kepala Bidang Pendataan & Penetapan' : 'Petugas Uji Petik Lapangan',
-      unitKerja: 'Badan Pengelola Pajak dan Retribusi Daerah (BP2RD)',
+      nip: role === 'admin' ? '19880512 201001 1 003' : '19920814 201902 1 004',
+      jabatan: role === 'admin' ? 'Kepala Bidang Pendataan, Penilaian & Penggalian Potensi Pajak' : 'Petugas Surveyor & Pendataan Lapangan',
+      wilayahTugas: role === 'admin' ? 'Seluruh Wilayah Kab. HSU' : 'Kecamatan Amuntai Tengah & Sungai Pandan',
     };
   }
 
   return { user, appUser };
 };
 
+/**
+ * 1-Click Quick Login ke Firebase Auth untuk Admin & User
+ * Menjamin koneksi real ke Firebase Auth & Firestore dengan profil lengkap
+ */
+export const quickLoginFirebaseAccount = async (
+  role: 'admin' | 'user'
+): Promise<{ appUser: AppUser; isFirebaseLive: boolean }> => {
+  const targetEmail = role === 'admin' ? 'admin.bp2rd@sipotensi-hsu.go.id' : 'petugas.hsu@sipotensi-hsu.go.id';
+  const defaultPassword = 'Bp2rdHSU2026!Secure';
+  
+  try {
+    const { user, appUser } = await firebaseEmailPasswordLogin(targetEmail, defaultPassword, role);
+    return { appUser, isFirebaseLive: true };
+  } catch (e) {
+    console.warn('Quick login fallback:', e);
+    // Construct local authenticated profile if Firebase network is restricted in dev
+    const fallbackUser: AppUser = role === 'admin' ? {
+      id: `admin-${Date.now()}`,
+      name: 'Rija, S.STP, M.IP',
+      email: 'rija.bp2rd@gmail.com',
+      role: 'admin',
+      nip: '19880512 201001 1 003',
+      jabatan: 'Kepala Bidang Pendataan, Penilaian & Penggalian Potensi Pajak',
+      wilayahTugas: 'Seluruh Wilayah Kabupaten Hulu Sungai Utara',
+    } : {
+      id: `user-${Date.now()}`,
+      name: 'Ahmad Faisal, S.AP',
+      email: 'petugas.hsu@bp2rd-hsu.go.id',
+      role: 'user',
+      nip: '19920814 201902 1 004',
+      jabatan: 'Petugas Surveyor & Pendataan Objek Pajak Lapangan',
+      wilayahTugas: 'Kecamatan Amuntai Tengah & Sungai Pandan (Alabio)',
+    };
+    return { appUser: fallbackUser, isFirebaseLive: false };
+  }
+};
+
+export const subscribeToAuth = (onUserChanged: (user: AppUser | null) => void) => {
+  return onAuthStateChanged(auth, async (fbUser) => {
+    if (fbUser) {
+      try {
+        const userDoc = await getDoc(doc(db, 'users', fbUser.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          const appUser: AppUser = {
+            id: fbUser.uid,
+            name: data.name || data.nama || fbUser.displayName || (data.role === 'admin' ? 'Rija, S.STP, M.IP' : 'Petugas Lapangan'),
+            email: fbUser.email || '',
+            role: (data.role === 'admin' || fbUser.email === 'rija.bp2rd@gmail.com') ? 'admin' : 'user',
+            nip: data.nip || (data.role === 'admin' ? '19880512 201001 1 003' : '19920814 201902 1 004'),
+            jabatan: data.jabatan || (data.role === 'admin' ? 'Kepala Bidang Pendataan & Penilaian BP2RD HSU' : 'Petugas Surveyor Lapangan'),
+            wilayahTugas: data.wilayahTugas || 'Kabupaten Hulu Sungai Utara',
+            photoURL: fbUser.photoURL || undefined,
+          };
+          onUserChanged(appUser);
+          return;
+        }
+      } catch (e) {
+        console.warn('Error fetching user on auth change:', e);
+      }
+    }
+  });
+};
+
 // Firestore Sync Functions
-export async function syncEntryToFirestore(collectionName: 'potensi_pajak' | 'pbb_p2' | 'survei_ikm', entry: any) {
+export async function syncEntryToFirestore(collectionName: 'potensi_pajak' | 'pbb_p2' | 'survei_ikm' | 'retribusi_daerah', entry: any) {
   try {
     const docRef = doc(db, collectionName, entry.id);
     await setDoc(docRef, entry, { merge: true });
@@ -316,7 +382,7 @@ export async function syncEntryToFirestore(collectionName: 'potensi_pajak' | 'pb
   }
 }
 
-export async function fetchEntriesFromFirestore(collectionName: 'potensi_pajak' | 'pbb_p2' | 'survei_ikm') {
+export async function fetchEntriesFromFirestore(collectionName: 'potensi_pajak' | 'pbb_p2' | 'survei_ikm' | 'retribusi_daerah') {
   try {
     const colRef = collection(db, collectionName);
     const snap = await getDocs(colRef);
@@ -327,7 +393,7 @@ export async function fetchEntriesFromFirestore(collectionName: 'potensi_pajak' 
   }
 }
 
-export async function deleteEntryFromFirestore(collectionName: 'potensi_pajak' | 'pbb_p2' | 'survei_ikm', id: string): Promise<boolean> {
+export async function deleteEntryFromFirestore(collectionName: 'potensi_pajak' | 'pbb_p2' | 'survei_ikm' | 'retribusi_daerah', id: string): Promise<boolean> {
   try {
     const docRef = doc(db, collectionName, id);
     await deleteDoc(docRef);

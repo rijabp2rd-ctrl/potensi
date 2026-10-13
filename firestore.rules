@@ -19,68 +19,63 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "rija.bp2rd@gmail.com" ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Connection ping test
+    match /_connection_test/{id} {
+      allow read, write: if true;
+    }
+
     // Profil Akun Petugas & Admin BP2RD
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create, update: if isOwner(userId) && isValidId(userId);
-      allow delete: if isOwner(userId);
+      allow create, update: if (isOwner(userId) || isAdmin()) && isValidId(userId);
+      allow delete: if isOwner(userId) || isAdmin();
     }
 
     match /admins/{adminId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn() && request.auth.token.email == "rija.bp2rd@gmail.com";
+      allow write: if isSignedIn() && (request.auth.token.email == "rija.bp2rd@gmail.com" || isOwner(adminId));
     }
 
     // Koleksi Library Berkas & Regulasi
     match /library_berkas/{berkasId} {
       allow read: if true;
-      allow create, update: if isSignedIn() && isValidId(berkasId)
-        && request.resource.data.id is string
-        && request.resource.data.title is string
-        && request.resource.data.title.size() <= 256
-        && request.resource.data.category is string;
+      allow create, update: if isSignedIn() && isValidId(berkasId);
       allow delete: if isSignedIn();
     }
 
-    // Koleksi Penggalian Potensi Pajak
+    // Koleksi Penggalian Potensi Pajak Daerah
     match /potensi_pajak/{potensiId} {
       allow read: if true;
-      allow create: if isValidId(potensiId) 
-        && request.resource.data.id is string
-        && request.resource.data.namaObjek is string
-        && request.resource.data.namaObjek.size() <= 256
-        && request.resource.data.alamat is string
-        && request.resource.data.alamat.size() <= 512
-        && request.resource.data.noWhatsapp is string
-        && request.resource.data.noWhatsapp.size() <= 32;
-      allow update, delete: if isSignedIn();
+      allow create, update: if isValidId(potensiId);
+      allow delete: if isSignedIn();
     }
 
     // Koleksi Layanan PBB-P2
     match /pbb_p2/{pbbId} {
       allow read: if true;
-      allow create: if isValidId(pbbId)
-        && request.resource.data.id is string
-        && request.resource.data.namaWajibPajak is string
-        && request.resource.data.namaWajibPajak.size() <= 128
-        && request.resource.data.nik is string
-        && request.resource.data.nik.size() == 16
-        && request.resource.data.lokasiObjek is string
-        && request.resource.data.lokasiObjek.size() <= 512;
-      allow update, delete: if isSignedIn();
+      allow create, update: if isValidId(pbbId);
+      allow delete: if isSignedIn();
+    }
+
+    // Koleksi Penggalian Potensi Retribusi Daerah
+    match /retribusi_daerah/{retribusiId} {
+      allow read: if true;
+      allow create, update: if isValidId(retribusiId);
+      allow delete: if isSignedIn();
     }
 
     // Koleksi Survei IKM
     match /survei_ikm/{ikmId} {
       allow read: if true;
-      allow create: if isValidId(ikmId)
-        && request.resource.data.id is string
-        && request.resource.data.namaWajibPajak is string
-        && request.resource.data.namaWajibPajak.size() <= 128
-        && request.resource.data.alamat is string
-        && request.resource.data.alamat.size() <= 512
-        && request.resource.data.nilaiKonversi is number;
-      allow update, delete: if isSignedIn();
+      allow create, update: if isValidId(ikmId);
+      allow delete: if isSignedIn();
     }
   }
 }

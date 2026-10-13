@@ -1,209 +1,215 @@
 import React from 'react';
 import { 
   Building2, 
+  MapPin, 
   FileSpreadsheet, 
-  LayoutDashboard, 
-  FileText, 
-  CreditCard, 
-  Star, 
+  Receipt, 
   FolderArchive, 
+  BarChart3, 
+  PieChart,
   LogIn, 
   LogOut, 
-  HardDrive
+  ShieldCheck, 
+  User as UserIcon,
+  Navigation2,
+  Coins
 } from 'lucide-react';
-import { AppUser, GoogleSheetsConfig } from '../types';
+import { AppUser } from '../types';
 
 interface NavbarProps {
-  activeTab: 'beranda' | 'potensi' | 'pbb' | 'ikm' | 'dashboard' | 'laporan' | 'library';
-  setActiveTab: (tab: 'beranda' | 'potensi' | 'pbb' | 'ikm' | 'dashboard' | 'laporan' | 'library') => void;
+  activeTab: string;
+  onSelectTab: (tab: string) => void;
   currentUser: AppUser | null;
   onOpenLogin: () => void;
   onLogout: () => void;
-  sheetsConfig: GoogleSheetsConfig;
-  onOpenSheetsHub: () => void;
-  onOpenGoogleWorkspace: () => void;
+  potensiCount: number;
+  pbbCount: number;
+  retribusiCount?: number;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
-  setActiveTab,
+  onSelectTab,
   currentUser,
   onOpenLogin,
   onLogout,
-  sheetsConfig,
-  onOpenSheetsHub,
-  onOpenGoogleWorkspace,
+  potensiCount,
+  pbbCount,
+  retribusiCount = 0,
 }) => {
   return (
-    <header className="sticky top-0 z-50 bg-slate-900 border-b border-slate-800 text-white shadow-xl backdrop-blur-md bg-opacity-95">
-      {/* Top Banner Notice */}
-      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-xs px-4 py-1.5 border-b border-blue-800/40 flex flex-wrap items-center justify-between text-blue-200">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-            PORTAL RESMI BP2RD
-          </span>
-          <span className="hidden sm:inline">Pemerintah Daerah • Badan Pengelola Pajak dan Retribusi Daerah</span>
-        </div>
-        <div className="flex items-center gap-2.5">
-          {/* Google Workspace & Drive Button */}
-          <button
-            onClick={onOpenGoogleWorkspace}
-            title="Kelola Google Drive & Google Sheets"
-            className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-950/70 border border-blue-400/40 text-blue-200 hover:bg-blue-900/80 transition-all text-[11px] font-semibold shadow-sm cursor-pointer"
-          >
-            <HardDrive className="w-3.5 h-3.5 text-blue-400" />
-            <span>Google Drive &amp; Sheets</span>
-          </button>
-
-          {/* Google Sheets Live Status Indicator */}
-          <button
-            onClick={onOpenSheetsHub}
-            title="Klik untuk membuka Pengaturan Integrasi Google Sheets"
-            className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/80 transition-all text-[11px] font-medium"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-            <span>Sheets: {sheetsConfig.isConnected ? 'Terhubung' : 'Standby'}</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-          </button>
-        </div>
-      </div>
-
-      {/* Main Navbar */}
+    <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Brand Logo & Name */}
+        <div className="flex items-center justify-between h-20">
+          
+          {/* Logo Brand Pemkab HSU & BP2RD */}
           <div 
-            onClick={() => setActiveTab('beranda')}
-            className="flex items-center gap-3 cursor-pointer group"
+            onClick={() => onSelectTab('beranda')}
+            className="flex items-center gap-3.5 cursor-pointer group select-none"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 flex items-center justify-center shadow-lg shadow-blue-500/20 border border-blue-400/30 group-hover:scale-105 transition-transform">
-              <Building2 className="w-5 h-5 text-white" />
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-amber-500 p-0.5 shadow-lg shadow-emerald-950/40 group-hover:scale-105 transition-transform duration-300">
+              <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+                <Building2 className="w-6 h-6 text-emerald-400 group-hover:text-emerald-300 transition-colors" />
+              </div>
             </div>
             <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-lg font-bold tracking-tight text-white group-hover:text-blue-300 transition-colors">
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300 bg-clip-text text-transparent">
                   SIPOTENSI
                 </span>
-                <span className="text-xs px-1.5 py-0.2 rounded bg-blue-600/30 text-blue-300 font-semibold border border-blue-500/40">
-                  BP2RD
+                <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  BP2RD HSU
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 leading-tight">
-                Penggalian Potensi Pajak & Evaluasi IKM
+              <p className="text-xs text-slate-400 font-medium tracking-wide">
+                Kabupaten Hulu Sungai Utara &bull; Amuntai
               </p>
             </div>
           </div>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-1">
+          {/* Navigation Links (Desktop) */}
+          <nav className="hidden lg:flex items-center gap-1.5 bg-slate-950/70 p-1.5 rounded-2xl border border-slate-800/80 shadow-inner">
             <button
-              onClick={() => setActiveTab('beranda')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              onClick={() => onSelectTab('beranda')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center gap-2 ${
                 activeTab === 'beranda'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/25'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              Beranda
+              <span>Beranda</span>
             </button>
 
             <button
-              onClick={() => setActiveTab('potensi')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              onClick={() => onSelectTab('peta')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center gap-2 ${
+                activeTab === 'peta'
+                  ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/25'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <Navigation2 className="w-3.5 h-3.5 text-amber-400" />
+              <span>Peta Geospasial HSU</span>
+            </button>
+
+            <button
+              onClick={() => onSelectTab('potensi')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center gap-2 ${
                 activeTab === 'potensi'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/25'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <FileText className="w-3.5 h-3.5 text-blue-400" />
-              <span>Form Potensi</span>
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>Input Potensi</span>
+              {potensiCount > 0 && (
+                <span className="ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                  {potensiCount}
+                </span>
+              )}
             </button>
 
             <button
-              onClick={() => setActiveTab('pbb')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              onClick={() => onSelectTab('pbb')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center gap-2 ${
                 activeTab === 'pbb'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/25'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Form PBB-P2</span>
+              <Receipt className="w-3.5 h-3.5" />
+              <span>PBB-P2</span>
+              {pbbCount > 0 && (
+                <span className="ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-blue-950 text-blue-300 border border-blue-800">
+                  {pbbCount}
+                </span>
+              )}
             </button>
 
             <button
-              onClick={() => setActiveTab('ikm')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                activeTab === 'ikm'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+              onClick={() => onSelectTab('retribusi')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center gap-2 ${
+                activeTab === 'retribusi'
+                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/25'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <Star className="w-3.5 h-3.5 text-amber-400" />
-              <span>Survei IKM</span>
+              <Coins className="w-3.5 h-3.5 text-amber-400" />
+              <span>Input Retribusi</span>
+              {retribusiCount > 0 && (
+                <span className="ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-800">
+                  {retribusiCount}
+                </span>
+              )}
             </button>
 
             <button
-              onClick={() => setActiveTab('library')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              onClick={() => onSelectTab('library')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center gap-2 ${
                 activeTab === 'library'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/25'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <FolderArchive className="w-3.5 h-3.5 text-purple-400" />
+              <FolderArchive className="w-3.5 h-3.5" />
               <span>Library Berkas</span>
             </button>
 
-            <div className="w-px h-6 bg-slate-700 mx-1"></div>
+            {/* Menu Manajemen Laporan & Dashboard Analitik HANYA TAMPIL pada Login Admin dan User */}
+            {currentUser && (currentUser.role === 'admin' || currentUser.role === 'user') && (
+              <>
+                <button
+                  onClick={() => onSelectTab('laporan')}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center gap-2 ${
+                    activeTab === 'laporan'
+                      ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/25'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  <span>Manajemen Laporan</span>
+                </button>
 
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                activeTab === 'dashboard'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <LayoutDashboard className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Dashboard Analitik</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('laporan')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                activeTab === 'laporan'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-teal-400" />
-              <span>Manajemen Laporan</span>
-            </button>
+                <button
+                  onClick={() => onSelectTab('analitik')}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center gap-2 ${
+                    activeTab === 'analitik'
+                      ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-500/25'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                >
+                  <PieChart className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Dashboard Analitik</span>
+                </button>
+              </>
+            )}
           </nav>
 
-          {/* User Auth & Action Buttons */}
-          <div className="flex items-center gap-2">
+          {/* User Auth Section */}
+          <div className="flex items-center gap-3">
             {currentUser ? (
-              <div className="flex items-center gap-2 bg-slate-800/80 border border-slate-700 pl-3 pr-1 py-1 rounded-xl">
+              <div className="flex items-center gap-3 bg-slate-800/80 pl-3 pr-2 py-1.5 rounded-2xl border border-slate-700/80">
                 <div className="flex flex-col text-right">
-                  <div className="flex items-center justify-end gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span className="text-xs font-semibold text-white leading-tight">
-                      {currentUser.nama}
+                  <div className="flex items-center gap-1.5 justify-end">
+                    <span className="text-xs font-bold text-slate-200 max-w-[140px] truncate">
+                      {currentUser.name}
+                    </span>
+                    <span className={`text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded ${
+                      currentUser.role === 'admin' 
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' 
+                        : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                    }`}>
+                      {currentUser.role}
                     </span>
                   </div>
-                  <span className="text-[10px] text-amber-300 font-medium">
-                    {currentUser.role === 'admin' ? 'Super Admin BP2RD' : 'Petugas Lapangan'} • Firebase Auth
+                  <span className="text-[10px] text-slate-400 truncate max-w-[160px]">
+                    {currentUser.jabatan || 'Aparatur BP2RD'}
                   </span>
-                </div>
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow">
-                  {currentUser.nama.charAt(0)}
                 </div>
                 <button
                   onClick={onLogout}
-                  title="Logout dari Sesi Firebase"
-                  className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-lg transition-colors ml-1 cursor-pointer"
+                  title="Logout Akun"
+                  className="p-1.5 rounded-xl hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
@@ -211,74 +217,72 @@ export const Navbar: React.FC<NavbarProps> = ({
             ) : (
               <button
                 onClick={onOpenLogin}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-amber-600 via-orange-600 to-rose-600 hover:from-amber-500 hover:to-orange-500 text-white shadow-md shadow-orange-600/30 transition-all border border-orange-400/30 active:scale-95 cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-lg shadow-emerald-900/30 hover:shadow-emerald-900/50 transition-all duration-200 cursor-pointer active:scale-95"
               >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Login Firebase (Admin / Petugas)</span>
+                <LogIn className="w-4 h-4" />
+                <span>Login Petugas / Admin</span>
               </button>
             )}
           </div>
+
         </div>
 
-        {/* Mobile Submenu Bar */}
-        <div className="lg:hidden flex items-center justify-between py-2 border-t border-slate-800 overflow-x-auto gap-2 text-xs">
-          <button
-            onClick={() => setActiveTab('beranda')}
-            className={`px-2.5 py-1 rounded-md shrink-0 font-medium ${
-              activeTab === 'beranda' ? 'bg-blue-600 text-white' : 'text-slate-400'
-            }`}
+        {/* Mobile Nav Bar */}
+        <div className="lg:hidden flex items-center justify-between py-2 border-t border-slate-800/60 overflow-x-auto gap-2 no-scrollbar text-[11px]">
+          <button 
+            onClick={() => onSelectTab('beranda')} 
+            className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap ${activeTab === 'beranda' ? 'bg-emerald-500 text-white font-bold' : 'text-slate-400'}`}
           >
             Beranda
           </button>
-          <button
-            onClick={() => setActiveTab('potensi')}
-            className={`px-2.5 py-1 rounded-md shrink-0 font-medium ${
-              activeTab === 'potensi' ? 'bg-blue-600 text-white' : 'text-slate-400'
-            }`}
+          <button 
+            onClick={() => onSelectTab('peta')} 
+            className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap ${activeTab === 'peta' ? 'bg-emerald-500 text-white font-bold' : 'text-slate-400'}`}
           >
-            Form Potensi
+            Peta HSU
           </button>
-          <button
-            onClick={() => setActiveTab('pbb')}
-            className={`px-2.5 py-1 rounded-md shrink-0 font-medium ${
-              activeTab === 'pbb' ? 'bg-blue-600 text-white' : 'text-slate-400'
-            }`}
+          <button 
+            onClick={() => onSelectTab('potensi')} 
+            className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap ${activeTab === 'potensi' ? 'bg-emerald-500 text-white font-bold' : 'text-slate-400'}`}
           >
-            Form PBB-P2
+            Input Potensi
           </button>
-          <button
-            onClick={() => setActiveTab('ikm')}
-            className={`px-2.5 py-1 rounded-md shrink-0 font-medium ${
-              activeTab === 'ikm' ? 'bg-blue-600 text-white' : 'text-slate-400'
-            }`}
+          <button 
+            onClick={() => onSelectTab('pbb')} 
+            className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap ${activeTab === 'pbb' ? 'bg-emerald-500 text-white font-bold' : 'text-slate-400'}`}
           >
-            Survei IKM
+            PBB-P2
           </button>
-          <button
-            onClick={() => setActiveTab('library')}
-            className={`px-2.5 py-1 rounded-md shrink-0 font-medium ${
-              activeTab === 'library' ? 'bg-blue-600 text-white' : 'text-slate-400'
-            }`}
+          <button 
+            onClick={() => onSelectTab('retribusi')} 
+            className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap ${activeTab === 'retribusi' ? 'bg-amber-600 text-white font-bold' : 'text-slate-400'}`}
           >
-            Library
+            Retribusi
           </button>
-          <button
-            onClick={() => setActiveTab('dashboard')}
-            className={`px-2.5 py-1 rounded-md shrink-0 font-medium ${
-              activeTab === 'dashboard' ? 'bg-indigo-600 text-white' : 'text-slate-400'
-            }`}
+          <button 
+            onClick={() => onSelectTab('library')} 
+            className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap ${activeTab === 'library' ? 'bg-emerald-500 text-white font-bold' : 'text-slate-400'}`}
           >
-            Dashboard
+            Library Berkas
           </button>
-          <button
-            onClick={() => setActiveTab('laporan')}
-            className={`px-2.5 py-1 rounded-md shrink-0 font-medium ${
-              activeTab === 'laporan' ? 'bg-indigo-600 text-white' : 'text-slate-400'
-            }`}
-          >
-            Laporan
-          </button>
+          {currentUser && (currentUser.role === 'admin' || currentUser.role === 'user') && (
+            <>
+              <button 
+                onClick={() => onSelectTab('laporan')} 
+                className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap ${activeTab === 'laporan' ? 'bg-emerald-500 text-white font-bold' : 'text-slate-400'}`}
+              >
+                Laporan
+              </button>
+              <button 
+                onClick={() => onSelectTab('analitik')} 
+                className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap ${activeTab === 'analitik' ? 'bg-emerald-500 text-white font-bold' : 'text-slate-400'}`}
+              >
+                Analitik
+              </button>
+            </>
+          )}
         </div>
+
       </div>
     </header>
   );
