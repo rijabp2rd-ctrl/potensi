@@ -108,6 +108,7 @@ export const PotensiPajakForm: React.FC<PotensiPajakFormProps> = ({
   const [gpsSource, setGpsSource] = useState<'device' | 'preset' | 'manual'>('preset');
 
   // Potensi calculations
+  const [tahunPajak, setTahunPajak] = useState<number>(new Date().getFullYear());
   const [omzetBulanan, setOmzetBulanan] = useState<number>(50000000);
   const [tarifPajakPersen, setTarifPajakPersen] = useState<number>(10);
   const [catatanPetugas, setCatatanPetugas] = useState('');
@@ -272,6 +273,7 @@ export const PotensiPajakForm: React.FC<PotensiPajakFormProps> = ({
       latitude,
       longitude,
       akurasiGps: gpsAccuracy || 10,
+      tahun: tahunPajak,
       potensiRupiahBulanan: potensiBulanan,
       potensiRupiahTahunan: potensiTahunan,
       statusVerifikasi: currentUser?.role === 'admin' ? 'Terverifikasi' : 'Dalam Proses',
@@ -598,7 +600,23 @@ export const PotensiPajakForm: React.FC<PotensiPajakFormProps> = ({
               <span>3. Perhitungan Potensi Pajak (Omzet &amp; Tarif)</span>
             </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+                  Tahun Pajak / Periode <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="2020"
+                  max="2035"
+                  value={tahunPajak}
+                  onChange={(e) => setTahunPajak(parseInt(e.target.value) || new Date().getFullYear())}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-amber-500 font-bold"
+                />
+                <span className="text-[10px] text-slate-500 mt-1 block">Tahun penetapan fiskal</span>
+              </div>
+
               <div>
                 <label className="text-xs font-semibold text-slate-300 block mb-1.5">
                   Estimasi Omzet / Peredaran Bruto Bulanan (Rp)
@@ -611,6 +629,7 @@ export const PotensiPajakForm: React.FC<PotensiPajakFormProps> = ({
                   onChange={(e) => setOmzetBulanan(parseFloat(e.target.value) || 0)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-amber-500"
                 />
+                <span className="text-[10px] text-slate-500 mt-1 block">{formatRupiah(omzetBulanan)}</span>
               </div>
 
               <div>
@@ -625,6 +644,7 @@ export const PotensiPajakForm: React.FC<PotensiPajakFormProps> = ({
                   onChange={(e) => setTarifPajakPersen(parseFloat(e.target.value) || 0)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-amber-500"
                 />
+                <span className="text-[10px] text-slate-500 mt-1 block">{tarifPajakPersen}% PBJT / Daerah</span>
               </div>
             </div>
 

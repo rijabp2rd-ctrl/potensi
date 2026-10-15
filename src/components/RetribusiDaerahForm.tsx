@@ -163,6 +163,7 @@ export const RetribusiDaerahForm: React.FC<RetribusiDaerahFormProps> = ({
   const [nomorKontrakOrSK, setNomorKontrakOrSK] = useState('');
 
   // 5. Tarif & Perhitungan Potensi
+  const [tahunRetribusi, setTahunRetribusi] = useState<number>(new Date().getFullYear());
   const [tarifSatuan, setTarifSatuan] = useState<number>(150000);
   const [jumlahSatuan, setJumlahSatuan] = useState<number>(50);
   const [satuanTarif, setSatuanTarif] = useState<string>('Per Kios / Bulan');
@@ -342,6 +343,7 @@ export const RetribusiDaerahForm: React.FC<RetribusiDaerahFormProps> = ({
       tarifSatuan,
       jumlahSatuan,
       satuanTarif,
+      tahun: tahunRetribusi,
       potensiPerbulan,
       potensiPertahun,
       kecamatan,
@@ -745,7 +747,25 @@ export const RetribusiDaerahForm: React.FC<RetribusiDaerahFormProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+                  Tahun Retribusi <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="number"
+                  required
+                  min={2020}
+                  max={2035}
+                  value={tahunRetribusi}
+                  onChange={(e) => setTahunRetribusi(parseInt(e.target.value) || new Date().getFullYear())}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-amber-500 font-bold"
+                />
+                <p className="text-[10px] text-slate-500 mt-1 font-mono">
+                  Tahun anggaran fiskal
+                </p>
+              </div>
+
               <div>
                 <label className="text-xs font-semibold text-slate-300 block mb-1.5">
                   Tarif Satuan Retribusi (Rp) <span className="text-red-400">*</span>
@@ -779,7 +799,7 @@ export const RetribusiDaerahForm: React.FC<RetribusiDaerahFormProps> = ({
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-amber-500"
                 />
                 <p className="text-[10px] text-slate-500 mt-1">
-                  Jumlah unit, kamar, kios, karcis, atau frekuensi
+                  Jumlah unit, kamar, kios, karcis, frekuensi
                 </p>
               </div>
 
@@ -796,6 +816,9 @@ export const RetribusiDaerahForm: React.FC<RetribusiDaerahFormProps> = ({
                     <option key={idx} value={sat}>{sat}</option>
                   ))}
                 </select>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Satuan acuan tarif
+                </p>
               </div>
             </div>
 

@@ -51,6 +51,7 @@ export interface PotensiPajakEntry {
   akurasiGps?: number;
   isCustomCoord?: boolean;
   // Financial Potential
+  tahun?: number; // Tahun Pajak / Periode Potensi
   potensiRupiahBulanan: number;
   potensiRupiahTahunan: number;
   statusVerifikasi: VerificationStatus;
@@ -126,6 +127,7 @@ export interface RetribusiDaerahEntry {
   tarifSatuan: number;
   jumlahSatuan: number;
   satuanTarif: string;
+  tahun?: number; // Tahun Retribusi / Anggaran
   potensiPerbulan: number;
   potensiPertahun: number;
   kecamatan: string;
