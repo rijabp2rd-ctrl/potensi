@@ -468,6 +468,31 @@ export function App() {
     showToast(`Survei IKM dari ${newEntry.nama} berhasil disimpan (Skor: ${newEntry.totalNilai}/100)!`);
   };
 
+  const handleUpdateIkmSurvey = (updatedEntry: IkmSurveyEntry) => {
+    const updated = ikmList.map(item => item.id === updatedEntry.id ? updatedEntry : item);
+    setIkmList(updated);
+    saveIkmList(updated);
+    try {
+      syncEntryToFirestore('survei_ikm', updatedEntry);
+    } catch (e) {
+      console.warn('Sync updated IKM to Firestore note:', e);
+    }
+    showToast(`Data survei IKM "${updatedEntry.nama}" (${updatedEntry.nomorResponden}) berhasil diperbarui!`);
+  };
+
+  const handleDeleteIkmSurvey = async (id: string) => {
+    const target = ikmList.find(item => item.id === id);
+    const updated = ikmList.filter(item => item.id !== id);
+    setIkmList(updated);
+    saveIkmList(updated);
+    try {
+      await deleteEntryFromFirestore('survei_ikm', id);
+    } catch (e) {
+      console.warn('Delete IKM from Firestore note:', e);
+    }
+    showToast(`Data survei IKM "${target?.nama || 'Responden'}" berhasil dihapus.`);
+  };
+
   const handleOpenLibraryWithCategory = (cat: 'all' | LibraryCategory) => {
     setLibraryCategoryFilter(cat);
     setActiveTab('library');
@@ -598,6 +623,8 @@ export function App() {
           <IndeksKepuasanMasyarakat
             ikmList={ikmList}
             onSaveSurvey={handleSaveIkmSurvey}
+            onUpdateSurvey={handleUpdateIkmSurvey}
+            onDeleteSurvey={handleDeleteIkmSurvey}
             currentUser={currentUser}
           />
         )}

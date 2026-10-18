@@ -240,5 +240,6 @@ export interface IkmSurveyEntry {
   predikat: 'Sangat Baik' | 'Baik' | 'Cukup' | 'Kurang';
   petugasPencatat?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 

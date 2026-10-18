@@ -98,8 +98,18 @@ export const DocumentLibrary: React.FC<DocumentLibraryProps> = ({
     return matchesCategory && matchesQuery;
   });
 
-  // Download simulation
+  // Download real file or fallback document
   const handleDownload = (item: LibraryBerkasEntry) => {
+    if (item.fileUrl) {
+      const link = document.createElement('a');
+      link.href = item.fileUrl;
+      link.download = item.fileName || `${item.nomorBerkas || 'dokumen'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+
     const textContent = `PEMERINTAH KABUPATEN HULU SUNGAI UTARA
 BADAN PENGELOLA PAJAK DAN RETRIBUSI DAERAH (BP2RD)
 Jl. Basuki Rahmat No. 01, Amuntai Tengah, Kab. Hulu Sungai Utara, Kalimantan Selatan

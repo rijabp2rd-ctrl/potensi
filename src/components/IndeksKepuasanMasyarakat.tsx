@@ -24,13 +24,21 @@ import {
   Layers,
   Info,
   ShieldCheck,
-  Lock
+  Lock,
+  Pencil,
+  Trash2,
+  Edit3,
+  AlertTriangle,
+  X,
+  Check
 } from 'lucide-react';
 import { IkmSurveyEntry, IkmRatingValue, IkmRatingLevel, AppUser } from '../types';
 
 interface IndeksKepuasanMasyarakatProps {
   ikmList: IkmSurveyEntry[];
   onSaveSurvey: (entry: IkmSurveyEntry) => void;
+  onUpdateSurvey?: (entry: IkmSurveyEntry) => void;
+  onDeleteSurvey?: (id: string) => void;
   currentUser: AppUser | null;
 }
 
@@ -124,9 +132,12 @@ export const OPSI_NILAI: {
 export const IndeksKepuasanMasyarakat: React.FC<IndeksKepuasanMasyarakatProps> = ({
   ikmList,
   onSaveSurvey,
+  onUpdateSurvey,
+  onDeleteSurvey,
   currentUser,
 }) => {
-  const isAdmin = currentUser !== null && currentUser.role === 'admin';
+  const isInternalUser = currentUser !== null && (currentUser.role === 'admin' || currentUser.role === 'user');
+  const isAdmin = isInternalUser;
   const [activeSubTab, setActiveSubTab] = useState<'form' | 'rekap'>('form');
 
   // Form State
@@ -174,6 +185,103 @@ export const IndeksKepuasanMasyarakat: React.FC<IndeksKepuasanMasyarakatProps> =
   };
 
   const currentPredikat = getPredikat(currentTotalNilai);
+
+  // State Modal Edit Responden IKM
+  const [editingItem, setEditingItem] = useState<IkmSurveyEntry | null>(null);
+  const [editNama, setEditNama] = useState('');
+  const [editAlamat, setEditAlamat] = useState('');
+  const [editKegiatan, setEditKegiatan] = useState('');
+  const [editNomorKontak, setEditNomorKontak] = useState('');
+  const [editSaranMasukan, setEditSaranMasukan] = useState('');
+  const [editRatings, setEditRatings] = useState<{
+    pernyataan1: IkmRatingValue;
+    pernyataan2: IkmRatingValue;
+    pernyataan3: IkmRatingValue;
+    pernyataan4: IkmRatingValue;
+    pernyataan5: IkmRatingValue;
+  }>({
+    pernyataan1: 20,
+    pernyataan2: 20,
+    pernyataan3: 20,
+    pernyataan4: 20,
+    pernyataan5: 20,
+  });
+
+  const editTotalNilai =
+    editRatings.pernyataan1 +
+    editRatings.pernyataan2 +
+    editRatings.pernyataan3 +
+    editRatings.pernyataan4 +
+    editRatings.pernyataan5;
+
+  const editPredikat = getPredikat(editTotalNilai);
+
+  // State Modal Konfirmasi Hapus Responden IKM
+  const [deletingItem, setDeletingItem] = useState<IkmSurveyEntry | null>(null);
+
+  const handleStartEdit = (item: IkmSurveyEntry) => {
+    setEditingItem(item);
+    setEditNama(item.nama);
+    setEditAlamat(item.alamat);
+    setEditKegiatan(item.kegiatan);
+    setEditNomorKontak(item.nomorKontak || '');
+    setEditSaranMasukan(item.saranMasukan || '');
+    setEditRatings({
+      pernyataan1: item.pernyataan1,
+      pernyataan2: item.pernyataan2,
+      pernyataan3: item.pernyataan3,
+      pernyataan4: item.pernyataan4,
+      pernyataan5: item.pernyataan5,
+    });
+  };
+
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem) return;
+
+    if (!editNama.trim()) {
+      alert('Mohon isi nama lengkap responden.');
+      return;
+    }
+    if (!editAlamat.trim()) {
+      alert('Mohon isi alamat responden.');
+      return;
+    }
+    if (!editKegiatan.trim()) {
+      alert('Mohon isi nama kegiatan / jenis layanan.');
+      return;
+    }
+
+    const updatedEntry: IkmSurveyEntry = {
+      ...editingItem,
+      nama: editNama.trim(),
+      alamat: editAlamat.trim(),
+      kegiatan: editKegiatan.trim(),
+      nomorKontak: editNomorKontak.trim() || undefined,
+      pernyataan1: editRatings.pernyataan1,
+      pernyataan2: editRatings.pernyataan2,
+      pernyataan3: editRatings.pernyataan3,
+      pernyataan4: editRatings.pernyataan4,
+      pernyataan5: editRatings.pernyataan5,
+      saranMasukan: editSaranMasukan.trim() || undefined,
+      totalNilai: editTotalNilai,
+      predikat: editPredikat,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (onUpdateSurvey) {
+      onUpdateSurvey(updatedEntry);
+    }
+    setEditingItem(null);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deletingItem) return;
+    if (onDeleteSurvey) {
+      onDeleteSurvey(deletingItem.id);
+    }
+    setDeletingItem(null);
+  };
 
   // Submit Handler
   const handleSubmitSurvey = (e: React.FormEvent) => {
@@ -867,6 +975,7 @@ export const IndeksKepuasanMasyarakat: React.FC<IndeksKepuasanMasyarakatProps> =
                       <th className="py-3 px-2 text-center" title="Pernyataan 5: Hasil (Max 20)">P5</th>
                       <th className="py-3 px-3 text-right">Total Nilai</th>
                       <th className="py-3 px-3 text-center">Predikat</th>
+                      <th className="py-3 px-3 text-center">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60 text-slate-300">
@@ -916,6 +1025,28 @@ export const IndeksKepuasanMasyarakat: React.FC<IndeksKepuasanMasyarakatProps> =
                             {item.predikat}
                           </span>
                         </td>
+                        <td className="py-3 px-3 text-center whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleStartEdit(item)}
+                              className="px-2.5 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/35 text-blue-300 border border-blue-500/30 hover:border-blue-400 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer active:scale-95 shadow-sm"
+                              title="Edit Data Responden IKM"
+                            >
+                              <Pencil className="w-3.5 h-3.5 text-blue-400" />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeletingItem(item)}
+                              className="px-2.5 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/35 text-rose-300 border border-rose-500/30 hover:border-rose-400 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer active:scale-95 shadow-sm"
+                              title="Hapus Data Responden IKM"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                              <span>Hapus</span>
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -946,6 +1077,9 @@ export const IndeksKepuasanMasyarakat: React.FC<IndeksKepuasanMasyarakatProps> =
                         <span className="text-emerald-300 text-xs">
                           {getPredikat(filteredList.length > 0 ? filteredList.reduce((a, c) => a + c.totalNilai, 0) / filteredList.length : 0)}
                         </span>
+                      </td>
+                      <td className="py-3 px-3 text-center text-slate-500 text-xs font-normal">
+                        -
                       </td>
                     </tr>
                   </tfoot>
@@ -1148,6 +1282,320 @@ export const IndeksKepuasanMasyarakat: React.FC<IndeksKepuasanMasyarakatProps> =
               >
                 <Printer className="w-4 h-4" />
                 <span>Cetak Lembar Rekap (Printer / PDF)</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL EDIT DATA RESPONDEN SURVEI IKM */}
+      {/* ======================================================== */}
+      {editingItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-md overflow-y-auto animate-in fade-in">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-3xl w-full p-6 sm:p-7 shadow-2xl relative my-8 max-h-[92vh] overflow-y-auto">
+            
+            {/* Header Modal Edit */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center border border-blue-500/30">
+                  <Pencil className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-white">
+                    Edit Data Responden Survei IKM
+                  </h3>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="font-mono text-[11px] text-blue-300 font-bold">
+                      {editingItem.nomorResponden}
+                    </span>
+                    <span className="text-slate-500 text-xs">&bull;</span>
+                    <span className="text-[11px] text-slate-400">
+                      Tgl Survei: {editingItem.tanggalSurvey}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setEditingItem(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Form Edit */}
+            <form onSubmit={handleSaveEdit} className="mt-5 space-y-6">
+              
+              {/* Identitas Responden */}
+              <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 space-y-3.5">
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Identitas Responden &amp; Layanan</span>
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Nama Lengkap Responden <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editNama}
+                      onChange={(e) => setEditNama(e.target.value)}
+                      placeholder="Nama lengkap responden"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Alamat Lengkap Responden <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editAlamat}
+                      onChange={(e) => setEditAlamat(e.target.value)}
+                      placeholder="Alamat responden"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Nama Kegiatan / Jenis Layanan <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editKegiatan}
+                      onChange={(e) => setEditKegiatan(e.target.value)}
+                      placeholder="Contoh: Konsultasi PBB-P2"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Nomor Kontak / WhatsApp
+                    </label>
+                    <input
+                      type="text"
+                      value={editNomorKontak}
+                      onChange={(e) => setEditNomorKontak(e.target.value)}
+                      placeholder="08xx-xxxx-xxxx"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 5 Pernyataan Evaluasi Pelayanan */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-1 border-b border-slate-800">
+                  <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <Star className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Nilai 5 Butir Pernyataan Evaluasi (Maks 20 / Item)</span>
+                  </h4>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono font-bold text-emerald-400">
+                      Total: {editTotalNilai} / 100
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      editPredikat === 'Sangat Baik'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                        : editPredikat === 'Baik'
+                        ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
+                        : editPredikat === 'Cukup'
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                        : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                    }`}>
+                      {editPredikat}
+                    </span>
+                  </div>
+                </div>
+
+                {PERNYATAAN_IKM_CONFIG.map((pernyataan, idx) => {
+                  const currentValue = editRatings[pernyataan.key];
+
+                  return (
+                    <div
+                      key={pernyataan.id}
+                      className="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-2.5"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <span className="text-[10px] font-extrabold text-blue-400 uppercase tracking-wider block">
+                            Pernyataan {idx + 1}
+                          </span>
+                          <h5 className="text-xs font-bold text-white mt-0.5">
+                            {pernyataan.title}
+                          </h5>
+                        </div>
+                        <span className="shrink-0 px-2.5 py-0.5 rounded-lg text-[11px] font-bold font-mono bg-slate-900 border border-slate-700 text-blue-300">
+                          {currentValue} / 20
+                        </span>
+                      </div>
+
+                      {/* Emote Selector Buttons */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {OPSI_NILAI.map((opsi) => {
+                          const isSelected = currentValue === opsi.nilai;
+
+                          return (
+                            <button
+                              key={opsi.nilai}
+                              type="button"
+                              onClick={() => {
+                                setEditRatings((prev) => ({
+                                  ...prev,
+                                  [pernyataan.key]: opsi.nilai,
+                                }));
+                              }}
+                              className={`p-2 rounded-xl border text-center transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                                isSelected
+                                  ? `${opsi.bgSelectedClass} ring-1 ring-emerald-500/50 scale-[1.02]`
+                                  : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
+                              }`}
+                            >
+                              <span className="text-base select-none">{opsi.emoji}</span>
+                              <div className="text-left">
+                                <span className="text-[11px] font-bold block leading-none">{opsi.level}</span>
+                                <span className="text-[9px] opacity-75 font-mono">{opsi.nilai}</span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Saran & Masukan */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Saran &amp; Masukan Perbaikan Pelayanan
+                </label>
+                <textarea
+                  rows={2}
+                  value={editSaranMasukan}
+                  onChange={(e) => setEditSaranMasukan(e.target.value)}
+                  placeholder="Saran dan masukan dari responden..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              {/* Live Preview Score Banner */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-blue-950/40 via-slate-900 to-emerald-950/40 border border-blue-500/30 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">
+                    Kalkulasi Skor Baru Responden:
+                  </span>
+                  <span className="text-xs text-slate-300">
+                    5 Pernyataan: P1 ({editRatings.pernyataan1}) + P2 ({editRatings.pernyataan2}) + P3 ({editRatings.pernyataan3}) + P4 ({editRatings.pernyataan4}) + P5 ({editRatings.pernyataan5})
+                  </span>
+                </div>
+                <div className="text-right">
+                  <div className="text-xl font-black text-emerald-400 font-mono">
+                    {editTotalNilai} <span className="text-xs text-slate-400 font-normal">/ 100</span>
+                  </div>
+                  <span className="text-[11px] text-emerald-300 font-bold block">
+                    {editPredikat}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setEditingItem(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-lg shadow-blue-950/40 cursor-pointer active:scale-95 transition-all"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Simpan Perubahan</span>
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL KONFIRMASI HAPUS RESPONDEN IKM */}
+      {/* ======================================================== */}
+      {deletingItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in">
+          <div className="bg-slate-900 border border-rose-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl relative">
+            
+            <div className="flex items-start gap-3.5 mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center shrink-0">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-white">
+                  Konfirmasi Hapus Responden
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Tindakan ini akan menghapus data survei kepuasan masyarakat secara permanen.
+                </p>
+              </div>
+            </div>
+
+            {/* Target Item Summary Box */}
+            <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 my-4 space-y-1.5 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-400">No. Responden:</span>
+                <strong className="font-mono text-slate-200">{deletingItem.nomorResponden}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Nama Responden:</span>
+                <strong className="text-white">{deletingItem.nama}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Kegiatan / Layanan:</span>
+                <span className="text-emerald-300">{deletingItem.kegiatan}</span>
+              </div>
+              <div className="flex justify-between pt-1 border-t border-slate-800">
+                <span className="text-slate-400">Total Nilai / Predikat:</span>
+                <span className="font-mono font-bold text-amber-400">
+                  {deletingItem.totalNilai} / 100 ({deletingItem.predikat})
+                </span>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-rose-400/90 leading-relaxed mb-5">
+              ⚠️ Data yang dihapus akan segera disinkronkan ke Firestore database dan mempengaruhi kalkulasi rata-rata indeks kepuasan masyarakat BP2RD Kabupaten HSU.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setDeletingItem(null)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-lg shadow-rose-950/40 cursor-pointer active:scale-95 transition-all"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Ya, Hapus Responden</span>
               </button>
             </div>
 

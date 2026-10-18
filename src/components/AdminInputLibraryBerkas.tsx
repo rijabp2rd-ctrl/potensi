@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   FolderArchive, 
   Upload, 
@@ -9,10 +9,11 @@ import {
   FileText, 
   FileSpreadsheet, 
   Receipt, 
-  Image as ImageIcon,
-  Lock,
-  CheckCircle2,
-  AlertCircle
+  Image as ImageIcon, 
+  Lock, 
+  CheckCircle2, 
+  AlertCircle,
+  X
 } from 'lucide-react';
 import { LibraryBerkasEntry, LibraryCategory, AppUser } from '../types';
 
@@ -33,7 +34,11 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
   const [description, setDescription] = useState('');
   const [fileName, setFileName] = useState('');
   const [fileSize, setFileSize] = useState('2.4 MB');
+  const [fileType, setFileType] = useState<'pdf' | 'doc' | 'image' | 'xlsx' | 'zip'>('pdf');
+  const [fileUrl, setFileUrl] = useState<string>('');
   const [tagsInput, setTagsInput] = useState('');
+  const [isReadingFile, setIsReadingFile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Otomatis tentukan sifat akses:
   // regulasi, sop, blanko -> isPublic: true
@@ -50,6 +55,54 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
       case 'pbb': return 'Struk Bayar PBB-P2';
       default: return cat;
     }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setFileName(file.name);
+
+    // Format file size
+    const sizeInKb = file.size / 1024;
+    const formattedSize = sizeInKb > 1024
+      ? `${(sizeInKb / 1024).toFixed(1)} MB`
+      : `${Math.round(sizeInKb)} KB`;
+    setFileSize(formattedSize);
+
+    // Detect file type
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    let detectedType: 'pdf' | 'doc' | 'image' | 'xlsx' | 'zip' = 'pdf';
+    if (ext === 'pdf') {
+      detectedType = 'pdf';
+    } else if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'svg'].includes(ext)) {
+      detectedType = 'image';
+    } else if (['xls', 'xlsx', 'csv'].includes(ext)) {
+      detectedType = 'xlsx';
+    } else if (['doc', 'docx', 'odt', 'rtf'].includes(ext)) {
+      detectedType = 'doc';
+    } else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) {
+      detectedType = 'zip';
+    }
+    setFileType(detectedType);
+
+    // Auto-fill title if empty
+    if (!title.trim()) {
+      const cleanTitle = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
+      setTitle(cleanTitle);
+    }
+
+    // Read as Data URL
+    setIsReadingFile(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setFileUrl((event.target?.result as string) || '');
+      setIsReadingFile(false);
+    };
+    reader.onerror = () => {
+      setIsReadingFile(false);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -73,7 +126,8 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
       description,
       fileName: fileName || `${title.replace(/\s+/g, '_').slice(0, 30)}.pdf`,
       fileSize: fileSize || '1.8 MB',
-      fileType: category === 'objek' ? 'image' : category === 'dpa' ? 'xlsx' : 'pdf',
+      fileType: fileType || (category === 'objek' ? 'image' : category === 'dpa' ? 'xlsx' : 'pdf'),
+      fileUrl: fileUrl || undefined,
       isPublic: isPublicCategory,
       uploadedBy: currentUser?.name || 'Administrator BP2RD HSU',
       uploadedRole: currentUser?.role || 'admin',
@@ -198,16 +252,102 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1.5">
-                Nama File Fisik / Digital
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold text-slate-300">
+                  Nama File Fisik / Digital
+                </label>
+                {fileUrl ? (
+                  <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" />
+                    <span>Terunggah ({fileSize})</span>
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-slate-400">
+                    Bisa ketik nama atau upload file
+                  </span>
+                )}
+              </div>
+
+              {/* Hidden file input */}
               <input
-                type="text"
-                value={fileName}
-                onChange={(e) => setFileName(e.target.value)}
-                placeholder="Perbup_HSU_NJOP_2026.pdf"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 transition-all"
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.webp,.zip,.rar,.7z"
+                onChange={handleFileUpload}
+                className="hidden"
               />
+
+              {/* Input Group: Text Field + Upload File Button */}
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={fileName}
+                    onChange={(e) => setFileName(e.target.value)}
+                    placeholder="Perbup_HSU_NJOP_2026.pdf"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-3.5 pr-8 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 transition-all font-mono"
+                  />
+                  {fileName && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFileName('');
+                        setFileUrl('');
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                      }}
+                      className="absolute right-2.5 top-2.5 text-slate-500 hover:text-white text-xs cursor-pointer"
+                      title="Reset / Kosongkan Nama File"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isReadingFile}
+                  className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 active:scale-95 shadow-md shadow-emerald-950/40"
+                  title="Upload / Unggah File dari Komputer atau HP"
+                >
+                  <Upload className="w-4 h-4" />
+                  <span>{isReadingFile ? 'Memproses...' : 'Upload File'}</span>
+                </button>
+              </div>
+
+              {/* File Info Box if file uploaded */}
+              {fileUrl ? (
+                <div className="mt-2 p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-between text-xs animate-in fade-in">
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <span className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 shrink-0">
+                      {fileType === 'image' ? (
+                        <ImageIcon className="w-3.5 h-3.5" />
+                      ) : fileType === 'xlsx' ? (
+                        <FileSpreadsheet className="w-3.5 h-3.5" />
+                      ) : (
+                        <FileText className="w-3.5 h-3.5" />
+                      )}
+                    </span>
+                    <div className="truncate">
+                      <span className="font-bold text-white block truncate text-[11px]">{fileName}</span>
+                      <span className="text-[10px] text-emerald-400 font-mono">
+                        Ukuran: {fileSize} &bull; Tipe: {fileType.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-[11px] text-emerald-300 hover:text-white font-semibold underline ml-2 shrink-0 cursor-pointer"
+                  >
+                    Ganti
+                  </button>
+                </div>
+              ) : (
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Format didukung: PDF, Word (DOC/DOCX), Excel (XLS/XLSX), Gambar (JPG/PNG), atau ZIP.
+                </p>
+              )}
             </div>
           </div>
 
