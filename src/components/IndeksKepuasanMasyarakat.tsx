@@ -39,32 +39,32 @@ export const PERNYATAAN_IKM_CONFIG = [
   {
     id: 1,
     key: 'pernyataan1' as const,
-    title: 'Pernyataan 1: Kemudahan Prosedur & Persyaratan Pelayanan',
-    deskripsi: 'Bagaimana kemudahan persyaratan administrasi dan kejelasan alur prosedur pelayanan pendaftaran/pendataan di BP2RD HSU?',
+    title: 'Pernyataan 1: Monitoring dan Manfaat bagi pihak sekolah.',
+    deskripsi: 'Bagaimana Kegiatan monitoring bagi pihak sekolah dalam meningkatkan pemahaman mengenai administrasi perpajakan daerah?',
   },
   {
     id: 2,
     key: 'pernyataan2' as const,
-    title: 'Pernyataan 2: Kecepatan & Ketepatan Respon Petugas',
-    deskripsi: 'Bagaimana ketepatan waktu serta kecepatan respon aparatur petugas pendataan lapangan dan loket dalam melayani kebutuhan Anda?',
+    title: 'Pernyataan 2: Penjelasan dan Informasi mengenai tujuan kegiatan tersebut',
+    deskripsi: 'Petugas memberikan penjelasan dan informasi yang jelas mengenai tujuan kegiatan monitoring serta penggalian potensi pajak daerah?',
   },
   {
     id: 3,
     key: 'pernyataan3' as const,
-    title: 'Pernyataan 3: Kesopanan, Keramahan & Kejelasan Informasi',
-    deskripsi: 'Bagaimana sikap keramahan, kesopanan, etika pelayanan, dan kejelasan penjelasan yang disampaikan oleh aparatur BP2RD HSU?',
+    title: 'Pernyataan 3: Monitoring dan Penggalian potensi di lingkungan sekolah berjalan dengan tertib.',
+    deskripsi: 'Bagaimana Pelaksanaan monitoring dan pendataan potensi pajak di lingkungan sekolah berjalan dengan tertib, lancar, dan sesuai dengan prosedur yang berlaku ?',
   },
   {
     id: 4,
     key: 'pernyataan4' as const,
-    title: 'Pernyataan 4: Kualitas Sarana, Transparansi & Aplikasi SIPOTENSI',
-    deskripsi: 'Bagaimana transparansi tarif, keakuratan sistem SIPOTENSI, serta kenyamanan sarana dan fasilitas pelayanan yang disediakan?',
+    title: 'Pernyataan 4: Kualitas Komunikasi, Koordinasi dan Verifikasi Data',
+    deskripsi: 'Bagaimana Petugas melakukan komunikasi dan koordinasi yang baik dengan pihak sekolah dalam pengumpulan, verifikasi, dan pemutakhiran pajak daerah?',
   },
   {
     id: 5,
     key: 'pernyataan5' as const,
     title: 'Pernyataan 5: Penanganan Keluhan & Kepuasan Hasil Layanan',
-    deskripsi: 'Bagaimana respon penyelesaian konsultasi/keluhan dan kepuasan Anda secara menyeluruh terhadap hasil akhir pelayanan BP2RD HSU?',
+    deskripsi: 'Bagaimana respon penyelesaian konsultasi/keluhan dan kepuasan Anda secara menyeluruh terhadap hasil akhir pelayanan BAPENDA HSU?',
   },
 ];
 

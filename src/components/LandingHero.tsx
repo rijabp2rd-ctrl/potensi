@@ -79,7 +79,7 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
             transition={{ duration: 0.6, delay: 0.1 }}
             className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight"
           >
-            Penggalian Potensi Pajak Daerah &amp; PBB-P2 Berbasis{' '}
+            Penggalian Potensi Pajak Daerah &amp; Retribusi Daerah Berbasis{' '}
             <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300 bg-clip-text text-transparent">
               Geospasial GPS Presisi
             </span>
@@ -91,7 +91,7 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
             transition={{ duration: 0.6, delay: 0.2 }}
             className="mt-6 text-base sm:text-lg text-slate-300 max-w-3xl leading-relaxed"
           >
-            Portal digital integrasi Badan Pengelola Pajak dan Retribusi Daerah (BP2RD) Kabupaten Hulu Sungai Utara. 
+            Portal digital integrasi Badan Pendapatan Daerah Kabupaten Hulu Sungai Utara. 
             Mendata objek pajak secara akurat di 10 kecamatan dengan koordinat GPS valid, keterbukaan dokumen regulasi daerah, serta manajemen pelaporan fiskal terverifikasi.
           </motion.p>
 
@@ -278,7 +278,7 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
                   Perda &amp; Regulasi
                 </h3>
                 <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-                  Peraturan Daerah Kab. HSU No. 01 Tahun 2024 tentang Pajak &amp; Retribusi Daerah, Perbup PBB-P2, Instruksi Bupati, dan landasan hukum fiskal.
+                  Peraturan Daerah Kab. HSU No. 01 Tahun 2025 tentang Perubahan Pajak Daerah &amp; Retribusi Daerah, daan landasan hukum fiskal.
                 </p>
               </div>
               <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-bold text-emerald-400">
