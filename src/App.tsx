@@ -217,9 +217,22 @@ export function App() {
   };
 
   const handleDeleteRetribusi = async (id: string) => {
-    const updated = retribusiList.filter(r => r.id !== id);
-    setRetribusiList(updated);
-    saveRetribusiList(updated);
+    let updatedList: RetribusiDaerahEntry[] = [];
+    setRetribusiList(prev => {
+      updatedList = prev.filter(r => r.id !== id);
+      saveRetribusiList(updatedList);
+      return updatedList;
+    });
+
+    // Also remove associated photo in Library Berkas if any
+    setLibraryList(prev => {
+      const updatedLib = prev.filter(l => !l.id.includes(id) && !l.nomorBerkas.includes(id));
+      saveLibraryList(updatedLib);
+      return updatedLib;
+    });
+
+    triggerAutoSync(potensiList, updatedList, pbbList);
+
     try {
       await deleteEntryFromFirestore('retribusi_daerah', id);
     } catch (err) {

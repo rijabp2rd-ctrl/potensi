@@ -28,7 +28,8 @@ import {
   Layers,
   HelpCircle,
   ExternalLink,
-  ShieldCheck
+  ShieldCheck,
+  Trash2
 } from 'lucide-react';
 import { 
   RetribusiDaerahEntry, 
@@ -137,12 +138,10 @@ export const RetribusiDaerahForm: React.FC<RetribusiDaerahFormProps> = ({
   const [golonganFilter, setGolonganFilter] = useState<string>('all');
 
   React.useEffect(() => {
-    if (!isInternalUser) {
-      setActiveSubTab('form');
-    } else if (initialSubTab) {
+    if (initialSubTab) {
       setActiveSubTab(initialSubTab);
     }
-  }, [initialSubTab, isInternalUser]);
+  }, [initialSubTab]);
 
   const [justSavedItem, setJustSavedItem] = useState<RetribusiDaerahEntry | null>(null);
 
@@ -363,9 +362,7 @@ export const RetribusiDaerahForm: React.FC<RetribusiDaerahFormProps> = ({
 
     onSave(newEntry);
     setJustSavedItem(newEntry);
-    if (isInternalUser) {
-      setActiveSubTab('riwayat');
-    }
+    setActiveSubTab('riwayat');
   };
 
   return (
@@ -396,36 +393,34 @@ export const RetribusiDaerahForm: React.FC<RetribusiDaerahFormProps> = ({
           </div>
         </div>
 
-        {/* View Mode Switcher: HANYA TAMPIL PADA LOGIN ADMIN & USER */}
-        {isInternalUser && (
-          <div className="flex items-center gap-2 bg-slate-900 p-1.5 rounded-2xl border border-slate-800">
-            <button
-              type="button"
-              onClick={() => setActiveSubTab('form')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeSubTab === 'form'
-                  ? 'bg-amber-600 text-white shadow'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Formulir Baru
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveSubTab('riwayat')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeSubTab === 'riwayat'
-                  ? 'bg-amber-600 text-white shadow'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <span>Daftar Retribusi Terinput</span>
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-950 font-mono text-amber-400">
-                {retribusiList.length}
-              </span>
-            </button>
-          </div>
-        )}
+        {/* View Mode Switcher: Tampil untuk Navigasi Antar Formulir dan Daftar Retribusi */}
+        <div className="flex items-center gap-2 bg-slate-900 p-1.5 rounded-2xl border border-slate-800">
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('form')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeSubTab === 'form'
+                ? 'bg-amber-600 text-white shadow'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Formulir Baru
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('riwayat')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeSubTab === 'riwayat'
+                ? 'bg-amber-600 text-white shadow'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <span>Daftar Retribusi Terinput</span>
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-950 font-mono text-amber-400">
+              {retribusiList.length}
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* Success Notification Banner after saving */}
@@ -454,6 +449,19 @@ export const RetribusiDaerahForm: React.FC<RetribusiDaerahFormProps> = ({
               >
                 + Input Retribusi Lain
               </button>
+              {onDeleteRetribusi && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const itemToDelete = justSavedItem;
+                    setDeleteTarget(itemToDelete);
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-red-600/20 hover:bg-red-600/30 text-xs font-bold text-red-400 border border-red-500/30 transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Hapus / Batalkan Data Ini</span>
+                </button>
+              )}
               {onNavigateToTab && (
                 <>
                   <button
@@ -1063,8 +1071,8 @@ export const RetribusiDaerahForm: React.FC<RetribusiDaerahFormProps> = ({
         </form>
       )}
 
-      {/* VIEW 2: DAFTAR RETRIBUSI TERINPUT (HANYA TAMPIL UNTUK ADMIN & USER) */}
-      {isInternalUser && activeSubTab === 'riwayat' && (
+      {/* VIEW 2: DAFTAR RETRIBUSI TERINPUT */}
+      {activeSubTab === 'riwayat' && (
         <div className="mt-8 bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
@@ -1218,13 +1226,15 @@ export const RetribusiDaerahForm: React.FC<RetribusiDaerahFormProps> = ({
                               <FileText className="w-3 h-3" />
                               <span>Lihat</span>
                             </button>
-                            {currentUser?.role === 'admin' && onDeleteRetribusi && (
+                            {onDeleteRetribusi && (
                               <button
                                 type="button"
                                 onClick={() => setDeleteTarget(r)}
-                                className="px-2 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-[10px] font-bold border border-red-500/20 transition-colors cursor-pointer"
+                                className="px-2 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-[10px] font-bold border border-red-500/20 transition-colors cursor-pointer flex items-center gap-1"
+                                title="Hapus Data Retribusi"
                               >
-                                Hapus
+                                <Trash2 className="w-3 h-3" />
+                                <span>Hapus</span>
                               </button>
                             )}
                           </div>
@@ -1363,7 +1373,21 @@ export const RetribusiDaerahForm: React.FC<RetribusiDaerahFormProps> = ({
               </div>
             )}
 
-            <div className="mt-5 pt-4 border-t border-slate-800 flex justify-end">
+            <div className="mt-5 pt-4 border-t border-slate-800 flex items-center justify-between gap-3">
+              {onDeleteRetribusi ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = viewDetailTarget;
+                    setViewDetailTarget(null);
+                    setDeleteTarget(target);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Hapus Data Retribusi</span>
+                </button>
+              ) : <div />}
               <button
                 type="button"
                 onClick={() => setViewDetailTarget(null)}
@@ -1400,14 +1424,22 @@ export const RetribusiDaerahForm: React.FC<RetribusiDaerahFormProps> = ({
               <button
                 type="button"
                 onClick={() => {
+                  const targetId = deleteTarget.id;
+                  if (justSavedItem?.id === targetId) {
+                    setJustSavedItem(null);
+                  }
+                  if (viewDetailTarget?.id === targetId) {
+                    setViewDetailTarget(null);
+                  }
                   if (onDeleteRetribusi) {
-                    onDeleteRetribusi(deleteTarget.id);
+                    onDeleteRetribusi(targetId);
                   }
                   setDeleteTarget(null);
                 }}
-                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-colors cursor-pointer shadow-lg shadow-red-950/50"
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-colors cursor-pointer shadow-lg shadow-red-950/50 flex items-center gap-1.5"
               >
-                Ya, Hapus Data
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Ya, Hapus Data</span>
               </button>
             </div>
           </div>

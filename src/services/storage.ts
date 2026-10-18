@@ -902,16 +902,7 @@ export function loadRetribusiList(): RetribusiDaerahEntry[] {
       localStorage.setItem(RETRIBUSI_KEY, JSON.stringify(INITIAL_RETRIBUSI_DATA));
       return INITIAL_RETRIBUSI_DATA;
     }
-    const parsed: RetribusiDaerahEntry[] = JSON.parse(raw);
-    // Merge any missing initial items by ID so users get rich geospatial data
-    const existingIds = new Set(parsed.map(item => item.id));
-    const missing = INITIAL_RETRIBUSI_DATA.filter(item => !existingIds.has(item.id));
-    if (missing.length > 0) {
-      const merged = [...parsed, ...missing];
-      localStorage.setItem(RETRIBUSI_KEY, JSON.stringify(merged));
-      return merged;
-    }
-    return parsed;
+    return JSON.parse(raw);
   } catch (e) {
     console.error('Error loading retribusi list:', e);
     return INITIAL_RETRIBUSI_DATA;
