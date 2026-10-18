@@ -132,16 +132,19 @@ export const RetribusiDaerahForm: React.FC<RetribusiDaerahFormProps> = ({
   onUpdateRetribusiStatus,
   onDeleteRetribusi
 }) => {
+  const isAdmin = currentUser !== null && currentUser.role === 'admin';
   const isInternalUser = currentUser !== null && (currentUser.role === 'admin' || currentUser.role === 'user');
-  const [activeSubTab, setActiveSubTab] = useState<'form' | 'riwayat'>(initialSubTab);
+  const [activeSubTab, setActiveSubTab] = useState<'form' | 'riwayat'>(isAdmin && initialSubTab === 'riwayat' ? 'riwayat' : 'form');
   const [searchKeyword, setSearchKeyword] = useState('');
   const [golonganFilter, setGolonganFilter] = useState<string>('all');
 
   React.useEffect(() => {
-    if (initialSubTab) {
+    if (!isAdmin) {
+      setActiveSubTab('form');
+    } else if (initialSubTab) {
       setActiveSubTab(initialSubTab);
     }
-  }, [initialSubTab]);
+  }, [initialSubTab, isAdmin]);
 
   const [justSavedItem, setJustSavedItem] = useState<RetribusiDaerahEntry | null>(null);
 
@@ -362,7 +365,9 @@ export const RetribusiDaerahForm: React.FC<RetribusiDaerahFormProps> = ({
 
     onSave(newEntry);
     setJustSavedItem(newEntry);
-    setActiveSubTab('riwayat');
+    if (isAdmin) {
+      setActiveSubTab('riwayat');
+    }
   };
 
   return (
@@ -393,34 +398,36 @@ export const RetribusiDaerahForm: React.FC<RetribusiDaerahFormProps> = ({
           </div>
         </div>
 
-        {/* View Mode Switcher: Tampil untuk Navigasi Antar Formulir dan Daftar Retribusi */}
-        <div className="flex items-center gap-2 bg-slate-900 p-1.5 rounded-2xl border border-slate-800">
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('form')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeSubTab === 'form'
-                ? 'bg-amber-600 text-white shadow'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Formulir Baru
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('riwayat')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              activeSubTab === 'riwayat'
-                ? 'bg-amber-600 text-white shadow'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <span>Daftar Retribusi Terinput</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-950 font-mono text-amber-400">
-              {retribusiList.length}
-            </span>
-          </button>
-        </div>
+        {/* View Mode Switcher: Daftar Retribusi Terinput HANYA Tampil pada Admin */}
+        {isAdmin && (
+          <div className="flex items-center gap-2 bg-slate-900 p-1.5 rounded-2xl border border-slate-800">
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('form')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeSubTab === 'form'
+                  ? 'bg-amber-600 text-white shadow'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Formulir Baru
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('riwayat')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeSubTab === 'riwayat'
+                  ? 'bg-amber-600 text-white shadow'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>Daftar Retribusi Terinput</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-950 font-mono text-amber-400">
+                {retribusiList.length}
+              </span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Success Notification Banner after saving */}
@@ -1071,8 +1078,8 @@ export const RetribusiDaerahForm: React.FC<RetribusiDaerahFormProps> = ({
         </form>
       )}
 
-      {/* VIEW 2: DAFTAR RETRIBUSI TERINPUT */}
-      {activeSubTab === 'riwayat' && (
+      {/* VIEW 2: DAFTAR RETRIBUSI TERINPUT (HANYA BISA TAMPIL PADA ADMIN) */}
+      {isAdmin && activeSubTab === 'riwayat' && (
         <div className="mt-8 bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
