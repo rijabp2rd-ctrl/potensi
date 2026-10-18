@@ -103,7 +103,7 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
               Tambah Berkas Digital Baru
             </h1>
             <p className="text-xs text-slate-400 mt-0.5">
-              Registrasi dokumen regulasi publik atau arsip internal ke Library Berkas BP2RD Kabupaten Hulu Sungai Utara.
+              Registrasi dokumen regulasi publik atau arsip internal ke Library Berkas BAPENDA Kabupaten Hulu Sungai Utara.
             </p>
           </div>
         </div>

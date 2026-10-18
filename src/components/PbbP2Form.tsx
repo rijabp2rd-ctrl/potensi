@@ -952,16 +952,22 @@ export const PbbP2Form: React.FC<PbbP2FormProps> = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="text-xs font-semibold text-slate-300 block mb-1">
-                          Luas Bangunan (m&sup2;) <span className="text-red-400">*</span>
+                          Luas Bangunan (m&sup2;) <span className="text-[10px] text-slate-400 font-normal ml-1">(Opsional)</span>
                         </label>
                         <input
                           type="number"
-                          min="1"
-                          required={hasBangunan}
-                          value={luasBangunanM2}
-                          onChange={(e) => setLuasBangunanM2(Math.max(0, parseFloat(e.target.value) || 0))}
+                          min="0"
+                          placeholder="0 (Opsional)"
+                          value={luasBangunanM2 === 0 ? '' : luasBangunanM2}
+                          onChange={(e) => {
+                            const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                            setLuasBangunanM2(isNaN(val) ? 0 : Math.max(0, val));
+                          }}
                           className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-blue-500"
                         />
+                        <span className="text-[10px] text-slate-500 mt-0.5 block">
+                          Biarkan 0 atau kosong jika tidak ada bangunan
+                        </span>
                       </div>
 
                       <div>
@@ -984,7 +990,7 @@ export const PbbP2Form: React.FC<PbbP2FormProps> = ({
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <label className="text-xs font-semibold text-slate-300">
-                          NJOP Bangunan per m&sup2; (Rp) <span className="text-red-400">*</span>
+                          NJOP Bangunan per m&sup2; (Rp) <span className="text-[10px] text-slate-400 font-normal ml-1">(Opsional)</span>
                         </label>
                         <span className="text-xs font-mono font-bold text-blue-400">
                           {formatRupiah(njopBangunanPerM2)}/m&sup2;
@@ -992,15 +998,29 @@ export const PbbP2Form: React.FC<PbbP2FormProps> = ({
                       </div>
                       <input
                         type="number"
-                        min="50000"
+                        min="0"
                         step="10000"
-                        required={hasBangunan}
-                        value={njopBangunanPerM2}
-                        onChange={(e) => setNjopBangunanPerM2(Math.max(0, parseFloat(e.target.value) || 0))}
+                        placeholder="0 (Opsional)"
+                        value={njopBangunanPerM2 === 0 ? '' : njopBangunanPerM2}
+                        onChange={(e) => {
+                          const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                          setNjopBangunanPerM2(isNaN(val) ? 0 : Math.max(0, val));
+                        }}
                         className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-blue-500"
                       />
                       {/* Quick NJOP Bangunan Chips */}
                       <div className="flex flex-wrap gap-1.5 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => setNjopBangunanPerM2(0)}
+                          className={`px-2 py-0.5 rounded text-[10px] font-mono transition-colors cursor-pointer ${
+                            njopBangunanPerM2 === 0
+                              ? 'bg-blue-500 text-white font-bold'
+                              : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                          }`}
+                        >
+                          Rp 0 (Kosong)
+                        </button>
                         {[500000, 750000, 1000000, 1200000, 1500000, 1800000].map((v) => (
                           <button
                             key={v}
@@ -1025,7 +1045,9 @@ export const PbbP2Form: React.FC<PbbP2FormProps> = ({
                           Total Nilai NJOP Bangunan:
                         </span>
                         <span className="text-[11px] text-slate-400 font-sans">
-                          {luasBangunanM2} m&sup2; &times; {formatRupiah(njopBangunanPerM2)}
+                          {luasBangunanM2 > 0 && njopBangunanPerM2 > 0
+                            ? `${luasBangunanM2} m² × ${formatRupiah(njopBangunanPerM2)}`
+                            : 'Rp 0 (Tanpa Nilai Bangunan / Opsional)'}
                         </span>
                       </div>
                       <span className="text-sm sm:text-base font-black text-blue-300">
