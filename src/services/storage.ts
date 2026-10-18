@@ -9,11 +9,11 @@ export const RETRIBUSI_KEY = 'sipotensi_retribusi_list';
 export const DEFAULT_USERS: AppUser[] = [
   {
     id: 'user-admin-1',
-    name: 'Rija, S.STP, M.IP',
+    name: 'Rija Paisal,S.Sos',
     email: 'rija.bp2rd@gmail.com',
     role: 'admin',
-    nip: '19880512 201001 1 003',
-    jabatan: 'Kepala Bidang Pendataan, Penilaian & Penggalian Potensi Pajak',
+    nip: '19900709 202521 1 011',
+    jabatan: 'Penata Layanan Operasional',
     wilayahTugas: 'Seluruh Wilayah Kabupaten Hulu Sungai Utara',
   },
   {
@@ -176,10 +176,20 @@ export const INITIAL_PBB_DATA: PbbP2Entry[] = [
     alamatObjek: 'Jl. Empu Jatmika No. 14 RT 04, Amuntai',
     luasBumiM2: 450,
     njopBumiPerM2: 850000,
+    kelasBumi: 'A35',
+    totalNjopBumi: 382500000,
     luasBangunanM2: 240,
     njopBangunanPerM2: 1200000,
+    kelasBangunan: 'B12',
+    totalNjopBangunan: 288000000,
     njopTotal: 670500000,
-    pbbTerhutang: 835250,
+    njoptkp: 10000000,
+    njopKenaPajak: 660500000,
+    tarifPbbPersen: 0.15,
+    stimulusPengurangan: 0,
+    dendaAdministrasi: 0,
+    totalPbbHarusDibayar: 990750,
+    pbbTerhutang: 990750,
     statusPembayaran: 'LUNAS',
     statusVerifikasi: 'Setuju',
     verifiedBy: 'Rija, S.STP, M.IP',
@@ -211,10 +221,20 @@ export const INITIAL_PBB_DATA: PbbP2Entry[] = [
     alamatObjek: 'Jl. Trans Kalimantan RT 02, Pakacangan',
     luasBumiM2: 600,
     njopBumiPerM2: 420000,
+    kelasBumi: 'A38',
+    totalNjopBumi: 252000000,
     luasBangunanM2: 180,
     njopBangunanPerM2: 890000,
+    kelasBangunan: 'B14',
+    totalNjopBangunan: 160200000,
     njopTotal: 412200000,
-    pbbTerhutang: 462200,
+    njoptkp: 10000000,
+    njopKenaPajak: 402200000,
+    tarifPbbPersen: 0.15,
+    stimulusPengurangan: 0,
+    dendaAdministrasi: 0,
+    totalPbbHarusDibayar: 603300,
+    pbbTerhutang: 603300,
     statusPembayaran: 'LUNAS',
     statusVerifikasi: 'Verifikasi',
     verifiedBy: 'Ahmad Faisal, S.AP',
@@ -241,10 +261,20 @@ export const INITIAL_PBB_DATA: PbbP2Entry[] = [
     alamatObjek: 'Jl. Kebun Purun RT 01, Alabio',
     luasBumiM2: 1200,
     njopBumiPerM2: 350000,
+    kelasBumi: 'A39',
+    totalNjopBumi: 420000000,
     luasBangunanM2: 380,
     njopBangunanPerM2: 950000,
+    kelasBangunan: 'B13',
+    totalNjopBangunan: 361000000,
     njopTotal: 781000000,
-    pbbTerhutang: 976250,
+    njoptkp: 10000000,
+    njopKenaPajak: 771000000,
+    tarifPbbPersen: 0.15,
+    stimulusPengurangan: 0,
+    dendaAdministrasi: 0,
+    totalPbbHarusDibayar: 1156500,
+    pbbTerhutang: 1156500,
     statusPembayaran: 'BELUM LUNAS',
     statusVerifikasi: 'Menunggu Verifikasi',
     latitude: -2.482345,
@@ -265,10 +295,20 @@ export const INITIAL_PBB_DATA: PbbP2Entry[] = [
     alamatObjek: 'Jl. Dermaga Rawa No. 05 RT 03',
     luasBumiM2: 520,
     njopBumiPerM2: 280000,
+    kelasBumi: 'A40',
+    totalNjopBumi: 145600000,
     luasBangunanM2: 150,
     njopBangunanPerM2: 750000,
+    kelasBangunan: 'B15',
+    totalNjopBangunan: 112500000,
     njopTotal: 258100000,
-    pbbTerhutang: 283910,
+    njoptkp: 10000000,
+    njopKenaPajak: 248100000,
+    tarifPbbPersen: 0.15,
+    stimulusPengurangan: 0,
+    dendaAdministrasi: 0,
+    totalPbbHarusDibayar: 372150,
+    pbbTerhutang: 372150,
     statusPembayaran: 'LUNAS',
     statusVerifikasi: 'Setuju',
     verifiedBy: 'Siti Nurhaliza, A.Md',
@@ -551,7 +591,27 @@ export function loadPbbList(): PbbP2Entry[] {
       localStorage.setItem(PBB_KEY, JSON.stringify(INITIAL_PBB_DATA));
       return INITIAL_PBB_DATA;
     }
-    return JSON.parse(raw);
+    const parsed: PbbP2Entry[] = JSON.parse(raw);
+    const updated = parsed.map(item => {
+      const matchInit = INITIAL_PBB_DATA.find(i => i.id === item.id);
+      if (matchInit && (!item.totalNjopBumi || !item.kelasBumi)) {
+        return {
+          ...matchInit,
+          ...item,
+          kelasBumi: item.kelasBumi || matchInit.kelasBumi,
+          totalNjopBumi: item.totalNjopBumi || (item.luasBumiM2 * item.njopBumiPerM2),
+          kelasBangunan: item.kelasBangunan || matchInit.kelasBangunan,
+          totalNjopBangunan: item.totalNjopBangunan || (item.luasBangunanM2 * item.njopBangunanPerM2),
+          njoptkp: item.njoptkp ?? matchInit.njoptkp,
+          njopKenaPajak: item.njopKenaPajak ?? Math.max(0, item.njopTotal - (matchInit.njoptkp || 10000000)),
+          tarifPbbPersen: item.tarifPbbPersen ?? matchInit.tarifPbbPersen,
+          pbbTerhutang: matchInit.pbbTerhutang || item.pbbTerhutang,
+          totalPbbHarusDibayar: matchInit.totalPbbHarusDibayar || item.pbbTerhutang,
+        };
+      }
+      return item;
+    });
+    return updated;
   } catch (e) {
     console.error('Error loading pbb list:', e);
     return INITIAL_PBB_DATA;

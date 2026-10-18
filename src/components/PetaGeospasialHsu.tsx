@@ -1247,18 +1247,46 @@ export const PetaGeospasialHsu: React.FC<PetaGeospasialHsuProps> = ({
                     <span className="font-mono font-bold text-blue-400">{activePin.details.tahunPajak || 2026}</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-800">
-                    <span className="text-slate-400">Luas Tanah/Bgn:</span>
-                    <span className="font-bold text-white">{activePin.details.luasBumiM2} m&sup2; / {activePin.details.luasBangunanM2} m&sup2;</span>
+                    <span className="text-slate-400">Luas Tanah &amp; Kelas:</span>
+                    <span className="font-bold text-white">
+                      {activePin.details.luasBumiM2} m&sup2; 
+                      <span className="text-emerald-400 font-mono text-[11px] ml-1">
+                        (Kelas {activePin.details.kelasBumi || 'A35'})
+                      </span>
+                    </span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-800">
-                    <span className="text-slate-400">PBB Terhutang:</span>
-                    <span className="font-bold text-blue-400 font-mono">
+                    <span className="text-slate-400">Luas Bangunan:</span>
+                    <span className="font-bold text-white">
+                      {activePin.details.luasBangunanM2 > 0 ? (
+                        <>
+                          {activePin.details.luasBangunanM2} m&sup2; 
+                          <span className="text-blue-400 font-mono text-[11px] ml-1">
+                            (Kelas {activePin.details.kelasBangunan || 'B12'})
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-slate-500 font-normal">Tanpa Bangunan</span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-800">
+                    <span className="text-slate-400">Total Nilai NJOP:</span>
+                    <span className="font-mono text-white font-semibold">
+                      {formatRupiah(activePin.details.njopTotal)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-800">
+                    <span className="text-slate-400">Ketetapan PBB:</span>
+                    <span className="font-bold text-emerald-400 font-mono">
                       {formatRupiah(activePin.details.pbbTerhutang)}
                     </span>
                   </div>
                   <div className="flex justify-between py-1">
                     <span className="text-slate-400">Status Bayar:</span>
-                    <span className="font-bold text-emerald-300">{activePin.details.statusPembayaran}</span>
+                    <span className={`font-bold ${activePin.details.statusPembayaran === 'LUNAS' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                      {activePin.details.statusPembayaran}
+                    </span>
                   </div>
                 </div>
               )}

@@ -1,6 +1,6 @@
 {
-  "name": "SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara",
-  "description": "Sistem Informasi Potensi Pajak Daerah & PBB-P2 BP2RD Kabupaten Hulu Sungai Utara dengan Pemetaan Geospasial GPS Presisi, Library Berkas Regulasi, dan Cetak Rekapitulasi Laporan Resmi",
+  "name": "SIPOTENSI BAPENDA Kabupaten Hulu Sungai Utara",
+  "description": "Sistem Informasi Potensi Pajak Daerah & Retribusi Daerah Kabupaten Hulu Sungai Utara dengan Pemetaan Geospasial GPS Presisi, Library Berkas Regulasi, dan Cetak Rekapitulasi Laporan Resmi",
   "version": "1.0.0",
   "capabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

@@ -617,6 +617,7 @@ export function App() {
               onDeletePbb={handleDeletePbb}
               onDeleteRetribusi={handleDeleteRetribusi}
               onOpenSpreadsheetModal={() => setIsSpreadsheetModalOpen(true)}
+              onNavigateToMap={() => setActiveTab('peta')}
             />
           ) : (
             <div className="max-w-xl mx-auto my-20 p-8 bg-slate-900 border border-amber-500/40 rounded-3xl text-center shadow-2xl">

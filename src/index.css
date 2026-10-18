@@ -30,7 +30,7 @@
   background: #475569;
 }
 
-/* Print Stylesheet for Official BP2RD Kabupaten Hulu Sungai Utara Reports */
+/* Print Stylesheet for Official BAPENDA Kabupaten Hulu Sungai Utara Reports */
 @media print {
   @page {
     size: A4 portrait;

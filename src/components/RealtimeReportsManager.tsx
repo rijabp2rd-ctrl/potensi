@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { PotensiPajakEntry, PbbP2Entry, RetribusiDaerahEntry, AppUser, VerificationStatus } from '../types';
 import { KABUPATEN_HSU, KECAMATAN_HSU_OPTIONS } from '../constants/wilayahHsu';
+import { VerifikasiMapModal } from './VerifikasiMapModal';
 
 interface RealtimeReportsManagerProps {
   potensiList: PotensiPajakEntry[];
@@ -50,6 +51,7 @@ interface RealtimeReportsManagerProps {
   onDeletePbb?: (id: string) => void;
   onDeleteRetribusi?: (id: string) => void;
   onOpenSpreadsheetModal?: () => void;
+  onNavigateToMap?: (location?: { lat: number; lng: number; title: string; type: string }) => void;
 }
 
 export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
@@ -64,6 +66,7 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
   onDeletePbb,
   onDeleteRetribusi,
   onOpenSpreadsheetModal,
+  onNavigateToMap,
 }) => {
   // Main view mode: 'hasil_inputan' (Aksi Lihat Hasil Inputan & Status) or 'rekap_cetak' (Rekapitulasi & Cetak)
   const [activeViewMode, setActiveViewMode] = useState<'hasil_inputan' | 'rekap_cetak'>('hasil_inputan');
@@ -123,6 +126,25 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
     fileType: 'image' | 'pdf' | 'doc' | 'other';
     fileSize?: string;
     sourceInfo?: string;
+  } | null>(null);
+
+  // Verifikasi Map Modal State (Aksi Verifikasi Lihat Map Geospasial)
+  const [verifikasiMapModal, setVerifikasiMapModal] = useState<{
+    itemType: 'potensi' | 'pbb' | 'retribusi';
+    id: string;
+    name: string;
+    nomor: string;
+    kecamatan: string;
+    kelurahanDesa: string;
+    alamat: string;
+    latitude: number;
+    longitude: number;
+    statusVerifikasi: VerificationStatus;
+    nilaiFiskalLabel: string;
+    nilaiFiskalRp: string;
+    petugas?: string;
+    fotoUrl?: string;
+    fotoName?: string;
   } | null>(null);
 
   const formatRupiah = (val: number) => {
@@ -327,27 +349,27 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
     
     if (selectedReportType === 'potensi' || selectedReportType === 'gabungan') {
       csvContent += "DATA POTENSI PAJAK DAERAH BP2RD HSU\n";
-      csvContent += "No Formulir,Wajib Pajak,NPWPD,Jenis Pajak,Kecamatan,Kelurahan,Potensi Bulanan,Potensi Tahunan,Status Verifikasi,Petugas\n";
+      csvContent += "No Formulir,Wajib Pajak,NPWPD,Jenis Pajak,Kecamatan,Kelurahan / Desa,Alamat Lengkap,Potensi Bulanan,Potensi Tahunan,Status Verifikasi,Petugas\n";
       filteredPotensi.forEach((p) => {
-        csvContent += `"${p.nomorFormulir}","${p.namaWajibPajak}","${p.npwpd}","${p.jenisPajak}","${p.kecamatan}","${p.kelurahanDesa}",${p.potensiRupiahBulanan},${p.potensiRupiahTahunan},"${normalizeStatus(p.statusVerifikasi)}","${p.petugasPendata}"\n`;
+        csvContent += `"${p.nomorFormulir}","${p.namaWajibPajak}","${p.npwpd}","${p.jenisPajak}","${p.kecamatan}","${p.kelurahanDesa || '-'}","${(p.alamatLengkap || '-').replace(/"/g, '""')}",${p.potensiRupiahBulanan},${p.potensiRupiahTahunan},"${normalizeStatus(p.statusVerifikasi)}","${p.petugasPendata}"\n`;
       });
       csvContent += "\n";
     }
 
     if (selectedReportType === 'retribusi' || selectedReportType === 'gabungan') {
       csvContent += "DATA HASIL INPUT POTENSI RETRIBUSI DAERAH BP2RD HSU\n";
-      csvContent += "No Register,Tanggal,Golongan Retribusi,Sub Objek Retribusi,Sub Rekening,Pengelola,Kecamatan,Kelurahan,Tarif Satuan,Jumlah Satuan,Potensi Bulanan,Potensi Tahunan,Status Verifikasi,Petugas\n";
+      csvContent += "No Register,Tanggal,Golongan Retribusi,Sub Objek Retribusi,Sub Rekening,Pengelola,Kecamatan,Kelurahan / Desa,Alamat Lengkap,Tarif Satuan,Jumlah Satuan,Potensi Bulanan,Potensi Tahunan,Status Verifikasi,Petugas\n";
       filteredRetribusi.forEach((r) => {
-        csvContent += `"${r.nomorRegister}","${r.tanggalPendataan}","${r.golonganRetribusi}","${r.subObjekRetribusi}","${r.subRekening || '-'}","${r.namaPengelola || '-'}","${r.kecamatan}","${r.kelurahanDesa}",${r.tarifSatuan},${r.jumlahSatuan},${r.potensiPerbulan},${r.potensiPertahun},"${normalizeStatus(r.statusVerifikasi)}","${r.petugasPendata}"\n`;
+        csvContent += `"${r.nomorRegister}","${r.tanggalPendataan}","${r.golonganRetribusi}","${r.subObjekRetribusi}","${r.subRekening || '-'}","${r.namaPengelola || '-'}","${r.kecamatan}","${r.kelurahanDesa || '-'}","${(r.alamatLengkap || '-').replace(/"/g, '""')}",${r.tarifSatuan},${r.jumlahSatuan},${r.potensiPerbulan},${r.potensiPertahun},"${normalizeStatus(r.statusVerifikasi)}","${r.petugasPendata}"\n`;
       });
       csvContent += "\n";
     }
 
     if (selectedReportType === 'pbb' || selectedReportType === 'gabungan') {
       csvContent += "DATA KETETAPAN DAN PEMBAYARAN PBB-P2 HSU\n";
-      csvContent += "NOP,Tahun,Wajib Pajak,Kecamatan,Kelurahan,Luas Bumi (m2),Luas Bangunan (m2),PBB Terhutang,Status Pembayaran,Status Verifikasi,Tanggal Bayar\n";
+      csvContent += "NOP,Tahun,Wajib Pajak,Kecamatan,Kelurahan / Desa,Alamat Objek,Luas Bumi (m2),Luas Bangunan (m2),PBB Terhutang,Status Pembayaran,Status Verifikasi,Tanggal Bayar\n";
       filteredPbb.forEach((p) => {
-        csvContent += `"${p.nop}",${p.tahunPajak},"${p.namaWajibPajak}","${p.kecamatan}","${p.kelurahanDesa}",${p.luasBumiM2},${p.luasBangunanM2},${p.pbbTerhutang},"${p.statusPembayaran}","${normalizeStatus(p.statusVerifikasi)}","${p.tanggalBayar || '-'}"\n`;
+        csvContent += `"${p.nop}",${p.tahunPajak},"${p.namaWajibPajak}","${p.kecamatan}","${p.kelurahanDesa || '-'}","${(p.alamatObjek || '-').replace(/"/g, '""')}",${p.luasBumiM2},${p.luasBangunanM2},${p.pbbTerhutang},"${p.statusPembayaran}","${normalizeStatus(p.statusVerifikasi)}","${p.tanggalBayar || '-'}"\n`;
       });
     }
 
@@ -439,13 +461,14 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
     <table>
       <thead>
         <tr>
-          <th width="4%">No</th>
-          <th width="14%">Nomor Form</th>
-          <th width="20%">Nama Wajib Pajak / Usaha</th>
-          <th width="16%">Jenis Pajak</th>
-          <th width="16%">Kecamatan / Desa</th>
-          <th width="15%" class="text-right">Potensi Tahunan</th>
-          <th width="15%" class="text-center">Status Verifikasi</th>
+          <th width="3%">No</th>
+          <th width="12%">Nomor Form</th>
+          <th width="18%">Nama Wajib Pajak / Usaha</th>
+          <th width="13%">Jenis Pajak</th>
+          <th width="12%">Kecamatan / Desa</th>
+          <th width="18%">Alamat Lengkap</th>
+          <th width="12%" class="text-right">Potensi Tahunan</th>
+          <th width="12%" class="text-center">Status Verifikasi</th>
         </tr>
       </thead>
       <tbody>
@@ -455,7 +478,8 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
             <td style="font-family: monospace;">${p.nomorFormulir}</td>
             <td><strong>${p.namaWajibPajak}</strong><br><small>${p.namaUsaha}</small></td>
             <td>${p.jenisPajak}</td>
-            <td>${p.kecamatan}<br><small>${p.kelurahanDesa}</small></td>
+            <td>${p.kecamatan}<br><small style="color: #047857; font-weight: bold;">${p.kelurahanDesa || '-'}</small></td>
+            <td style="font-size: 8.5pt;">${p.alamatLengkap || '-'}</td>
             <td class="text-right" style="font-weight: bold;">${formatRupiah(p.potensiRupiahTahunan)}</td>
             <td class="text-center"><strong>${normalizeStatus(p.statusVerifikasi)}</strong></td>
           </tr>
@@ -463,7 +487,7 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
       </tbody>
       <tfoot>
         <tr style="background: #f2f2f2; font-weight: bold;">
-          <td colspan="5" class="text-right">TOTAL POTENSI PAJAK DAERAH:</td>
+          <td colspan="6" class="text-right">TOTAL POTENSI PAJAK DAERAH:</td>
           <td class="text-right">${formatRupiah(totalPotensiRupiah)}</td>
           <td class="text-center">${filteredPotensi.length} Objek</td>
         </tr>
@@ -478,13 +502,14 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
     <table>
       <thead>
         <tr>
-          <th width="4%">No</th>
-          <th width="14%">No. Register</th>
-          <th width="22%">Sub Objek Retribusi & Pengelola</th>
-          <th width="16%">Golongan Retribusi</th>
-          <th width="16%">Kecamatan / Desa</th>
-          <th width="14%" class="text-right">Tarif & Volume</th>
-          <th width="14%" class="text-right">Potensi Tahunan</th>
+          <th width="3%">No</th>
+          <th width="12%">No. Register</th>
+          <th width="18%">Sub Objek & Pengelola</th>
+          <th width="13%">Golongan Retribusi</th>
+          <th width="12%">Kecamatan / Desa</th>
+          <th width="18%">Alamat Lengkap</th>
+          <th width="12%" class="text-right">Tarif & Volume</th>
+          <th width="12%" class="text-right">Potensi Tahunan</th>
         </tr>
       </thead>
       <tbody>
@@ -494,7 +519,8 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
             <td style="font-family: monospace;">${r.nomorRegister}</td>
             <td><strong>${r.subObjekRetribusi}</strong><br><small>${r.namaPengelola || '-'}</small></td>
             <td>${r.golonganRetribusi}</td>
-            <td>${r.kecamatan}<br><small>${r.kelurahanDesa}</small></td>
+            <td>${r.kecamatan}<br><small style="color: #b45309; font-weight: bold;">${r.kelurahanDesa || '-'}</small></td>
+            <td style="font-size: 8.5pt;">${r.alamatLengkap || '-'}</td>
             <td class="text-right">${formatRupiah(r.tarifSatuan)} / ${r.satuanTarif} (${r.jumlahSatuan})</td>
             <td class="text-right" style="font-weight: bold;">${formatRupiah(r.potensiPertahun)}</td>
           </tr>
@@ -502,7 +528,7 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
       </tbody>
       <tfoot>
         <tr style="background: #f2f2f2; font-weight: bold;">
-          <td colspan="6" class="text-right">TOTAL POTENSI RETRIBUSI DAERAH:</td>
+          <td colspan="7" class="text-right">TOTAL POTENSI RETRIBUSI DAERAH:</td>
           <td class="text-right">${formatRupiah(totalRetribusiRupiah)}</td>
         </tr>
       </tfoot>
@@ -516,13 +542,14 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
     <table>
       <thead>
         <tr>
-          <th width="4%">No</th>
-          <th width="18%">NOP (18 Digit)</th>
-          <th width="20%">Nama Wajib Pajak</th>
-          <th width="16%">Kecamatan / Desa</th>
-          <th width="14%" class="text-right">Ketetapan PBB</th>
-          <th width="14%" class="text-center">Status Pembayaran</th>
-          <th width="14%" class="text-center">Status Verifikasi</th>
+          <th width="3%">No</th>
+          <th width="14%">NOP (18 Digit)</th>
+          <th width="16%">Nama Wajib Pajak</th>
+          <th width="13%">Kecamatan / Desa</th>
+          <th width="18%">Alamat Objek Pajak</th>
+          <th width="12%" class="text-right">Ketetapan PBB</th>
+          <th width="12%" class="text-center">Status Pembayaran</th>
+          <th width="12%" class="text-center">Status Verifikasi</th>
         </tr>
       </thead>
       <tbody>
@@ -531,7 +558,8 @@ export const RealtimeReportsManager: React.FC<RealtimeReportsManagerProps> = ({
             <td class="text-center">${idx + 1}</td>
             <td style="font-family: monospace;">${p.nop}</td>
             <td>${p.namaWajibPajak}</td>
-            <td>${p.kecamatan}<br><small>${p.kelurahanDesa}</small></td>
+            <td>${p.kecamatan}<br><small style="color: #1d4ed8; font-weight: bold;">${p.kelurahanDesa || '-'}</small></td>
+            <td style="font-size: 8.5pt;">${p.alamatObjek || '-'}</td>
             <td class="text-right" style="font-weight: bold;">${formatRupiah(p.pbbTerhutang)}</td>
             <td class="text-center"><strong>${p.statusPembayaran}</strong></td>
             <td class="text-center">${normalizeStatus(p.statusVerifikasi)}</td>
@@ -902,7 +930,9 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                     <tr>
                       <th className="py-3 px-4">No. Form / NOP</th>
                       <th className="py-3 px-4">Wajib Pajak &amp; Objek</th>
-                      <th className="py-3 px-4">Kecamatan &amp; Lokasi</th>
+                      <th className="py-3 px-4 text-emerald-400">Kelurahan / Desa</th>
+                      <th className="py-3 px-4">Alamat Lengkap</th>
+                      <th className="py-3 px-4">Kecamatan</th>
                       <th className="py-3 px-4 text-right">Nilai Fiskal</th>
                       <th className="py-3 px-4 text-center">Status Verifikasi</th>
                       <th className="py-3 px-4">Petugas / Tanggal</th>
@@ -918,6 +948,12 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                       const pbb = isPbb ? (item.data as PbbP2Entry) : null;
                       const ret = isRetribusi ? (item.data as RetribusiDaerahEntry) : null;
                       const status = normalizeStatus(item.data.statusVerifikasi);
+
+                      const kelurahanDesaVal = isPotensi ? (pot?.kelurahanDesa || '-') : isRetribusi ? (ret?.kelurahanDesa || '-') : (pbb?.kelurahanDesa || '-');
+                      const alamatVal = isPotensi ? (pot?.alamatLengkap || '-') : isRetribusi ? (ret?.alamatLengkap || '-') : (pbb?.alamatObjek || '-');
+                      const latVal = isPotensi ? pot?.latitude : isRetribusi ? ret?.latitude : pbb?.latitude;
+                      const lngVal = isPotensi ? pot?.longitude : isRetribusi ? ret?.longitude : pbb?.longitude;
+                      const hasGps = Boolean(latVal && lngVal && latVal !== 0 && lngVal !== 0);
 
                       return (
                         <tr key={idx} className="hover:bg-slate-800/40 transition-colors">
@@ -956,12 +992,35 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                             </span>
                           </td>
 
-                          {/* Kecamatan & Lokasi */}
+                          {/* Kelurahan / Desa */}
                           <td className="py-3 px-4">
-                            <span className="text-slate-200 block">{item.data.kecamatan}</span>
-                            <span className="text-[10px] text-slate-500 block truncate max-w-[160px]">
-                              {isPotensi ? pot?.alamatLengkap : isRetribusi ? ret?.alamatLengkap : pbb?.alamatObjek}
+                            <span className="font-bold text-emerald-400 block">
+                              {kelurahanDesaVal}
                             </span>
+                            <span className="text-[10px] text-slate-500">Kelurahan/Desa</span>
+                          </td>
+
+                          {/* Alamat Lengkap */}
+                          <td className="py-3 px-4">
+                            <span className="text-slate-200 block text-xs max-w-[180px] leading-tight truncate" title={alamatVal}>
+                              {alamatVal}
+                            </span>
+                            {hasGps ? (
+                              <span className="text-[10px] text-teal-400 font-mono flex items-center gap-0.5 mt-0.5">
+                                <MapPin className="w-3 h-3 text-teal-400 shrink-0" />
+                                <span>{latVal?.toFixed(4)}, {lngVal?.toFixed(4)}</span>
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-slate-500 italic block mt-0.5">
+                                Titik Pusat Kec.
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Kecamatan */}
+                          <td className="py-3 px-4">
+                            <span className="text-slate-200 block font-medium">{item.data.kecamatan}</span>
+                            <span className="text-[10px] text-slate-500">Kab. HSU</span>
                           </td>
 
                           {/* Nilai Fiskal */}
@@ -1017,6 +1076,42 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                           <td className="py-3 px-4 text-center">
                             <div className="flex items-center justify-center gap-1.5">
                               
+                              {/* Aksi Verifikasi: Lihat Map */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const lat = isPotensi ? pot!.latitude : isRetribusi ? ret!.latitude : pbb!.latitude;
+                                  const lng = isPotensi ? pot!.longitude : isRetribusi ? ret!.longitude : pbb!.longitude;
+                                  const title = isPotensi ? `${pot!.namaWajibPajak} (${pot!.namaUsaha})` : isRetribusi ? ret!.subObjekRetribusi : pbb!.namaWajibPajak;
+                                  const no = isPotensi ? pot!.nomorFormulir : isRetribusi ? ret!.nomorRegister : pbb!.nop;
+                                  const foto = isPotensi ? pot?.fotoObjekUrl : isRetribusi ? ret?.fotoObjekRetribusiUrl : pbb?.fotoObjekPbbUrl;
+                                  const fotoN = isPotensi ? pot?.fotoObjekName : isRetribusi ? ret?.fotoObjekRetribusiName : pbb?.fotoObjekPbbName;
+
+                                  setVerifikasiMapModal({
+                                    itemType: item.type,
+                                    id: item.data.id,
+                                    name: title,
+                                    nomor: no,
+                                    kecamatan: item.data.kecamatan,
+                                    kelurahanDesa: kelurahanDesaVal,
+                                    alamat: alamatVal,
+                                    latitude: lat || 0,
+                                    longitude: lng || 0,
+                                    statusVerifikasi: (item.data.statusVerifikasi as VerificationStatus) || 'Menunggu Verifikasi',
+                                    nilaiFiskalLabel: isPotensi ? 'Potensi Pajak Tahunan' : isRetribusi ? 'Potensi Retribusi Tahunan' : 'PBB Terhutang',
+                                    nilaiFiskalRp: formatRupiah(isPotensi ? (pot?.potensiRupiahTahunan || 0) : isRetribusi ? (ret?.potensiPertahun || 0) : (pbb?.pbbTerhutang || 0)),
+                                    petugas: isPotensi ? pot?.petugasPendata : isRetribusi ? ret?.petugasPendata : pbb?.petugasValidasi,
+                                    fotoUrl: foto,
+                                    fotoName: fotoN,
+                                  });
+                                }}
+                                title="Verifikasi Titik Koordinat GPS & Lihat Map"
+                                className="px-2.5 py-1.5 rounded-xl bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 hover:text-white font-bold text-[11px] flex items-center gap-1 border border-teal-500/40 transition-all cursor-pointer shadow-sm active:scale-95"
+                              >
+                                <MapPin className="w-3.5 h-3.5 text-teal-400" />
+                                <span>Lihat Map</span>
+                              </button>
+
                               {/* Lihat Hasil Inputan Detail */}
                               <button
                                 onClick={() => handleOpenDetailModal(item)}
@@ -1403,25 +1498,61 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                     <thead className="bg-slate-950/80 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800">
                       <tr>
                         <th className="py-2.5 px-3">No. Form</th>
-                        <th className="py-2.5 px-3">Wajib Pajak</th>
+                        <th className="py-2.5 px-3">Wajib Pajak &amp; Usaha</th>
                         <th className="py-2.5 px-3">Jenis Pajak</th>
                         <th className="py-2.5 px-3">Kecamatan</th>
+                        <th className="py-2.5 px-3 text-emerald-400">Kelurahan / Desa</th>
+                        <th className="py-2.5 px-3">Alamat Lengkap</th>
                         <th className="py-2.5 px-3 text-right">Potensi Tahunan</th>
                         <th className="py-2.5 px-3 text-center">Status</th>
+                        <th className="py-2.5 px-3 text-center">Aksi Map</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/60 text-slate-300">
                       {filteredPotensi.map(p => (
                         <tr key={p.id} className="hover:bg-slate-800/40">
                           <td className="py-2.5 px-3 font-mono text-slate-400">{p.nomorFormulir}</td>
-                          <td className="py-2.5 px-3 font-semibold text-white">{p.namaWajibPajak}</td>
+                          <td className="py-2.5 px-3 font-semibold text-white">
+                            <div>{p.namaWajibPajak}</div>
+                            <span className="text-[10px] text-slate-400 font-normal">{p.namaUsaha}</span>
+                          </td>
                           <td className="py-2.5 px-3 text-emerald-400">{p.jenisPajak}</td>
                           <td className="py-2.5 px-3">{p.kecamatan}</td>
+                          <td className="py-2.5 px-3 font-bold text-emerald-400">{p.kelurahanDesa || '-'}</td>
+                          <td className="py-2.5 px-3 text-slate-300 max-w-[180px] truncate" title={p.alamatLengkap}>{p.alamatLengkap || '-'}</td>
                           <td className="py-2.5 px-3 text-right font-mono font-bold text-white">{formatRupiah(p.potensiRupiahTahunan)}</td>
                           <td className="py-2.5 px-3 text-center">
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 border border-slate-700">
                               {normalizeStatus(p.statusVerifikasi)}
                             </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-center">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setVerifikasiMapModal({
+                                  itemType: 'potensi',
+                                  id: p.id,
+                                  name: `${p.namaWajibPajak} (${p.namaUsaha})`,
+                                  nomor: p.nomorFormulir,
+                                  kecamatan: p.kecamatan,
+                                  kelurahanDesa: p.kelurahanDesa || '-',
+                                  alamat: p.alamatLengkap || '-',
+                                  latitude: p.latitude || 0,
+                                  longitude: p.longitude || 0,
+                                  statusVerifikasi: (p.statusVerifikasi as VerificationStatus) || 'Menunggu Verifikasi',
+                                  nilaiFiskalLabel: 'Potensi Pajak Tahunan',
+                                  nilaiFiskalRp: formatRupiah(p.potensiRupiahTahunan || 0),
+                                  petugas: p.petugasPendata,
+                                  fotoUrl: p.fotoObjekUrl,
+                                  fotoName: p.fotoObjekName,
+                                });
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/40 text-[10px] font-bold flex items-center gap-1 mx-auto transition-all cursor-pointer"
+                            >
+                              <MapPin className="w-3 h-3 text-teal-400" />
+                              <span>Lihat Map</span>
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -1450,9 +1581,12 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                         <th className="py-2.5 px-3">Sub Objek &amp; Pengelola</th>
                         <th className="py-2.5 px-3">Golongan Retribusi</th>
                         <th className="py-2.5 px-3">Kecamatan</th>
+                        <th className="py-2.5 px-3 text-amber-300">Kelurahan / Desa</th>
+                        <th className="py-2.5 px-3">Alamat Lengkap</th>
                         <th className="py-2.5 px-3 text-right">Tarif &amp; Satuan</th>
                         <th className="py-2.5 px-3 text-right">Potensi Tahunan</th>
                         <th className="py-2.5 px-3 text-center">Status</th>
+                        <th className="py-2.5 px-3 text-center">Aksi Map</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/60 text-slate-300">
@@ -1465,6 +1599,8 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                           </td>
                           <td className="py-2.5 px-3 text-slate-300">{r.golonganRetribusi}</td>
                           <td className="py-2.5 px-3">{r.kecamatan}</td>
+                          <td className="py-2.5 px-3 font-bold text-amber-300">{r.kelurahanDesa || '-'}</td>
+                          <td className="py-2.5 px-3 text-slate-300 max-w-[180px] truncate" title={r.alamatLengkap}>{r.alamatLengkap || '-'}</td>
                           <td className="py-2.5 px-3 text-right font-mono text-slate-300">
                             {formatRupiah(r.tarifSatuan)} / {r.satuanTarif} ({r.jumlahSatuan})
                           </td>
@@ -1473,6 +1609,34 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 border border-slate-700">
                               {normalizeStatus(r.statusVerifikasi)}
                             </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-center">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setVerifikasiMapModal({
+                                  itemType: 'retribusi',
+                                  id: r.id,
+                                  name: `${r.subObjekRetribusi}${r.namaPengelola ? ` • ${r.namaPengelola}` : ''}`,
+                                  nomor: r.nomorRegister,
+                                  kecamatan: r.kecamatan,
+                                  kelurahanDesa: r.kelurahanDesa || '-',
+                                  alamat: r.alamatLengkap || '-',
+                                  latitude: r.latitude || 0,
+                                  longitude: r.longitude || 0,
+                                  statusVerifikasi: (r.statusVerifikasi as VerificationStatus) || 'Menunggu Verifikasi',
+                                  nilaiFiskalLabel: 'Potensi Retribusi Tahunan',
+                                  nilaiFiskalRp: formatRupiah(r.potensiPertahun || 0),
+                                  petugas: r.petugasPendata,
+                                  fotoUrl: r.fotoObjekRetribusiUrl,
+                                  fotoName: r.fotoObjekRetribusiName,
+                                });
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/40 text-[10px] font-bold flex items-center gap-1 mx-auto transition-all cursor-pointer"
+                            >
+                              <MapPin className="w-3 h-3 text-teal-400" />
+                              <span>Lihat Map</span>
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -1500,9 +1664,12 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                         <th className="py-2.5 px-3">NOP (18 Digit)</th>
                         <th className="py-2.5 px-3">Nama Wajib Pajak</th>
                         <th className="py-2.5 px-3">Kecamatan</th>
+                        <th className="py-2.5 px-3 text-blue-300">Kelurahan / Desa</th>
+                        <th className="py-2.5 px-3">Alamat Objek</th>
                         <th className="py-2.5 px-3 text-right">PBB Terhutang</th>
                         <th className="py-2.5 px-3 text-center">Status Bayar</th>
                         <th className="py-2.5 px-3 text-center">Status Verifikasi</th>
+                        <th className="py-2.5 px-3 text-center">Aksi Map</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/60 text-slate-300">
@@ -1511,6 +1678,8 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                           <td className="py-2.5 px-3 font-mono text-slate-300">{p.nop}</td>
                           <td className="py-2.5 px-3 font-semibold text-white">{p.namaWajibPajak}</td>
                           <td className="py-2.5 px-3">{p.kecamatan}</td>
+                          <td className="py-2.5 px-3 font-bold text-blue-300">{p.kelurahanDesa || '-'}</td>
+                          <td className="py-2.5 px-3 text-slate-300 max-w-[180px] truncate" title={p.alamatObjek}>{p.alamatObjek || '-'}</td>
                           <td className="py-2.5 px-3 text-right font-mono font-bold text-white">{formatRupiah(p.pbbTerhutang)}</td>
                           <td className="py-2.5 px-3 text-center">
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -1523,6 +1692,34 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 border border-slate-700">
                               {normalizeStatus(p.statusVerifikasi)}
                             </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-center">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setVerifikasiMapModal({
+                                  itemType: 'pbb',
+                                  id: p.id,
+                                  name: p.namaWajibPajak,
+                                  nomor: p.nop,
+                                  kecamatan: p.kecamatan,
+                                  kelurahanDesa: p.kelurahanDesa || '-',
+                                  alamat: p.alamatObjek || '-',
+                                  latitude: p.latitude || 0,
+                                  longitude: p.longitude || 0,
+                                  statusVerifikasi: (p.statusVerifikasi as VerificationStatus) || 'Menunggu Verifikasi',
+                                  nilaiFiskalLabel: 'PBB Terhutang',
+                                  nilaiFiskalRp: formatRupiah(p.pbbTerhutang || 0),
+                                  petugas: p.petugasValidasi,
+                                  fotoUrl: p.fotoObjekPbbUrl,
+                                  fotoName: p.fotoObjekPbbName,
+                                });
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/40 text-[10px] font-bold flex items-center gap-1 mx-auto transition-all cursor-pointer"
+                            >
+                              <MapPin className="w-3 h-3 text-teal-400" />
+                              <span>Lihat Map</span>
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -1828,21 +2025,74 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                     </>
                   ) : (
                     <>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">NJOP Total:</span>
-                        <span className="font-mono text-white">
+                      <div className="space-y-1.5 py-1 text-[11px] font-mono border-b border-slate-800/80">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400">Total NJOP Bumi:</span>
+                          <span className="text-emerald-400 font-bold">
+                            {formatRupiah(selectedItem.pbb?.totalNjopBumi || ((selectedItem.pbb?.luasBumiM2 || 0) * (selectedItem.pbb?.njopBumiPerM2 || 0)))}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-[10px] text-slate-500 font-sans">
+                          <span>{selectedItem.pbb?.luasBumiM2} m&sup2; &times; {formatRupiah(selectedItem.pbb?.njopBumiPerM2 || 0)}</span>
+                          <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-slate-400">
+                            Kelas {selectedItem.pbb?.kelasBumi || 'A35'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5 py-1 text-[11px] font-mono border-b border-slate-800/80">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400">Total NJOP Bangunan:</span>
+                          <span className="text-blue-400 font-bold">
+                            {(selectedItem.pbb?.luasBangunanM2 || 0) > 0 
+                              ? formatRupiah(selectedItem.pbb?.totalNjopBangunan || ((selectedItem.pbb?.luasBangunanM2 || 0) * (selectedItem.pbb?.njopBangunanPerM2 || 0)))
+                              : 'Rp 0 (Tanpa Bangunan)'}
+                          </span>
+                        </div>
+                        {(selectedItem.pbb?.luasBangunanM2 || 0) > 0 && (
+                          <div className="flex justify-between items-center text-[10px] text-slate-500 font-sans">
+                            <span>{selectedItem.pbb?.luasBangunanM2} m&sup2; &times; {formatRupiah(selectedItem.pbb?.njopBangunanPerM2 || 0)}</span>
+                            <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-slate-400">
+                              Kelas {selectedItem.pbb?.kelasBangunan || 'B12'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex justify-between text-xs pt-1">
+                        <span className="text-slate-300 font-semibold">Total NJOP Objek:</span>
+                        <span className="font-mono text-white font-bold">
                           {formatRupiah(selectedItem.pbb?.njopTotal || 0)}
                         </span>
                       </div>
+
+                      <div className="flex justify-between text-[11px] text-slate-400">
+                        <span>NJOPTKP (Tidak Kena Pajak):</span>
+                        <span className="font-mono text-amber-400">
+                          (-) {formatRupiah(selectedItem.pbb?.njoptkp || 10000000)}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between text-[11px] text-slate-400">
+                        <span>Tarif PBB-P2:</span>
+                        <span className="font-mono text-slate-200 font-bold">
+                          {selectedItem.pbb?.tarifPbbPersen || 0.15}%
+                        </span>
+                      </div>
+
                       <div className="flex justify-between pt-1 border-t border-slate-800/60">
-                        <span className="text-slate-300 font-bold">PBB Terhutang:</span>
-                        <span className="font-mono text-blue-400 text-sm font-black">
+                        <span className="text-slate-200 font-bold">Ketetapan PBB Terhutang:</span>
+                        <span className="font-mono text-emerald-400 text-sm font-black">
                           {formatRupiah(selectedItem.pbb?.pbbTerhutang || 0)}
                         </span>
                       </div>
                       <div className="flex justify-between text-[11px]">
-                        <span className="text-slate-400">Status Bayar:</span>
-                        <span className={`font-bold ${selectedItem.pbb?.statusPembayaran === 'LUNAS' ? 'text-emerald-400' : 'text-red-400'}`}>
+                        <span className="text-slate-400">Status Pembayaran:</span>
+                        <span className={`font-bold px-2 py-0.5 rounded ${
+                          selectedItem.pbb?.statusPembayaran === 'LUNAS' 
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                            : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                        }`}>
                           {selectedItem.pbb?.statusPembayaran}
                         </span>
                       </div>
@@ -1914,6 +2164,48 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                         : selectedItem.pbb?.alamatObjek}
                     </span>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const isPot = selectedItem.type === 'potensi';
+                      const isRet = selectedItem.type === 'retribusi';
+                      const pot = selectedItem.potensi;
+                      const ret = selectedItem.retribusi;
+                      const pbb = selectedItem.pbb;
+
+                      const lat = isPot ? pot!.latitude : isRet ? ret!.latitude : pbb!.latitude;
+                      const lng = isPot ? pot!.longitude : isRet ? ret!.longitude : pbb!.longitude;
+                      const kel = isPot ? pot!.kelurahanDesa : isRet ? ret!.kelurahanDesa : pbb!.kelurahanDesa;
+                      const alm = isPot ? pot!.alamatLengkap : isRet ? ret!.alamatLengkap : pbb!.alamatObjek;
+                      const title = isPot ? `${pot!.namaWajibPajak} (${pot!.namaUsaha})` : isRet ? ret!.subObjekRetribusi : pbb!.namaWajibPajak;
+                      const no = isPot ? pot!.nomorFormulir : isRet ? ret!.nomorRegister : pbb!.nop;
+                      const foto = isPot ? pot?.fotoObjekUrl : isRet ? ret?.fotoObjekRetribusiUrl : pbb?.fotoObjekPbbUrl;
+                      const fotoN = isPot ? pot?.fotoObjekName : isRet ? ret?.fotoObjekRetribusiName : pbb?.fotoObjekPbbName;
+
+                      setVerifikasiMapModal({
+                        itemType: selectedItem.type,
+                        id: isPot ? pot!.id : isRet ? ret!.id : pbb!.id,
+                        name: title,
+                        nomor: no,
+                        kecamatan: isPot ? pot!.kecamatan : isRet ? ret!.kecamatan : pbb!.kecamatan,
+                        kelurahanDesa: kel || '-',
+                        alamat: alm || '-',
+                        latitude: lat || 0,
+                        longitude: lng || 0,
+                        statusVerifikasi: (isPot ? pot!.statusVerifikasi : isRet ? ret!.statusVerifikasi : pbb!.statusVerifikasi) || 'Menunggu Verifikasi',
+                        nilaiFiskalLabel: isPot ? 'Potensi Pajak Tahunan' : isRet ? 'Potensi Retribusi Tahunan' : 'PBB Terhutang',
+                        nilaiFiskalRp: formatRupiah(isPot ? (pot?.potensiRupiahTahunan || 0) : isRet ? (ret?.potensiPertahun || 0) : (pbb?.pbbTerhutang || 0)),
+                        petugas: isPot ? pot?.petugasPendata : isRet ? ret?.petugasPendata : pbb?.petugasValidasi,
+                        fotoUrl: foto,
+                        fotoName: fotoN,
+                      });
+                    }}
+                    className="mt-2 w-full py-2 px-3 rounded-xl bg-teal-600/20 hover:bg-teal-600/30 text-teal-300 border border-teal-500/40 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                  >
+                    <MapPin className="w-3.5 h-3.5 text-teal-400" />
+                    <span>Lihat Titik Geospasial &amp; Verifikasi Map</span>
+                  </button>
                 </div>
 
                 {/* 2. Catatan Petugas / Keterangan Objek */}
@@ -2543,14 +2835,16 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                         II. Rincian Hasil Input Potensi Retribusi Daerah ({filteredRetribusi.length} Data)
                       </h5>
                     )}
-                    <table className="w-full border-collapse border border-black print-table">
+                    <table className="w-full border-collapse border border-black print-table text-[9px]">
                       <thead>
                         <tr className="bg-slate-100">
-                          <th className="border border-black p-1 text-center w-8">No</th>
+                          <th className="border border-black p-1 text-center w-6">No</th>
                           <th className="border border-black p-1 text-left">No. Register</th>
                           <th className="border border-black p-1 text-left">Sub Objek &amp; Pengelola</th>
-                          <th className="border border-black p-1 text-left">Golongan Retribusi</th>
-                          <th className="border border-black p-1 text-left">Kecamatan / Desa</th>
+                          <th className="border border-black p-1 text-left">Golongan</th>
+                          <th className="border border-black p-1 text-left">Kecamatan</th>
+                          <th className="border border-black p-1 text-left font-bold">Kelurahan / Desa</th>
+                          <th className="border border-black p-1 text-left">Alamat Lengkap</th>
                           <th className="border border-black p-1 text-right">Tarif &amp; Satuan</th>
                           <th className="border border-black p-1 text-right">Potensi Tahunan (Rp)</th>
                           <th className="border border-black p-1 text-center">Status</th>
@@ -2559,7 +2853,7 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                       <tbody>
                         {filteredRetribusi.length === 0 ? (
                           <tr>
-                            <td colSpan={8} className="border border-black p-2 text-center text-slate-500 italic">
+                            <td colSpan={10} className="border border-black p-2 text-center text-slate-500 italic">
                               Tidak ada data retribusi daerah untuk wilayah ini.
                             </td>
                           </tr>
@@ -2570,11 +2864,13 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                               <td className="border border-black p-1 font-mono font-bold">{r.nomorRegister}</td>
                               <td className="border border-black p-1">
                                 <strong>{r.subObjekRetribusi}</strong>
-                                {r.namaPengelola && <div className="text-[9px] text-slate-600">Pengelola: {r.namaPengelola}</div>}
+                                {r.namaPengelola && <div className="text-[8px] text-slate-600">PIC: {r.namaPengelola}</div>}
                               </td>
                               <td className="border border-black p-1">{r.golonganRetribusi}</td>
-                              <td className="border border-black p-1">{r.kecamatan}, {r.kelurahanDesa}</td>
-                              <td className="border border-black p-1 text-right text-[9px]">
+                              <td className="border border-black p-1">{r.kecamatan}</td>
+                              <td className="border border-black p-1 font-semibold">{r.kelurahanDesa || '-'}</td>
+                              <td className="border border-black p-1 text-slate-700">{r.alamatLengkap || '-'}</td>
+                              <td className="border border-black p-1 text-right text-[8px]">
                                 {formatRupiah(r.tarifSatuan)} / {r.satuanTarif} ({r.jumlahSatuan})
                               </td>
                               <td className="border border-black p-1 text-right font-bold">{formatRupiah(r.potensiPertahun)}</td>
@@ -2585,7 +2881,7 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                       </tbody>
                       <tfoot>
                         <tr className="bg-slate-100 font-bold">
-                          <td colSpan={6} className="border border-black p-1 text-right">TOTAL POTENSI RETRIBUSI DAERAH:</td>
+                          <td colSpan={8} className="border border-black p-1 text-right">TOTAL POTENSI RETRIBUSI DAERAH:</td>
                           <td className="border border-black p-1 text-right">{formatRupiah(totalRetribusiRupiah)}</td>
                           <td className="border border-black p-1 text-center">{filteredRetribusi.length} Objek</td>
                         </tr>
@@ -2602,14 +2898,16 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                         I. Rincian Objek Potensi Pajak Daerah ({filteredPotensi.length} Data)
                       </h5>
                     )}
-                    <table className="w-full border-collapse border border-black print-table">
+                    <table className="w-full border-collapse border border-black print-table text-[9px]">
                       <thead>
                         <tr className="bg-slate-100">
-                          <th className="border border-black p-1 text-center w-8">No</th>
+                          <th className="border border-black p-1 text-center w-6">No</th>
                           <th className="border border-black p-1 text-left">No. Formulir</th>
                           <th className="border border-black p-1 text-left">Wajib Pajak &amp; Usaha</th>
                           <th className="border border-black p-1 text-left">Jenis Pajak</th>
                           <th className="border border-black p-1 text-left">Kecamatan</th>
+                          <th className="border border-black p-1 text-left font-bold">Kelurahan / Desa</th>
+                          <th className="border border-black p-1 text-left">Alamat Lengkap</th>
                           <th className="border border-black p-1 text-right">Potensi Tahunan (Rp)</th>
                           <th className="border border-black p-1 text-center">Status</th>
                         </tr>
@@ -2617,7 +2915,7 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                       <tbody>
                         {filteredPotensi.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="border border-black p-2 text-center text-slate-500 italic">
+                            <td colSpan={9} className="border border-black p-2 text-center text-slate-500 italic">
                               Tidak ada data potensi pajak untuk wilayah ini.
                             </td>
                           </tr>
@@ -2631,6 +2929,8 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                               </td>
                               <td className="border border-black p-1">{p.jenisPajak}</td>
                               <td className="border border-black p-1">{p.kecamatan}</td>
+                              <td className="border border-black p-1 font-semibold">{p.kelurahanDesa || '-'}</td>
+                              <td className="border border-black p-1 text-slate-700">{p.alamatLengkap || '-'}</td>
                               <td className="border border-black p-1 text-right font-bold">{formatRupiah(p.potensiRupiahTahunan)}</td>
                               <td className="border border-black p-1 text-center">{normalizeStatus(p.statusVerifikasi)}</td>
                             </tr>
@@ -2639,7 +2939,7 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                       </tbody>
                       <tfoot>
                         <tr className="bg-slate-100 font-bold">
-                          <td colSpan={5} className="border border-black p-1 text-right">TOTAL POTENSI PAJAK DAERAH:</td>
+                          <td colSpan={7} className="border border-black p-1 text-right">TOTAL POTENSI PAJAK DAERAH:</td>
                           <td className="border border-black p-1 text-right">{formatRupiah(totalPotensiRupiah)}</td>
                           <td className="border border-black p-1 text-center">{filteredPotensi.length} Objek</td>
                         </tr>
@@ -2656,13 +2956,15 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                         III. Rincian Ketetapan &amp; Pembayaran PBB-P2 ({filteredPbb.length} Data)
                       </h5>
                     )}
-                    <table className="w-full border-collapse border border-black print-table">
+                    <table className="w-full border-collapse border border-black print-table text-[9px]">
                       <thead>
                         <tr className="bg-slate-100">
-                          <th className="border border-black p-1 text-center w-8">No</th>
+                          <th className="border border-black p-1 text-center w-6">No</th>
                           <th className="border border-black p-1 text-left">NOP (18 Digit)</th>
                           <th className="border border-black p-1 text-left">Nama Wajib Pajak</th>
-                          <th className="border border-black p-1 text-left">Kecamatan / Desa</th>
+                          <th className="border border-black p-1 text-left">Kecamatan</th>
+                          <th className="border border-black p-1 text-left font-bold">Kelurahan / Desa</th>
+                          <th className="border border-black p-1 text-left">Alamat Objek Pajak</th>
                           <th className="border border-black p-1 text-right">Ketetapan PBB (Rp)</th>
                           <th className="border border-black p-1 text-center">Status Bayar</th>
                           <th className="border border-black p-1 text-center">Status</th>
@@ -2671,7 +2973,7 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                       <tbody>
                         {filteredPbb.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="border border-black p-2 text-center text-slate-500 italic">
+                            <td colSpan={9} className="border border-black p-2 text-center text-slate-500 italic">
                               Tidak ada data PBB-P2 untuk wilayah ini.
                             </td>
                           </tr>
@@ -2680,8 +2982,10 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                             <tr key={p.id}>
                               <td className="border border-black p-1 text-center">{idx + 1}</td>
                               <td className="border border-black p-1 font-mono">{p.nop}</td>
-                              <td className="border border-black p-1">{p.namaWajibPajak}</td>
-                              <td className="border border-black p-1">{p.kecamatan}, {p.kelurahanDesa}</td>
+                              <td className="border border-black p-1 font-semibold">{p.namaWajibPajak}</td>
+                              <td className="border border-black p-1">{p.kecamatan}</td>
+                              <td className="border border-black p-1 font-semibold">{p.kelurahanDesa || '-'}</td>
+                              <td className="border border-black p-1 text-slate-700">{p.alamatObjek || '-'}</td>
                               <td className="border border-black p-1 text-right font-bold">{formatRupiah(p.pbbTerhutang)}</td>
                               <td className="border border-black p-1 text-center font-bold">
                                 {p.statusPembayaran === 'LUNAS' ? 'LUNAS' : 'TERTUNGGAK'}
@@ -2693,7 +2997,7 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                       </tbody>
                       <tfoot>
                         <tr className="bg-slate-100 font-bold">
-                          <td colSpan={4} className="border border-black p-1 text-right">TOTAL KETETAPAN PBB-P2:</td>
+                          <td colSpan={6} className="border border-black p-1 text-right">TOTAL KETETAPAN PBB-P2:</td>
                           <td className="border border-black p-1 text-right">{formatRupiah(totalPbbTerhutang)}</td>
                           <td colSpan={2} className="border border-black p-1 text-center">
                             Lunas: {formatRupiah(totalPbbLunas)}
@@ -2762,6 +3066,49 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
 
           </div>
         </div>
+      )}
+
+      {/* MODAL VERIFIKASI GEOSPASIAL & LIHAT MAP */}
+      {verifikasiMapModal && (
+        <VerifikasiMapModal
+          isOpen={true}
+          onClose={() => setVerifikasiMapModal(null)}
+          itemType={verifikasiMapModal.itemType}
+          id={verifikasiMapModal.id}
+          name={verifikasiMapModal.name}
+          nomor={verifikasiMapModal.nomor}
+          kecamatan={verifikasiMapModal.kecamatan}
+          kelurahanDesa={verifikasiMapModal.kelurahanDesa}
+          alamat={verifikasiMapModal.alamat}
+          latitude={verifikasiMapModal.latitude}
+          longitude={verifikasiMapModal.longitude}
+          statusVerifikasi={verifikasiMapModal.statusVerifikasi}
+          nilaiFiskalLabel={verifikasiMapModal.nilaiFiskalLabel}
+          nilaiFiskalRp={verifikasiMapModal.nilaiFiskalRp}
+          fotoUrl={verifikasiMapModal.fotoUrl}
+          fotoName={verifikasiMapModal.fotoName}
+          petugas={verifikasiMapModal.petugas}
+          onUpdateStatus={(id, newStatus, note) => {
+            if (verifikasiMapModal.itemType === 'potensi') {
+              handleChangePotensiStatus(id, newStatus, note);
+            } else if (verifikasiMapModal.itemType === 'pbb') {
+              handleChangePbbStatus(id, newStatus, note);
+            } else {
+              handleChangeRetribusiStatus(id, newStatus, note);
+            }
+            setVerifikasiMapModal(prev => prev ? { ...prev, statusVerifikasi: newStatus } : null);
+          }}
+          onOpenFullMap={() => {
+            if (onNavigateToMap) {
+              onNavigateToMap({
+                lat: verifikasiMapModal.latitude,
+                lng: verifikasiMapModal.longitude,
+                title: verifikasiMapModal.name,
+                type: verifikasiMapModal.itemType,
+              });
+            }
+          }}
+        />
       )}
 
     </div>

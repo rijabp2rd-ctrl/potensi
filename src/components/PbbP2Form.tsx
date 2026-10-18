@@ -24,9 +24,23 @@ import {
   PieChart,
   Search,
   PlayCircle,
-  ShieldCheck
+  ShieldCheck,
+  Printer,
+  Eye,
+  Sparkles,
+  SlidersHorizontal,
+  Layers,
+  HelpCircle,
+  FileCheck
 } from 'lucide-react';
 import { PbbP2Entry, AppUser, GpsCoordinateResult } from '../types';
+import { 
+  calculatePbbDetail, 
+  getKelasBumi, 
+  getKelasBangunan, 
+  terbilangRupiah 
+} from '../utils/pbbCalculator';
+import { SpptPbbModal } from './SpptPbbModal';
 import { 
   KABUPATEN_HSU, 
   KECAMATAN_HSU, 
@@ -88,11 +102,24 @@ export const PbbP2Form: React.FC<PbbP2FormProps> = ({
   const [kelurahanDesa, setKelurahanDesa] = useState('');
   const [alamatObjek, setAlamatObjek] = useState('');
 
-  // NJOP & Luas
-  const [luasBumiM2, setLuasBumiM2] = useState<number>(300);
-  const [njopBumiPerM2, setNjopBumiPerM2] = useState<number>(500000);
-  const [luasBangunanM2, setLuasBangunanM2] = useState<number>(120);
-  const [njopBangunanPerM2, setNjopBangunanPerM2] = useState<number>(1000000);
+  // NJOP & Luas & Parameter Perhitungan SPPT PBB-P2 Lengkap
+  const [luasBumiM2, setLuasBumiM2] = useState<number>(450);
+  const [njopBumiPerM2, setNjopBumiPerM2] = useState<number>(850000);
+  const [customKelasBumi, setCustomKelasBumi] = useState<string>('');
+  
+  const [hasBangunan, setHasBangunan] = useState<boolean>(true);
+  const [luasBangunanM2, setLuasBangunanM2] = useState<number>(240);
+  const [njopBangunanPerM2, setNjopBangunanPerM2] = useState<number>(1200000);
+  const [customKelasBangunan, setCustomKelasBangunan] = useState<string>('');
+  
+  const [njoptkp, setNjoptkp] = useState<number>(10000000);
+  const [tarifPbbPersen, setTarifPbbPersen] = useState<number>(0.15);
+  const [stimulusPengurangan, setStimulusPengurangan] = useState<number>(0);
+  const [dendaAdministrasi, setDendaAdministrasi] = useState<number>(0);
+
+  // Modal dialog preview Lembar Resmi SPPT PBB-P2
+  const [showCurrentSpptModal, setShowCurrentSpptModal] = useState<boolean>(false);
+  const [selectedSpptForModal, setSelectedSpptForModal] = useState<PbbP2Entry | null>(null);
 
   // Status bayar
   const [statusPembayaran, setStatusPembayaran] = useState<'LUNAS' | 'BELUM LUNAS'>('BELUM LUNAS');
@@ -155,13 +182,81 @@ export const PbbP2Form: React.FC<PbbP2FormProps> = ({
   const [isCapturingGps, setIsCapturingGps] = useState(false);
   const [gpsStatusMessage, setGpsStatusMessage] = useState<string | null>(null);
 
-  // Perhitungan PBB-P2 otomatis
-  const totalNjopBumi = luasBumiM2 * njopBumiPerM2;
-  const totalNjopBangunan = luasBangunanM2 * njopBangunanPerM2;
-  const totalNjop = totalNjopBumi + totalNjopBangunan;
-  const njoptkp = 10000000;
-  const njopKenaPajak = Math.max(0, totalNjop - njoptkp);
-  const pbbTerhutang = Math.round(njopKenaPajak * 0.0015);
+  // Perhitungan PBB-P2 Otomatis Sesuai SPPT Resmi
+  const effectiveLuasBangunan = hasBangunan ? luasBangunanM2 : 0;
+  const effectiveNjopBangunan = hasBangunan ? njopBangunanPerM2 : 0;
+
+  const calcResult = calculatePbbDetail({
+    luasBumi: luasBumiM2,
+    njopBumiPerM2: njopBumiPerM2,
+    luasBangunan: effectiveLuasBangunan,
+    njopBangunanPerM2: effectiveNjopBangunan,
+    njoptkp,
+    tarifPbbPersen,
+    stimulusPengurangan,
+    dendaAdministrasi,
+  });
+
+  const totalNjopBumi = calcResult.totalNjopBumi;
+  const totalNjopBangunan = calcResult.totalNjopBangunan;
+  const totalNjop = calcResult.njopTotal;
+  const njopKenaPajak = calcResult.njopKenaPajak;
+  const pbbTerhutang = calcResult.totalPbbHarusDibayar;
+  const kelasBumi = customKelasBumi || calcResult.kelasBumi;
+  const kelasBangunan = hasBangunan ? (customKelasBangunan || calcResult.kelasBangunan) : '-';
+
+  // Preset Cepat Objek Pajak di Wilayah Kabupaten HSU
+  const applyPresetHsu = (type: 'hunian' | 'ruko' | 'pertanian' | 'tanah_kosong') => {
+    if (type === 'hunian') {
+      setLuasBumiM2(300);
+      setNjopBumiPerM2(500000);
+      setCustomKelasBumi('A36');
+      setHasBangunan(true);
+      setLuasBangunanM2(120);
+      setNjopBangunanPerM2(1000000);
+      setCustomKelasBangunan('B12');
+      setNjoptkp(10000000);
+      setTarifPbbPersen(0.10);
+      setStimulusPengurangan(0);
+      setDendaAdministrasi(0);
+    } else if (type === 'ruko') {
+      setLuasBumiM2(250);
+      setNjopBumiPerM2(1200000);
+      setCustomKelasBumi('A34');
+      setHasBangunan(true);
+      setLuasBangunanM2(350);
+      setNjopBangunanPerM2(1800000);
+      setCustomKelasBangunan('B10');
+      setNjoptkp(10000000);
+      setTarifPbbPersen(0.20);
+      setStimulusPengurangan(0);
+      setDendaAdministrasi(0);
+    } else if (type === 'pertanian') {
+      setLuasBumiM2(2500);
+      setNjopBumiPerM2(60000);
+      setCustomKelasBumi('A43');
+      setHasBangunan(false);
+      setLuasBangunanM2(0);
+      setNjopBangunanPerM2(0);
+      setCustomKelasBangunan('-');
+      setNjoptkp(10000000);
+      setTarifPbbPersen(0.05);
+      setStimulusPengurangan(0);
+      setDendaAdministrasi(0);
+    } else if (type === 'tanah_kosong') {
+      setLuasBumiM2(500);
+      setNjopBumiPerM2(350000);
+      setCustomKelasBumi('A38');
+      setHasBangunan(false);
+      setLuasBangunanM2(0);
+      setNjopBangunanPerM2(0);
+      setCustomKelasBangunan('-');
+      setNjoptkp(10000000);
+      setTarifPbbPersen(0.10);
+      setStimulusPengurangan(0);
+      setDendaAdministrasi(0);
+    }
+  };
 
   const isCoordinateValidHsu = isWithinHsuRegion(latitude, longitude);
   const distanceToAmuntai = calculateHaversineDistance(
@@ -234,6 +329,10 @@ export const PbbP2Form: React.FC<PbbP2FormProps> = ({
     setFotoObjekPbbUrl('');
     setStrukBayarUrl('');
     setJustSavedItem(null);
+    setCustomKelasBumi('');
+    setCustomKelasBangunan('');
+    setStimulusPengurangan(0);
+    setDendaAdministrasi(0);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -265,10 +364,20 @@ export const PbbP2Form: React.FC<PbbP2FormProps> = ({
       alamatObjek: alamatObjek || `Wilayah ${kecamatan}, Kab. HSU`,
       luasBumiM2,
       njopBumiPerM2,
-      luasBangunanM2,
-      njopBangunanPerM2,
-      njopTotal: totalNjop,
-      pbbTerhutang,
+      kelasBumi,
+      totalNjopBumi: calcResult.totalNjopBumi,
+      luasBangunanM2: effectiveLuasBangunan,
+      njopBangunanPerM2: effectiveNjopBangunan,
+      kelasBangunan,
+      totalNjopBangunan: calcResult.totalNjopBangunan,
+      njopTotal: calcResult.njopTotal,
+      njoptkp: calcResult.njoptkp,
+      njopKenaPajak: calcResult.njopKenaPajak,
+      tarifPbbPersen: calcResult.tarifPbbPersen,
+      stimulusPengurangan: calcResult.stimulusPengurangan,
+      dendaAdministrasi: calcResult.dendaAdministrasi,
+      totalPbbHarusDibayar: calcResult.totalPbbHarusDibayar,
+      pbbTerhutang: calcResult.totalPbbHarusDibayar,
       statusPembayaran,
       statusVerifikasi: 'Terverifikasi',
       tanggalBayar: statusPembayaran === 'LUNAS' ? new Date().toISOString().split('T')[0] : undefined,
@@ -624,79 +733,550 @@ export const PbbP2Form: React.FC<PbbP2FormProps> = ({
             </div>
           </div>
 
-          {/* 3. Luas & NJOP Ketetapan */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 text-teal-400">
-              <Calculator className="w-4 h-4" />
-              <span>3. Luas Bumi, Bangunan, NJOP &amp; Ketetapan PBB</span>
-            </h2>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1.5">
-                  Luas Tanah / Bumi (m&sup2;)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={luasBumiM2}
-                  onChange={(e) => setLuasBumiM2(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-teal-500"
-                />
+          {/* 3. Luas Bumi, Bangunan, NJOP & Ketetapan PBB (Sesuai Referensi SPPT PBB Resmi) */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-6">
+            
+            {/* Header Section 3 */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2 text-teal-400">
+                <Calculator className="w-5 h-5" />
+                <div>
+                  <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+                    3. Luas Bumi, Bangunan, NJOP &amp; Ketetapan PBB-P2
+                  </h2>
+                  <p className="text-[11px] text-slate-400 font-normal">
+                    Formulasi resmi SPPT PBB-P2 Pemkab Hulu Sungai Utara &bull; UU HKPD No. 1/2022 &bull; Perda No. 01/2024
+                  </p>
+                </div>
               </div>
 
-              <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1.5">
-                  NJOP Bumi per m&sup2; (Rp)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="10000"
-                  value={njopBumiPerM2}
-                  onChange={(e) => setNjopBumiPerM2(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-teal-500"
-                />
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowCurrentSpptModal(true)}
+                className="px-4 py-2 rounded-xl bg-teal-600/20 hover:bg-teal-600/30 text-teal-300 border border-teal-500/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>Lihat Lembar SPPT Resmi</span>
+              </button>
+            </div>
 
-              <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1.5">
-                  Luas Bangunan (m&sup2;)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={luasBangunanM2}
-                  onChange={(e) => setLuasBangunanM2(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-teal-500"
-                />
+            {/* Presets Cepat Objek Pajak di Wilayah HSU */}
+            <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-3.5 space-y-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-300">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>Pilihan Cepat Standar Wilayah Kabupaten HSU (1-Klik):</span>
               </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => applyPresetHsu('hunian')}
+                  className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-700/70 hover:border-teal-500/50 text-left transition-colors cursor-pointer group"
+                >
+                  <span className="font-bold text-white block text-[11px] group-hover:text-teal-300">
+                    🏠 Hunian / Perumahan
+                  </span>
+                  <span className="text-[10px] text-slate-400 block mt-0.5">
+                    Bumi 300m&sup2; &bull; Bgn 120m&sup2; (0,10%)
+                  </span>
+                </button>
 
-              <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1.5">
-                  NJOP Bangunan per m&sup2; (Rp)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="10000"
-                  value={njopBangunanPerM2}
-                  onChange={(e) => setNjopBangunanPerM2(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-teal-500"
-                />
+                <button
+                  type="button"
+                  onClick={() => applyPresetHsu('ruko')}
+                  className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-700/70 hover:border-blue-500/50 text-left transition-colors cursor-pointer group"
+                >
+                  <span className="font-bold text-white block text-[11px] group-hover:text-blue-300">
+                    🏢 Ruko Pasar Amuntai
+                  </span>
+                  <span className="text-[10px] text-slate-400 block mt-0.5">
+                    Bumi 250m&sup2; &bull; Bgn 350m&sup2; (0,20%)
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => applyPresetHsu('pertanian')}
+                  className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-700/70 hover:border-emerald-500/50 text-left transition-colors cursor-pointer group"
+                >
+                  <span className="font-bold text-white block text-[11px] group-hover:text-emerald-300">
+                    🌾 Sawah Rawa Lebak
+                  </span>
+                  <span className="text-[10px] text-slate-400 block mt-0.5">
+                    Bumi 2.500m&sup2; &bull; Tanpa Bgn (0,05%)
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => applyPresetHsu('tanah_kosong')}
+                  className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-700/70 hover:border-amber-500/50 text-left transition-colors cursor-pointer group"
+                >
+                  <span className="font-bold text-white block text-[11px] group-hover:text-amber-300">
+                    📍 Pekarangan Kosong
+                  </span>
+                  <span className="text-[10px] text-slate-400 block mt-0.5">
+                    Bumi 500m&sup2; &bull; Tanpa Bgn (0,10%)
+                  </span>
+                </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-slate-950 border border-slate-800 text-xs font-mono">
-              <div>
-                <span className="text-slate-400 block">Total Nilai NJOP Objek:</span>
-                <span className="text-base font-bold text-white">{formatRupiah(totalNjop)}</span>
+            {/* Sub-Panel: A. DATA OBJEK BUMI / TANAH & B. DATA OBJEK BANGUNAN */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              
+              {/* KOTAK A: OBJEK BUMI (TANAH) */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-950/80 border border-emerald-500/30 space-y-3.5">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                    <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                      A. Data Objek Bumi (Tanah / Persil)
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[11px] font-mono bg-emerald-500/10 text-emerald-300 px-2.5 py-0.5 rounded-lg border border-emerald-500/20">
+                    <span>Kelas:</span>
+                    <strong className="font-black text-white">{kelasBumi}</strong>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-300 block mb-1">
+                      Luas Tanah / Bumi (m&sup2;) <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      required
+                      value={luasBumiM2}
+                      onChange={(e) => setLuasBumiM2(Math.max(0, parseFloat(e.target.value) || 0))}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-slate-300 block mb-1">
+                      Kelas Bumi (SPPT)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder={calcResult.kelasBumi}
+                      value={customKelasBumi}
+                      onChange={(e) => setCustomKelasBumi(e.target.value.toUpperCase())}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white font-mono uppercase focus:outline-none focus:border-emerald-500"
+                    />
+                    <span className="text-[10px] text-slate-500 mt-0.5 block">
+                      Otomatis: {calcResult.kelasBumi}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-slate-300">
+                      NJOP Bumi per m&sup2; (Rp) <span className="text-red-400">*</span>
+                    </label>
+                    <span className="text-xs font-mono font-bold text-emerald-400">
+                      {formatRupiah(njopBumiPerM2)}/m&sup2;
+                    </span>
+                  </div>
+                  <input
+                    type="number"
+                    min="10000"
+                    step="10000"
+                    required
+                    value={njopBumiPerM2}
+                    onChange={(e) => setNjopBumiPerM2(Math.max(0, parseFloat(e.target.value) || 0))}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
+                  />
+                  {/* Quick NJOP Bumi Chips */}
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {[60000, 150000, 350000, 500000, 850000, 1200000].map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setNjopBumiPerM2(v)}
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono transition-colors cursor-pointer ${
+                          njopBumiPerM2 === v
+                            ? 'bg-emerald-500 text-slate-950 font-bold'
+                            : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                        }`}
+                      >
+                        {formatRupiah(v).replace(',00', '')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Subtotal Total NJOP Bumi Box */}
+                <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/20 flex items-center justify-between font-mono text-xs">
+                  <div>
+                    <span className="text-[10px] text-emerald-400 uppercase font-sans font-bold block">
+                      Total Nilai NJOP Bumi (Luas &times; NJOP/m&sup2;):
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-sans">
+                      {luasBumiM2} m&sup2; &times; {formatRupiah(njopBumiPerM2)}
+                    </span>
+                  </div>
+                  <span className="text-sm sm:text-base font-black text-emerald-300">
+                    {formatRupiah(calcResult.totalNjopBumi)}
+                  </span>
+                </div>
               </div>
-              <div>
-                <span className="text-slate-400 block">Ketetapan PBB Terhutang:</span>
-                <span className="text-lg font-black text-emerald-400">{formatRupiah(pbbTerhutang)}</span>
+
+              {/* KOTAK B: OBJEK BANGUNAN */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-950/80 border border-blue-500/30 space-y-3.5">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-400"></span>
+                    <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                      B. Data Objek Bangunan
+                    </h3>
+                  </div>
+
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={hasBangunan}
+                      onChange={(e) => setHasBangunan(e.target.checked)}
+                      className="rounded border-slate-700 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+                    />
+                    <span className="text-xs font-bold text-slate-300">
+                      Ada Bangunan
+                    </span>
+                  </label>
+                </div>
+
+                {hasBangunan ? (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-semibold text-slate-300 block mb-1">
+                          Luas Bangunan (m&sup2;) <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          required={hasBangunan}
+                          value={luasBangunanM2}
+                          onChange={(e) => setLuasBangunanM2(Math.max(0, parseFloat(e.target.value) || 0))}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-semibold text-slate-300 block mb-1">
+                          Kelas Bangunan (SPPT)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder={calcResult.kelasBangunan}
+                          value={customKelasBangunan}
+                          onChange={(e) => setCustomKelasBangunan(e.target.value.toUpperCase())}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white font-mono uppercase focus:outline-none focus:border-blue-500"
+                        />
+                        <span className="text-[10px] text-slate-500 mt-0.5 block">
+                          Otomatis: {calcResult.kelasBangunan}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-semibold text-slate-300">
+                          NJOP Bangunan per m&sup2; (Rp) <span className="text-red-400">*</span>
+                        </label>
+                        <span className="text-xs font-mono font-bold text-blue-400">
+                          {formatRupiah(njopBangunanPerM2)}/m&sup2;
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        min="50000"
+                        step="10000"
+                        required={hasBangunan}
+                        value={njopBangunanPerM2}
+                        onChange={(e) => setNjopBangunanPerM2(Math.max(0, parseFloat(e.target.value) || 0))}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-blue-500"
+                      />
+                      {/* Quick NJOP Bangunan Chips */}
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {[500000, 750000, 1000000, 1200000, 1500000, 1800000].map((v) => (
+                          <button
+                            key={v}
+                            type="button"
+                            onClick={() => setNjopBangunanPerM2(v)}
+                            className={`px-2 py-0.5 rounded text-[10px] font-mono transition-colors cursor-pointer ${
+                              njopBangunanPerM2 === v
+                                ? 'bg-blue-500 text-white font-bold'
+                                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                            }`}
+                          >
+                            {formatRupiah(v).replace(',00', '')}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Subtotal Total NJOP Bangunan Box */}
+                    <div className="p-3 rounded-xl bg-blue-950/30 border border-blue-500/20 flex items-center justify-between font-mono text-xs">
+                      <div>
+                        <span className="text-[10px] text-blue-400 uppercase font-sans font-bold block">
+                          Total Nilai NJOP Bangunan:
+                        </span>
+                        <span className="text-[11px] text-slate-400 font-sans">
+                          {luasBangunanM2} m&sup2; &times; {formatRupiah(njopBangunanPerM2)}
+                        </span>
+                      </div>
+                      <span className="text-sm sm:text-base font-black text-blue-300">
+                        {formatRupiah(calcResult.totalNjopBangunan)}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-6 rounded-xl bg-slate-900/60 border border-dashed border-slate-800 text-center space-y-2">
+                    <Building2 className="w-8 h-8 text-slate-600 mx-auto" />
+                    <p className="text-xs font-semibold text-slate-300">
+                      Objek Tidak Memiliki Bangunan (Tanah Kosong)
+                    </p>
+                    <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
+                      Luas &amp; NJOP Bangunan dihitung Rp 0. Perhitungan PBB hanya didasarkan pada NJOP Bumi/Tanah.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+            {/* Sub-Panel: C. PARAMETER KETETAPAN PBB-P2 (NJOPTKP, TARIF, STIMULUS) */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-slate-800 text-xs font-bold text-white uppercase tracking-wider">
+                <SlidersHorizontal className="w-4 h-4 text-teal-400" />
+                <span>C. Parameter Pengenaan, Tarif &amp; Stimulus Pajak Daerah</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+                
+                {/* 1. NJOPTKP */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1">
+                    NJOPTKP (Tidak Kena Pajak)
+                  </label>
+                  <select
+                    value={njoptkp}
+                    onChange={(e) => setNjoptkp(parseInt(e.target.value) || 0)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500 cursor-pointer font-medium"
+                  >
+                    <option value={10000000}>Rp 10.000.000 (Standar Perda HSU)</option>
+                    <option value={12000000}>Rp 12.000.000 (Maksimal)</option>
+                    <option value={0}>Rp 0 (Objek Kedua WP Sama)</option>
+                  </select>
+                  <span className="text-[10px] text-slate-500 mt-1 block">
+                    Objek utama WP berhak NJOPTKP
+                  </span>
+                </div>
+
+                {/* 2. Tarif PBB-P2 */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1">
+                    Tarif PBB-P2 (%)
+                  </label>
+                  <select
+                    value={tarifPbbPersen}
+                    onChange={(e) => setTarifPbbPersen(parseFloat(e.target.value) || 0.15)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500 cursor-pointer font-medium"
+                  >
+                    <option value={0.10}>0,10% (Hunian &le; 1 Miliar)</option>
+                    <option value={0.15}>0,15% (Standar Umum SPPT HSU)</option>
+                    <option value={0.20}>0,20% (Komersial / &gt; 1 Miliar)</option>
+                    <option value={0.05}>0,05% (Pertanian / Peternakan Rawa)</option>
+                  </select>
+                  <span className="text-[10px] text-slate-500 mt-1 block">
+                    Perda Kab. HSU No. 01/2024
+                  </span>
+                </div>
+
+                {/* 3. Stimulus / Pengurangan SPPT */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1">
+                    Stimulus / Pengurangan (Rp)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="5000"
+                    value={stimulusPengurangan}
+                    onChange={(e) => setStimulusPengurangan(Math.max(0, parseFloat(e.target.value) || 0))}
+                    placeholder="0"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-teal-500"
+                  />
+                  <span className="text-[10px] text-slate-500 mt-1 block">
+                    Keringanan pensiunan / stimulus
+                  </span>
+                </div>
+
+                {/* 4. Denda Administrasi */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1">
+                    Denda Keterlambatan (Rp)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="5000"
+                    value={dendaAdministrasi}
+                    onChange={(e) => setDendaAdministrasi(Math.max(0, parseFloat(e.target.value) || 0))}
+                    placeholder="0"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-teal-500"
+                  />
+                  <span className="text-[10px] text-slate-500 mt-1 block">
+                    1% per bulan lewat tempo
+                  </span>
+                </div>
+
               </div>
             </div>
+
+            {/* Sub-Panel: D. TABEL RESMI LEMBAR SPPT PBB-P2 (SESUAI DOKUMEN RESMI BP2RD HSU) */}
+            <div className="rounded-2xl border-2 border-slate-700 bg-slate-950 overflow-hidden shadow-2xl">
+              <div className="px-5 py-3.5 bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border-b border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-teal-400" />
+                  <span className="text-xs font-extrabold text-white uppercase tracking-wider">
+                    Format Tabel Lembar Resmi SPPT PBB-P2 (Kabupaten Hulu Sungai Utara)
+                  </span>
+                </div>
+                <span className="text-[10px] uppercase font-mono px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                  Hitungan Real-Time Sah
+                </span>
+              </div>
+
+              {/* Tabel Komparasi Objek Bumi & Bangunan */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-slate-900/90 border-b border-slate-800 text-slate-400 uppercase text-[10px] font-semibold">
+                      <th className="py-2.5 px-4 text-left">Objek Pajak</th>
+                      <th className="py-2.5 px-4 text-right">Luas (m&sup2;)</th>
+                      <th className="py-2.5 px-4 text-center">Kelas</th>
+                      <th className="py-2.5 px-4 text-right">NJOP per m&sup2; (Rp)</th>
+                      <th className="py-2.5 px-4 text-right font-bold text-teal-300">Total NJOP (Rp)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800 font-mono">
+                    <tr className="hover:bg-slate-900/40">
+                      <td className="py-3 px-4 font-sans font-bold text-white flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                        <span>BUMI (Tanah Persil)</span>
+                      </td>
+                      <td className="py-3 px-4 text-right text-slate-200">
+                        {luasBumiM2.toLocaleString('id-ID')}
+                      </td>
+                      <td className="py-3 px-4 text-center font-bold text-emerald-400">
+                        {kelasBumi}
+                      </td>
+                      <td className="py-3 px-4 text-right text-slate-300">
+                        {formatRupiah(njopBumiPerM2)}
+                      </td>
+                      <td className="py-3 px-4 text-right font-bold text-white">
+                        {formatRupiah(calcResult.totalNjopBumi)}
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-slate-900/40">
+                      <td className="py-3 px-4 font-sans font-bold text-white flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                        <span>BANGUNAN</span>
+                      </td>
+                      <td className="py-3 px-4 text-right text-slate-200">
+                        {hasBangunan ? luasBangunanM2.toLocaleString('id-ID') : '-'}
+                      </td>
+                      <td className="py-3 px-4 text-center font-bold text-blue-400">
+                        {hasBangunan ? kelasBangunan : '-'}
+                      </td>
+                      <td className="py-3 px-4 text-right text-slate-300">
+                        {hasBangunan ? formatRupiah(njopBangunanPerM2) : '-'}
+                      </td>
+                      <td className="py-3 px-4 text-right font-bold text-white">
+                        {formatRupiah(calcResult.totalNjopBangunan)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Rincian Komputasi Ketetapan SPPT */}
+              <div className="p-4 sm:p-5 bg-slate-950 border-t border-slate-800 space-y-2 text-xs font-mono">
+                <div className="flex justify-between items-center text-slate-300">
+                  <span className="font-sans">Total Nilai Jual Objek Pajak (NJOP Bumi + Bangunan):</span>
+                  <span className="font-bold text-white text-sm">{formatRupiah(calcResult.njopTotal)}</span>
+                </div>
+
+                <div className="flex justify-between items-center text-slate-400">
+                  <span className="font-sans">Nilai Jual Objek Pajak Tidak Kena Pajak (NJOPTKP):</span>
+                  <span className="text-amber-300">(-) {formatRupiah(calcResult.njoptkp)}</span>
+                </div>
+
+                <div className="flex justify-between items-center text-slate-300 pt-1 border-t border-slate-800/80">
+                  <span className="font-sans font-bold">NJOP untuk Penghitungan PBB (NJOPKP):</span>
+                  <span className="font-bold text-teal-300 text-sm">{formatRupiah(calcResult.njopKenaPajak)}</span>
+                </div>
+
+                <div className="flex justify-between items-center text-slate-400">
+                  <span className="font-sans">Tarif Pajak Bumi &amp; Bangunan P2:</span>
+                  <span className="text-slate-200 font-bold">{calcResult.tarifPbbPersen}%</span>
+                </div>
+
+                <div className="flex justify-between items-center text-slate-300">
+                  <span className="font-sans">Ketetapan Pokok PBB Terhutang ({calcResult.tarifPbbPersen}% &times; NJOPKP):</span>
+                  <span className="font-bold text-white">{formatRupiah(calcResult.ketetapanPbbTerhutang)}</span>
+                </div>
+
+                {calcResult.stimulusPengurangan > 0 && (
+                  <div className="flex justify-between items-center text-emerald-400">
+                    <span className="font-sans">Pengurangan / Stimulus SPPT:</span>
+                    <span>(-) {formatRupiah(calcResult.stimulusPengurangan)}</span>
+                  </div>
+                )}
+
+                {calcResult.dendaAdministrasi > 0 && (
+                  <div className="flex justify-between items-center text-red-400">
+                    <span className="font-sans">Denda Administrasi Keterlambatan:</span>
+                    <span>(+) {formatRupiah(calcResult.dendaAdministrasi)}</span>
+                  </div>
+                )}
+
+                {/* Final Total Ketetapan Highlight */}
+                <div className="mt-3 p-4 rounded-xl bg-gradient-to-r from-teal-950 via-slate-900 to-blue-950 border border-teal-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+                  <div>
+                    <span className="text-xs uppercase font-sans font-black text-teal-300 tracking-wider block">
+                      JUMLAH PBB YANG HARUS DIBAYAR :
+                    </span>
+                    <span className="text-[11px] font-sans text-slate-300 italic">
+                      Terbilang: &ldquo;{calcResult.terbilang}&rdquo;
+                    </span>
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono tracking-tight">
+                    {formatRupiah(calcResult.totalPbbHarusDibayar)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Button at bottom of table */}
+              <div className="p-3.5 bg-slate-900/90 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[11px] text-slate-400">
+                  Formula teruji: Luas Bumi &times; NJOP/m&sup2; + Luas Bgn &times; NJOP/m&sup2; - NJOPTKP &times; Tarif
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentSpptModal(true)}
+                  className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-teal-950/40 transition-all cursor-pointer active:scale-95"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Buka Lembar SPPT Lengkap Siap Cetak</span>
+                </button>
+              </div>
+            </div>
+
           </div>
 
           {/* 4. Status Pembayaran SPPT */}
@@ -1054,9 +1634,18 @@ export const PbbP2Form: React.FC<PbbP2FormProps> = ({
                             )}
                           </div>
                         </td>
-                        {/* Aksi Petugas: Proses, Verifikasi, Setuju */}
+                        {/* Aksi Petugas: SPPT, Proses, Verifikasi, Setuju */}
                         <td className="py-3 px-3 text-center whitespace-nowrap">
                           <div className="flex items-center justify-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedSpptForModal(p)}
+                              title="Buka Lembar Resmi SPPT PBB-P2"
+                              className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-950/60 hover:bg-teal-900/80 text-teal-300 border border-teal-800/80 transition-all cursor-pointer flex items-center gap-1 shadow-sm"
+                            >
+                              <Eye className="w-2.5 h-2.5" />
+                              <span>SPPT</span>
+                            </button>
                             <button
                               type="button"
                               onClick={() => {
@@ -1117,6 +1706,49 @@ export const PbbP2Form: React.FC<PbbP2FormProps> = ({
             </table>
           </div>
         </div>
+      )}
+
+      {/* Modal Lembar Resmi SPPT PBB-P2 (Formulir Langsung) */}
+      {showCurrentSpptModal && (
+        <SpptPbbModal
+          entry={{
+            nop: statusNop === 'tidak_ada' ? 'TIDAK ADA NOP' : (nop || '63.08.xxx.xxx.xxx-xxxx.x'),
+            tahunPajak,
+            namaWajibPajak: namaWajibPajak || 'Wajib Pajak Terdata',
+            nikWajibPajak,
+            kecamatan,
+            kelurahanDesa: kelurahanDesa || 'Amuntai',
+            alamatObjek: alamatObjek || `Wilayah ${kecamatan}`,
+            luasBumiM2,
+            njopBumiPerM2,
+            kelasBumi,
+            totalNjopBumi: calcResult.totalNjopBumi,
+            luasBangunanM2: effectiveLuasBangunan,
+            njopBangunanPerM2: effectiveNjopBangunan,
+            kelasBangunan,
+            totalNjopBangunan: calcResult.totalNjopBangunan,
+            njopTotal: calcResult.njopTotal,
+            njoptkp: calcResult.njoptkp,
+            njopKenaPajak: calcResult.njopKenaPajak,
+            tarifPbbPersen: calcResult.tarifPbbPersen,
+            stimulusPengurangan: calcResult.stimulusPengurangan,
+            dendaAdministrasi: calcResult.dendaAdministrasi,
+            totalPbbHarusDibayar: calcResult.totalPbbHarusDibayar,
+            pbbTerhutang: calcResult.totalPbbHarusDibayar,
+            statusPembayaran,
+            bankTempatBayar,
+            petugasValidasi: currentUser?.name || 'Petugas Validasi BP2RD HSU',
+          }}
+          onClose={() => setShowCurrentSpptModal(false)}
+        />
+      )}
+
+      {/* Modal Lembar Resmi SPPT PBB-P2 (Dari Tabel Riwayat) */}
+      {selectedSpptForModal && (
+        <SpptPbbModal
+          entry={selectedSpptForModal}
+          onClose={() => setSelectedSpptForModal(null)}
+        />
       )}
 
     </div>
