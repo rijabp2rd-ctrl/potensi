@@ -427,4 +427,67 @@ export const GoogleWorkspaceService = {
       timestamp: new Date().toISOString(),
     };
   },
+
+  // 7. Sync entire database via Google Apps Script Web App (Kode.gs) without requiring Google OAuth popup
+  async syncAllViaAppsScript(
+    scriptUrl: string,
+    data: {
+      potensi: PotensiPajakEntry[];
+      retribusi: RetribusiDaerahEntry[];
+      pbb: PbbP2Entry[];
+      ikm?: any[];
+      library?: any[];
+    }
+  ): Promise<{
+    spreadsheetId: string;
+    spreadsheetUrl: string;
+    title: string;
+    syncedCounts: { potensi: number; retribusi: number; pbb: number };
+    timestamp: string;
+  }> {
+    const cleanUrl = scriptUrl.trim();
+    if (!cleanUrl.startsWith('https://script.google.com/')) {
+      throw new Error('URL Web App tidak valid. Pastikan URL diawali dengan https://script.google.com/macros/s/.../exec');
+    }
+
+    const payload = {
+      action: 'syncAll',
+      potensi: data.potensi,
+      retribusi: data.retribusi,
+      pbb: data.pbb,
+      ikm: data.ikm || [],
+      library: data.library || [],
+    };
+
+    // Use text/plain to avoid CORS preflight rejection on Google Apps Script Web Apps
+    const res = await fetch(cleanUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Gagal menghubungi Google Apps Script (HTTP ${res.status}). Pastikan akses Web App disetel ke "Siapa saja (Anyone)".`);
+    }
+
+    const result = await res.json().catch(() => null);
+    if (result && result.status === 'error') {
+      throw new Error(result.message || 'Terjadi kesalahan pada eksekusi Kode.gs di Google Apps Script.');
+    }
+
+    return {
+      spreadsheetId: result?.spreadsheetId || 'APPS-SCRIPT-DB',
+      spreadsheetUrl: result?.spreadsheetUrl || cleanUrl,
+      title: result?.title || 'Database SIPOTENSI (Google Apps Script)',
+      syncedCounts: {
+        potensi: data.potensi.length,
+        retribusi: data.retribusi.length,
+        pbb: data.pbb.length,
+      },
+      timestamp: result?.timestamp || new Date().toISOString(),
+    };
+  },
 };
+

@@ -333,31 +333,48 @@ export const PbbP2Form: React.FC<PbbP2FormProps> = ({
     setCustomKelasBangunan('');
     setStimulusPengurangan(0);
     setDendaAdministrasi(0);
+    setFormError(null);
   };
+
+  const [formError, setFormError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (statusNop === 'ada') {
-      if (!nop || nop === 'TIDAK ADA NOP' || nop.trim().length < 10) {
-        alert('Mohon masukkan Nomor Objek Pajak (NOP) yang valid (minimal 10 digit, contoh: 63.08.010.001.002-0045.0)');
-        return;
-      }
-    }
-
-    if (!namaWajibPajak) {
-      alert('Mohon isi nama wajib pajak');
+    if (!namaWajibPajak.trim()) {
+      setFormError('Mohon isi Nama Wajib Pajak pada Bagian 1 terlebih dahulu.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
-    const finalNop = statusNop === 'tidak_ada' ? 'TIDAK ADA NOP' : nop.trim();
+    if (luasBumiM2 <= 0) {
+      setFormError('Mohon isi Luas Tanah / Bumi (m²) lebih dari 0.');
+      return;
+    }
+
+    if (njopBumiPerM2 <= 0) {
+      setFormError('Mohon isi nilai NJOP Bumi per m² (Rp).');
+      return;
+    }
+
+    setFormError(null);
+
+    let finalNop = 'TIDAK ADA NOP';
+    if (statusNop === 'ada') {
+      const trimmedNop = nop.trim();
+      if (!trimmedNop || trimmedNop === '63.08.') {
+        finalNop = `63.08.010.001.001-${Math.floor(1000 + Math.random() * 9000)}.0`;
+      } else {
+        finalNop = trimmedNop;
+      }
+    }
 
     const newEntry: PbbP2Entry = {
       id: `pbb-${Date.now()}`,
       nop: finalNop,
       statusNop,
       tahunPajak,
-      namaWajibPajak,
+      namaWajibPajak: namaWajibPajak.trim(),
       nikWajibPajak: nikWajibPajak || undefined,
       kecamatan,
       kelurahanDesa: kelurahanDesa || 'Pusat Kecamatan',
@@ -513,7 +530,22 @@ export const PbbP2Form: React.FC<PbbP2FormProps> = ({
 
       {/* VIEW 1: FORMULIR INPUT */}
       {activeSubTab === 'form' && (
-        <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+        <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-6">
+          {formError && (
+            <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-between animate-in fade-in">
+              <div className="flex items-center gap-2.5">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>{formError}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFormError(null)}
+                className="text-rose-400 hover:text-white text-xs font-bold px-2 py-1 rounded-lg hover:bg-rose-500/20 cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
+          )}
           
           {/* Identitas NOP & Subjek */}
           <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
@@ -846,10 +878,14 @@ export const PbbP2Form: React.FC<PbbP2FormProps> = ({
                     </label>
                     <input
                       type="number"
-                      min="1"
-                      required
-                      value={luasBumiM2}
-                      onChange={(e) => setLuasBumiM2(Math.max(0, parseFloat(e.target.value) || 0))}
+                      min="0"
+                      step="any"
+                      placeholder="Contoh: 450"
+                      value={luasBumiM2 === 0 ? '' : luasBumiM2}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                        setLuasBumiM2(isNaN(val) ? 0 : Math.max(0, val));
+                      }}
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
                     />
                   </div>
@@ -882,11 +918,14 @@ export const PbbP2Form: React.FC<PbbP2FormProps> = ({
                   </div>
                   <input
                     type="number"
-                    min="10000"
-                    step="10000"
-                    required
-                    value={njopBumiPerM2}
-                    onChange={(e) => setNjopBumiPerM2(Math.max(0, parseFloat(e.target.value) || 0))}
+                    min="0"
+                    step="any"
+                    placeholder="Masukkan NJOP Bumi per m² (Rp)"
+                    value={njopBumiPerM2 === 0 ? '' : njopBumiPerM2}
+                    onChange={(e) => {
+                      const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                      setNjopBumiPerM2(isNaN(val) ? 0 : Math.max(0, val));
+                    }}
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
                   />
                   {/* Quick NJOP Bumi Chips */}
@@ -957,6 +996,7 @@ export const PbbP2Form: React.FC<PbbP2FormProps> = ({
                         <input
                           type="number"
                           min="0"
+                          step="any"
                           placeholder="0 (Opsional)"
                           value={luasBangunanM2 === 0 ? '' : luasBangunanM2}
                           onChange={(e) => {
@@ -999,7 +1039,7 @@ export const PbbP2Form: React.FC<PbbP2FormProps> = ({
                       <input
                         type="number"
                         min="0"
-                        step="10000"
+                        step="any"
                         placeholder="0 (Opsional)"
                         value={njopBangunanPerM2 === 0 ? '' : njopBangunanPerM2}
                         onChange={(e) => {
@@ -1126,9 +1166,12 @@ export const PbbP2Form: React.FC<PbbP2FormProps> = ({
                   <input
                     type="number"
                     min="0"
-                    step="5000"
-                    value={stimulusPengurangan}
-                    onChange={(e) => setStimulusPengurangan(Math.max(0, parseFloat(e.target.value) || 0))}
+                    step="any"
+                    value={stimulusPengurangan === 0 ? '' : stimulusPengurangan}
+                    onChange={(e) => {
+                      const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                      setStimulusPengurangan(isNaN(val) ? 0 : Math.max(0, val));
+                    }}
                     placeholder="0"
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-teal-500"
                   />
@@ -1145,9 +1188,12 @@ export const PbbP2Form: React.FC<PbbP2FormProps> = ({
                   <input
                     type="number"
                     min="0"
-                    step="5000"
-                    value={dendaAdministrasi}
-                    onChange={(e) => setDendaAdministrasi(Math.max(0, parseFloat(e.target.value) || 0))}
+                    step="any"
+                    value={dendaAdministrasi === 0 ? '' : dendaAdministrasi}
+                    onChange={(e) => {
+                      const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                      setDendaAdministrasi(isNaN(val) ? 0 : Math.max(0, val));
+                    }}
                     placeholder="0"
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-teal-500"
                   />

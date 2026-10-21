@@ -274,7 +274,29 @@ export function App() {
 
   const triggerAutoSync = (pList = potensiList, rList = retribusiList, pbList = pbbList) => {
     const cfg = loadSpreadsheetConfig();
-    if (cfg?.spreadsheetId && cfg.autoSync) {
+    if (!cfg || !cfg.autoSync) return;
+
+    if (cfg.connectionMode === 'appscript' && cfg.scriptUrl) {
+      GoogleWorkspaceService.syncAllViaAppsScript(cfg.scriptUrl, {
+        potensi: pList,
+        retribusi: rList,
+        pbb: pbList,
+        ikm: ikmList,
+        library: libraryList,
+      }).then(res => {
+        saveSpreadsheetConfig({
+          ...cfg,
+          lastSyncedAt: res.timestamp,
+          syncedCounts: res.syncedCounts,
+        });
+        setSpreadsheetConfig(loadSpreadsheetConfig());
+      }).catch(err => {
+        console.warn('Auto-sync to Google Apps Script notice:', err);
+      });
+      return;
+    }
+
+    if (cfg.spreadsheetId) {
       GoogleWorkspaceService.syncAllToConnectedSheet(cfg.spreadsheetId, {
         potensi: pList,
         retribusi: rList,
@@ -351,7 +373,9 @@ export function App() {
     }
 
     showToast(`Data potensi ${newEntry.namaUsaha} berhasil disimpan & disinkronkan ke Firebase!`);
-    setActiveTab('laporan');
+    if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'user')) {
+      setActiveTab('laporan');
+    }
   };
 
   const handleSavePbb = (newEntry: PbbP2Entry) => {
@@ -413,7 +437,9 @@ export function App() {
 
     triggerAutoSync(potensiList, retribusiList, updated);
     showToast(`Data SPPT NOP ${newEntry.nop} berhasil disimpan & disinkronkan ke Firebase!`);
-    setActiveTab('laporan');
+    if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'user')) {
+      setActiveTab('laporan');
+    }
   };
 
   const handleSaveRetribusi = (newEntry: RetribusiDaerahEntry) => {
@@ -449,7 +475,9 @@ export function App() {
     }
 
     showToast(`Potensi retribusi "${newEntry.subObjekRetribusi}" berhasil disimpan & disinkronkan ke Firebase!`);
-    setActiveTab('laporan');
+    if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'user')) {
+      setActiveTab('laporan');
+    }
   };
 
   const handleSaveLibrary = (newEntry: LibraryBerkasEntry) => {
@@ -594,6 +622,7 @@ export function App() {
             pbbList={pbbList}
             onSave={handleSavePbb}
             onCancel={() => setActiveTab('beranda')}
+            onNavigateToTab={(tab) => setActiveTab(tab)}
           />
         )}
 

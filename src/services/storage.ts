@@ -921,6 +921,8 @@ export interface ConnectedSpreadsheetConfig {
   spreadsheetId: string;
   spreadsheetUrl: string;
   title: string;
+  connectionMode?: 'oauth' | 'appscript';
+  scriptUrl?: string;
   lastSyncedAt?: string;
   autoSync: boolean;
   syncedCounts?: {
