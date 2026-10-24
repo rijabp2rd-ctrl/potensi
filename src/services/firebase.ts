@@ -22,6 +22,7 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { AppUser, LibraryBerkasEntry } from '../types';
+import { DEMO_RECORD_IDS, isDemoRecordId } from './storage';
 
 // Initialize Firebase App
 const app = initializeApp(firebaseConfig);
@@ -447,36 +448,48 @@ export async function deleteEntryFromFirestore(collectionName: FirestoreCollecti
 }
 
 /**
+ * Hapus seluruh data demo bawaan dari koleksi Firebase Firestore
+ */
+export async function purgeDemoDataFromFirestore(): Promise<void> {
+  const collections = Object.keys(DEMO_RECORD_IDS) as FirestoreCollectionName[];
+  const deletePromises: Promise<boolean>[] = [];
+
+  for (const colName of collections) {
+    const ids = DEMO_RECORD_IDS[colName] || [];
+    for (const demoId of ids) {
+      deletePromises.push(deleteEntryFromFirestore(colName, demoId));
+    }
+  }
+
+  await Promise.allSettled(deletePromises);
+}
+
+/**
  * Subscribe to a Firestore collection in real time (onSnapshot).
- * If the collection in Firestore is initially empty, seeds it with fallbackInitialData.
+ * Automatically removes any legacy demo data IDs from Firestore and returns only real user records.
  */
 export function subscribeToFirestoreCollection<T extends { id: string }>(
   collectionName: FirestoreCollectionName,
-  fallbackInitialData: T[],
+  _fallbackInitialData: T[],
   onDataReceived: (items: T[]) => void
 ) {
-  let hasSeeded = false;
   const colRef = collection(db, collectionName);
 
   return onSnapshot(
     colRef,
     (snapshot) => {
-      if (snapshot.empty && !hasSeeded && fallbackInitialData.length > 0) {
-        hasSeeded = true;
-        // Seed initial data into Firestore
-        Promise.all(
-          fallbackInitialData.map((item) => syncEntryToFirestore(collectionName, item))
-        ).catch((err) => {
-          console.warn(`Initial seed note for ${collectionName}:`, err);
-        });
-        return;
-      }
-
-      if (!snapshot.empty) {
-        hasSeeded = true;
-        const docs = snapshot.docs.map((d) => d.data() as T);
-        onDataReceived(docs);
-      }
+      const validDocs: T[] = [];
+      snapshot.docs.forEach((docSnap) => {
+        const data = docSnap.data() as T;
+        const docId = data?.id || docSnap.id;
+        if (isDemoRecordId(docId) || isDemoRecordId(docSnap.id)) {
+          // Hapus dokumen demo secara otomatis dari Firestore
+          deleteDoc(docSnap.ref).catch(() => {});
+        } else {
+          validDocs.push(data);
+        }
+      });
+      onDataReceived(validDocs);
     },
     (error) => {
       if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {

@@ -48,7 +48,8 @@ import {
   deleteEntryFromFirestore,
   subscribeToFirestoreCollection,
   syncLibraryEntryToFirestore,
-  deleteLibraryEntryFromFirestore
+  deleteLibraryEntryFromFirestore,
+  purgeDemoDataFromFirestore
 } from './services/firebase';
 import { ShieldCheck, LogIn, ArrowLeft } from 'lucide-react';
 
@@ -86,10 +87,11 @@ export function App() {
     saveCurrentUser(null);
     setCurrentUser(null);
 
-    // Test Firestore Connection on Boot (Requirement from skill)
+    // Test Firestore Connection on Boot & Purge any legacy demo records
     testFirestoreConnection().then((connected) => {
       if (connected) {
         console.log('SIPOTENSI HSU: Terhubung ke Firebase Firestore & Auth');
+        purgeDemoDataFromFirestore().catch(() => {});
       }
     });
 

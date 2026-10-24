@@ -13,7 +13,8 @@ import {
   User as UserIcon,
   Navigation2,
   Coins,
-  HeartHandshake
+  HeartHandshake,
+  Lock
 } from 'lucide-react';
 import { AppUser } from '../types';
 
@@ -216,7 +217,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={onOpenSpreadsheetModal}
-                title="Koneksi Database ke Google Spreadsheet"
+                title="Koneksi Database ke Google Spreadsheet (Dilindungi Kode Login)"
                 className={`px-3 py-2 rounded-2xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 border cursor-pointer active:scale-95 ${
                   isSpreadsheetConnected
                     ? 'bg-emerald-950/70 border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/60 shadow-sm shadow-emerald-950/40'
@@ -225,12 +226,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span className="hidden sm:inline">Spreadsheet</span>
-                {isSpreadsheetConnected ? (
+                <Lock className="w-3 h-3 text-amber-400 shrink-0 ml-0.5" />
+                {isSpreadsheetConnected && (
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" title="Terhubung" />
-                ) : (
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-700/80 text-emerald-300 font-semibold ml-0.5">
-                    Konek
-                  </span>
                 )}
               </button>
             )}
