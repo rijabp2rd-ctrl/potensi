@@ -725,12 +725,12 @@ export function App() {
             initialCategory={libraryCategoryFilter}
             onBackToHome={() => setActiveTab('beranda')}
             onOpenLogin={() => setIsLoginModalOpen(true)}
-            onOpenInputLibrary={() => setActiveTab('input-library')}
+            onOpenInputLibrary={currentUser?.role === 'admin' ? () => setActiveTab('input-library') : undefined}
             onDeleteEntry={handleDeleteLibrary}
           />
         )}
 
-        {activeTab === 'input-library' && (
+        {activeTab === 'input-library' && currentUser?.role === 'admin' && (
           <AdminInputLibraryBerkas
             currentUser={currentUser}
             onSave={handleSaveLibrary}

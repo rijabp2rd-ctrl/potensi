@@ -183,18 +183,19 @@ Kesesuaian dan keabsahan dokumen diverifikasi oleh Bagian Tata Usaha dan Hukum B
           </div>
         </div>
 
-        {/* Right Action: Input New File or Login Button */}
+        {/* Right Action: Input New File (Hanya untuk Admin) or Login Button */}
         <div className="flex flex-wrap items-center gap-2.5 self-start md:self-auto">
-          {onOpenInputLibrary && (
-            <button
-              onClick={onOpenInputLibrary}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-950/40 transition-all cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Tambah Berkas Baru</span>
-            </button>
-          )}
-          {!currentUser && (
+          {currentUser ? (
+            currentUser.role === 'admin' && onOpenInputLibrary && (
+              <button
+                onClick={onOpenInputLibrary}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-950/40 transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Tambah Berkas Baru</span>
+              </button>
+            )
+          ) : (
             <button
               onClick={onOpenLogin}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold transition-all cursor-pointer"
