@@ -791,13 +791,18 @@ export const RetribusiDaerahForm: React.FC<RetribusiDaerahFormProps> = ({
                     type="number"
                     required
                     min={0}
-                    value={tarifSatuan}
-                    onChange={(e) => setTarifSatuan(parseFloat(e.target.value) || 0)}
+                    step="any"
+                    placeholder="Contoh: 150000"
+                    value={tarifSatuan === 0 ? '' : tarifSatuan}
+                    onChange={(e) => {
+                      const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                      setTarifSatuan(isNaN(val) ? 0 : Math.max(0, val));
+                    }}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-amber-500"
                   />
                 </div>
                 <p className="text-[10px] text-slate-500 mt-1 font-mono">
-                  {formatRupiah(tarifSatuan)}
+                  {formatRupiah(tarifSatuan)} &bull; Bebas bulat / ganjil
                 </p>
               </div>
 
@@ -809,8 +814,13 @@ export const RetribusiDaerahForm: React.FC<RetribusiDaerahFormProps> = ({
                   type="number"
                   required
                   min={1}
-                  value={jumlahSatuan}
-                  onChange={(e) => setJumlahSatuan(parseInt(e.target.value) || 1)}
+                  step="any"
+                  placeholder="Contoh: 50"
+                  value={jumlahSatuan === 0 ? '' : jumlahSatuan}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                    setJumlahSatuan(isNaN(val) ? 0 : Math.max(0, val));
+                  }}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-amber-500"
                 />
                 <p className="text-[10px] text-slate-500 mt-1">
@@ -846,11 +856,15 @@ export const RetribusiDaerahForm: React.FC<RetribusiDaerahFormProps> = ({
                 {isManualOverride ? (
                   <input
                     type="number"
-                    value={potensiPerbulan}
+                    min="0"
+                    step="any"
+                    placeholder="0"
+                    value={potensiPerbulan === 0 ? '' : potensiPerbulan}
                     onChange={(e) => {
-                      const val = parseFloat(e.target.value) || 0;
-                      setPotensiPerbulan(val);
-                      setPotensiPertahun(val * 12);
+                      const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                      const cleanVal = isNaN(val) ? 0 : Math.max(0, val);
+                      setPotensiPerbulan(cleanVal);
+                      setPotensiPertahun(cleanVal * 12);
                     }}
                     className="w-full bg-slate-900 border border-amber-500 rounded-xl px-3 py-2 text-sm text-amber-400 font-mono font-bold"
                   />
@@ -871,8 +885,14 @@ export const RetribusiDaerahForm: React.FC<RetribusiDaerahFormProps> = ({
                 {isManualOverride ? (
                   <input
                     type="number"
-                    value={potensiPertahun}
-                    onChange={(e) => setPotensiPertahun(parseFloat(e.target.value) || 0)}
+                    min="0"
+                    step="any"
+                    placeholder="0"
+                    value={potensiPertahun === 0 ? '' : potensiPertahun}
+                    onChange={(e) => {
+                      const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                      setPotensiPertahun(isNaN(val) ? 0 : Math.max(0, val));
+                    }}
                     className="w-full bg-slate-900 border border-emerald-500 rounded-xl px-3 py-2 text-sm text-emerald-400 font-mono font-bold"
                   />
                 ) : (

@@ -112,6 +112,7 @@ export const PotensiPajakForm: React.FC<PotensiPajakFormProps> = ({
   const [omzetBulanan, setOmzetBulanan] = useState<number>(50000000);
   const [tarifPajakPersen, setTarifPajakPersen] = useState<number>(10);
   const [catatanPetugas, setCatatanPetugas] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Upload States: DPA / ARKAS & Foto Objek PJRD (Laptop & HP)
   const [dpaFileUrl, setDpaFileUrl] = useState<string>('');
@@ -248,24 +249,28 @@ export const PotensiPajakForm: React.FC<PotensiPajakFormProps> = ({
     setFotoObjekName('');
     setFotoObjekUrl('');
     setJustSavedItem(null);
+    setFormError(null);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!namaWajibPajak || !namaUsaha) {
-      alert('Mohon isi nama wajib pajak dan nama usaha');
+    if (!namaWajibPajak.trim() || !namaUsaha.trim()) {
+      setFormError('Mohon isi Nama Wajib Pajak dan Nama Objek Usaha terlebih dahulu.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
+
+    setFormError(null);
 
     const randomSuffix = Math.floor(100 + Math.random() * 900);
     const newEntry: PotensiPajakEntry = {
       id: `pot-${Date.now()}`,
       nomorFormulir: `FORM-POT/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${randomSuffix}`,
       tanggalPendataan: new Date().toISOString().split('T')[0],
-      namaWajibPajak,
+      namaWajibPajak: namaWajibPajak.trim(),
       npwpd: npwpd || `P.2.${Math.floor(1000000 + Math.random() * 9000000)}.08.${new Date().getFullYear()}`,
-      namaUsaha,
+      namaUsaha: namaUsaha.trim(),
       jenisPajak,
       kecamatan,
       kelurahanDesa: kelurahanDesa || 'Pusat Kecamatan',
@@ -274,6 +279,8 @@ export const PotensiPajakForm: React.FC<PotensiPajakFormProps> = ({
       longitude,
       akurasiGps: gpsAccuracy || 10,
       tahun: tahunPajak,
+      omzetBulanan,
+      tarifPajakPersen,
       potensiRupiahBulanan: potensiBulanan,
       potensiRupiahTahunan: potensiTahunan,
       statusVerifikasi: currentUser?.role === 'admin' ? 'Terverifikasi' : 'Dalam Proses',
@@ -405,6 +412,21 @@ export const PotensiPajakForm: React.FC<PotensiPajakFormProps> = ({
       {/* VIEW 1: FORMULIR INPUT */}
       {activeSubTab === 'form' && (
         <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+          {formError && (
+            <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-between animate-in fade-in">
+              <div className="flex items-center gap-2.5">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>{formError}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFormError(null)}
+                className="text-rose-400 hover:text-white text-xs font-bold px-2 py-1 rounded-lg hover:bg-rose-500/20 cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
+          )}
           
           {/* Identitas Subjek & Objek Pajak */}
           <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
@@ -624,12 +646,18 @@ export const PotensiPajakForm: React.FC<PotensiPajakFormProps> = ({
                 <input
                   type="number"
                   min="0"
-                  step="500000"
-                  value={omzetBulanan}
-                  onChange={(e) => setOmzetBulanan(parseFloat(e.target.value) || 0)}
+                  step="any"
+                  placeholder="Contoh: 12750350 (Bulat / Ganjil Bebas)"
+                  value={omzetBulanan === 0 ? '' : omzetBulanan}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                    setOmzetBulanan(isNaN(val) ? 0 : Math.max(0, val));
+                  }}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-amber-500"
                 />
-                <span className="text-[10px] text-slate-500 mt-1 block">{formatRupiah(omzetBulanan)}</span>
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  {formatRupiah(omzetBulanan)} <span className="text-emerald-400/90">&bull; Bebas angka bulat / ganjil</span>
+                </span>
               </div>
 
               <div>
@@ -640,8 +668,13 @@ export const PotensiPajakForm: React.FC<PotensiPajakFormProps> = ({
                   type="number"
                   min="0"
                   max="100"
-                  value={tarifPajakPersen}
-                  onChange={(e) => setTarifPajakPersen(parseFloat(e.target.value) || 0)}
+                  step="any"
+                  placeholder="10"
+                  value={tarifPajakPersen === 0 ? '' : tarifPajakPersen}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                    setTarifPajakPersen(isNaN(val) ? 0 : Math.max(0, val));
+                  }}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-amber-500"
                 />
                 <span className="text-[10px] text-slate-500 mt-1 block">{tarifPajakPersen}% PBJT / Daerah</span>

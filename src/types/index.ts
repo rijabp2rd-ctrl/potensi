@@ -52,6 +52,8 @@ export interface PotensiPajakEntry {
   isCustomCoord?: boolean;
   // Financial Potential
   tahun?: number; // Tahun Pajak / Periode Potensi
+  omzetBulanan?: number; // Estimasi Omzet / Peredaran Bruto Bulanan (Rp)
+  tarifPajakPersen?: number; // Tarif Pajak (%)
   potensiRupiahBulanan: number;
   potensiRupiahTahunan: number;
   statusVerifikasi: VerificationStatus;
