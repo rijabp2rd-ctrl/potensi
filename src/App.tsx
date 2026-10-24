@@ -45,7 +45,10 @@ import {
   logoutGoogle, 
   subscribeToAuth, 
   syncEntryToFirestore,
-  deleteEntryFromFirestore
+  deleteEntryFromFirestore,
+  subscribeToFirestoreCollection,
+  syncLibraryEntryToFirestore,
+  deleteLibraryEntryFromFirestore
 } from './services/firebase';
 import { ShieldCheck, LogIn, ArrowLeft } from 'lucide-react';
 
@@ -64,17 +67,22 @@ export function App() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [libraryCategoryFilter, setLibraryCategoryFilter] = useState<'all' | LibraryCategory>('all');
 
-  // Load initial data and connect with Firebase
+  // Load initial data and connect with Firebase Firestore in real time
   useEffect(() => {
-    setPotensiList(loadPotensiList());
-    setPbbList(loadPbbList());
-    setRetribusiList(loadRetribusiList());
-    setLibraryList(loadLibraryList());
-    setIkmList(loadIkmList());
+    const initialPotensi = loadPotensiList();
+    const initialPbb = loadPbbList();
+    const initialRetribusi = loadRetribusiList();
+    const initialLibrary = loadLibraryList();
+    const initialIkm = loadIkmList();
+
+    setPotensiList(initialPotensi);
+    setPbbList(initialPbb);
+    setRetribusiList(initialRetribusi);
+    setLibraryList(initialLibrary);
+    setIkmList(initialIkm);
     setSpreadsheetConfig(loadSpreadsheetConfig());
     
-    // Sesuai permintaan pengguna: Saat aplikasi dibuka jangan login admin (Mulai dalam mode publik / tamu)
-    // Pengguna dapat login kapan saja melalui tombol "Login Petugas / Admin" di Navbar
+    // Mulai dalam mode publik / tamu saat aplikasi dibuka
     saveCurrentUser(null);
     setCurrentUser(null);
 
@@ -85,6 +93,52 @@ export function App() {
       }
     });
 
+    // Real-time Firestore collection listeners (with automatic seeding if empty)
+    const unsubPotensi = subscribeToFirestoreCollection<PotensiPajakEntry>(
+      'potensi_pajak',
+      initialPotensi,
+      (docs) => {
+        setPotensiList(docs);
+        savePotensiList(docs);
+      }
+    );
+
+    const unsubPbb = subscribeToFirestoreCollection<PbbP2Entry>(
+      'pbb_p2',
+      initialPbb,
+      (docs) => {
+        setPbbList(docs);
+        savePbbList(docs);
+      }
+    );
+
+    const unsubRetribusi = subscribeToFirestoreCollection<RetribusiDaerahEntry>(
+      'retribusi_daerah',
+      initialRetribusi,
+      (docs) => {
+        setRetribusiList(docs);
+        saveRetribusiList(docs);
+      }
+    );
+
+    const unsubLibrary = subscribeToFirestoreCollection<LibraryBerkasEntry>(
+      'library_berkas',
+      initialLibrary,
+      (docs) => {
+        setLibraryList(docs);
+        saveLibraryList(docs);
+      }
+    );
+
+    const unsubIkm = subscribeToFirestoreCollection<IkmSurveyEntry>(
+      'survei_ikm',
+      initialIkm,
+      (docs) => {
+        setIkmList(docs);
+        saveIkmList(docs);
+      }
+    );
+
     // Real-time auth listener
     const unsubscribeAuth = subscribeToAuth((appUser) => {
       if (appUser) {
@@ -94,6 +148,11 @@ export function App() {
     });
 
     return () => {
+      unsubPotensi();
+      unsubPbb();
+      unsubRetribusi();
+      unsubLibrary();
+      unsubIkm();
       unsubscribeAuth();
     };
   }, []);
@@ -370,6 +429,7 @@ export function App() {
       const updatedLib = [...newLibraryEntries, ...libraryList];
       setLibraryList(updatedLib);
       saveLibraryList(updatedLib);
+      newLibraryEntries.forEach((entry) => syncLibraryEntryToFirestore(entry));
     }
 
     showToast(`Data potensi ${newEntry.namaUsaha} berhasil disimpan & disinkronkan ke Firebase!`);
@@ -433,6 +493,7 @@ export function App() {
       const updatedLib = [...newLibraryEntries, ...libraryList];
       setLibraryList(updatedLib);
       saveLibraryList(updatedLib);
+      newLibraryEntries.forEach((entry) => syncLibraryEntryToFirestore(entry));
     }
 
     triggerAutoSync(potensiList, retribusiList, updated);
@@ -472,6 +533,7 @@ export function App() {
       const updatedLib = [newLibraryEntry, ...libraryList];
       setLibraryList(updatedLib);
       saveLibraryList(updatedLib);
+      syncLibraryEntryToFirestore(newLibraryEntry);
     }
 
     showToast(`Potensi retribusi "${newEntry.subObjekRetribusi}" berhasil disimpan & disinkronkan ke Firebase!`);
@@ -484,16 +546,17 @@ export function App() {
     const updated = [newEntry, ...libraryList];
     setLibraryList(updated);
     saveLibraryList(updated);
-    showToast(`Berkas ${newEntry.nomorBerkas} berhasil ditambahkan ke Library!`);
+    syncLibraryEntryToFirestore(newEntry);
+    showToast(`Berkas ${newEntry.nomorBerkas} berhasil ditambahkan & disinkronkan ke Firebase!`);
     setActiveTab('library');
   };
 
   const handleDeleteLibrary = (id: string) => {
-    if (!window.confirm('Apakah Anda yakin ingin menghapus berkas ini dari repositori?')) return;
     const updated = libraryList.filter(item => item.id !== id);
     setLibraryList(updated);
     saveLibraryList(updated);
-    showToast('Berkas berhasil dihapus');
+    deleteLibraryEntryFromFirestore(id);
+    showToast('Berkas berhasil dihapus dari repositori & Firebase.');
   };
 
   const handleSaveIkmSurvey = (newEntry: IkmSurveyEntry) => {

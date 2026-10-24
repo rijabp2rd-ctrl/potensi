@@ -151,6 +151,31 @@
         "tanggalPendataan": { "type": "string", "maxLength": 30 }
       },
       "required": ["id", "nomorRegister", "golonganRetribusi", "subRekening", "subObjekRetribusi", "potensiPerbulan", "potensiPertahun", "latitude", "longitude"]
+    },
+    "SurveiIkm": {
+      "title": "SurveiIkm",
+      "description": "Indeks Kepuasan Masyarakat (IKM) survey responses for BP2RD HSU",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nomorResponden": { "type": "string", "maxLength": 60 },
+        "nama": { "type": "string", "maxLength": 120 },
+        "alamat": { "type": "string", "maxLength": 300 },
+        "kegiatan": { "type": "string", "maxLength": 200 },
+        "nomorKontak": { "type": "string", "maxLength": 40 },
+        "tanggalSurvey": { "type": "string", "maxLength": 30 },
+        "pernyataan1": { "type": "number" },
+        "pernyataan2": { "type": "number" },
+        "pernyataan3": { "type": "number" },
+        "pernyataan4": { "type": "number" },
+        "pernyataan5": { "type": "number" },
+        "saranMasukan": { "type": "string", "maxLength": 1000 },
+        "totalNilai": { "type": "number" },
+        "predikat": { "type": "string", "enum": ["Sangat Baik", "Baik", "Cukup", "Kurang"] },
+        "petugasPencatat": { "type": "string", "maxLength": 100 },
+        "createdAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "nomorResponden", "nama", "kegiatan", "tanggalSurvey", "totalNilai", "predikat"]
     }
   },
   "firestore": {
@@ -177,6 +202,10 @@
     "/library_berkas/{berkasId}": {
       "schema": "LibraryBerkas",
       "description": "Regulatory documents and internal uploaded files"
+    },
+    "/survei_ikm/{ikmId}": {
+      "schema": "SurveiIkm",
+      "description": "Community satisfaction index (IKM) survey entries"
     }
   }
 }

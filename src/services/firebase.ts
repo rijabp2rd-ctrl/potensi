@@ -58,6 +58,11 @@ export interface FirestoreErrorInfo {
     email?: string | null;
     emailVerified?: boolean | null;
     isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
   };
 }
 
@@ -69,12 +74,34 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
       email: auth.currentUser?.email,
       emailVerified: auth.currentUser?.emailVerified,
       isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(p => ({
+        providerId: p.providerId,
+        email: p.email,
+      })) || [],
     },
     operationType,
     path,
   };
-  console.error('Firestore Error:', JSON.stringify(errInfo));
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
+}
+
+// Helper to sanitize document IDs to match ^[a-zA-Z0-9_\-]+$ (max 128 chars)
+export function sanitizeFirestoreId(rawId: string): string {
+  const cleaned = String(rawId || `doc-${Date.now()}`).replace(/[^a-zA-Z0-9_\-]/g, '_').slice(0, 128);
+  return cleaned || `doc_${Date.now()}`;
+}
+
+// Helper to recursively strip undefined properties (Firestore rejects undefined values)
+export function sanitizeFirestorePayload<T extends Record<string, any>>(obj: T): Record<string, any> {
+  const result: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      result[key] = value;
+    }
+  }
+  return result;
 }
 
 // Connection test on boot
@@ -84,7 +111,7 @@ export async function testFirestoreConnection(): Promise<boolean> {
     return true;
   } catch (error) {
     if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('Firebase Firestore is offline or config needs check.');
+      console.error('Please check your Firebase configuration.');
       return false;
     }
     return true;
@@ -159,7 +186,7 @@ export const firebaseLoginOfficerOrAdmin = async (
     ? 'admin' 
     : 'user';
 
-  const userDocRef = doc(db, 'users', user.uid);
+  const userDocRef = doc(db, 'users', sanitizeFirestoreId(user.uid));
   let appUser: AppUser;
 
   try {
@@ -176,7 +203,7 @@ export const firebaseLoginOfficerOrAdmin = async (
         wilayahTugas: data.wilayahTugas || (role === 'admin' ? 'Seluruh Wilayah Kab. HSU' : 'Kecamatan Amuntai Tengah & Sungai Pandan'),
         photoURL: user.photoURL || undefined,
       };
-      await setDoc(userDocRef, { ...appUser, lastLogin: new Date().toISOString() }, { merge: true });
+      await setDoc(userDocRef, sanitizeFirestorePayload({ ...appUser, lastLogin: new Date().toISOString() }), { merge: true });
     } else {
       appUser = {
         id: user.uid,
@@ -188,7 +215,8 @@ export const firebaseLoginOfficerOrAdmin = async (
         wilayahTugas: role === 'admin' ? 'Seluruh Wilayah Kab. HSU' : 'Kecamatan Amuntai Tengah & Sungai Pandan',
         photoURL: user.photoURL || undefined,
       };
-      await setDoc(userDocRef, {
+      await setDoc(userDocRef, sanitizeFirestorePayload({
+        id: user.uid,
         uid: user.uid,
         email: appUser.email,
         name: appUser.name,
@@ -199,7 +227,7 @@ export const firebaseLoginOfficerOrAdmin = async (
         wilayahTugas: appUser.wilayahTugas,
         photoURL: user.photoURL || '',
         lastLogin: new Date().toISOString(),
-      });
+      }));
     }
   } catch (err) {
     console.warn('Firestore user profile sync note:', err);
@@ -249,7 +277,7 @@ export const firebaseEmailPasswordLogin = async (
     ? 'admin' 
     : 'user';
 
-  const userDocRef = doc(db, 'users', user.uid);
+  const userDocRef = doc(db, 'users', sanitizeFirestoreId(user.uid));
   let appUser: AppUser;
 
   try {
@@ -265,7 +293,7 @@ export const firebaseEmailPasswordLogin = async (
         jabatan: data.jabatan || (role === 'admin' ? 'Kepala Bidang Pendataan, Penilaian & Penggalian Potensi Pajak' : 'Petugas Surveyor & Pendataan Lapangan'),
         wilayahTugas: data.wilayahTugas || (role === 'admin' ? 'Seluruh Wilayah Kab. HSU' : 'Kecamatan Amuntai Tengah & Sungai Pandan'),
       };
-      await setDoc(userDocRef, { ...appUser, lastLogin: new Date().toISOString() }, { merge: true });
+      await setDoc(userDocRef, sanitizeFirestorePayload({ ...appUser, lastLogin: new Date().toISOString() }), { merge: true });
     } else {
       appUser = {
         id: user.uid,
@@ -276,7 +304,8 @@ export const firebaseEmailPasswordLogin = async (
         jabatan: role === 'admin' ? 'Kepala Bidang Pendataan, Penilaian & Penggalian Potensi Pajak' : 'Petugas Surveyor & Pendataan Lapangan',
         wilayahTugas: role === 'admin' ? 'Seluruh Wilayah Kab. HSU' : 'Kecamatan Amuntai Tengah & Sungai Pandan',
       };
-      await setDoc(userDocRef, {
+      await setDoc(userDocRef, sanitizeFirestorePayload({
+        id: user.uid,
         uid: user.uid,
         email: appUser.email,
         name: appUser.name,
@@ -286,7 +315,7 @@ export const firebaseEmailPasswordLogin = async (
         jabatan: appUser.jabatan,
         wilayahTugas: appUser.wilayahTugas,
         lastLogin: new Date().toISOString(),
-      });
+      }));
     }
   } catch (err) {
     console.warn('Firestore user profile sync note:', err);
@@ -315,11 +344,10 @@ export const quickLoginFirebaseAccount = async (
   const defaultPassword = 'Bp2rdHSU2026!Secure';
   
   try {
-    const { user, appUser } = await firebaseEmailPasswordLogin(targetEmail, defaultPassword, role);
+    const { appUser } = await firebaseEmailPasswordLogin(targetEmail, defaultPassword, role);
     return { appUser, isFirebaseLive: true };
   } catch (e) {
     console.warn('Quick login fallback:', e);
-    // Construct local authenticated profile if Firebase network is restricted in dev
     const fallbackUser: AppUser = role === 'admin' ? {
       id: `admin-${Date.now()}`,
       name: 'Rija, S.STP, M.IP',
@@ -345,7 +373,7 @@ export const subscribeToAuth = (onUserChanged: (user: AppUser | null) => void) =
   return onAuthStateChanged(auth, async (fbUser) => {
     if (fbUser) {
       try {
-        const userDoc = await getDoc(doc(db, 'users', fbUser.uid));
+        const userDoc = await getDoc(doc(db, 'users', sanitizeFirestoreId(fbUser.uid)));
         if (userDoc.exists()) {
           const data = userDoc.data();
           const appUser: AppUser = {
@@ -368,99 +396,132 @@ export const subscribeToAuth = (onUserChanged: (user: AppUser | null) => void) =
   });
 };
 
+export type FirestoreCollectionName = 'potensi_pajak' | 'pbb_p2' | 'survei_ikm' | 'retribusi_daerah' | 'library_berkas';
+
 // Firestore Sync Functions
-export async function syncEntryToFirestore(collectionName: 'potensi_pajak' | 'pbb_p2' | 'survei_ikm' | 'retribusi_daerah', entry: any) {
+export async function syncEntryToFirestore(collectionName: FirestoreCollectionName, entry: any): Promise<boolean> {
+  const cleanId = sanitizeFirestoreId(entry.id);
+  const path = `${collectionName}/${cleanId}`;
   try {
-    const docRef = doc(db, collectionName, entry.id);
-    await setDoc(docRef, entry, { merge: true });
+    const docRef = doc(db, collectionName, cleanId);
+    const payload = sanitizeFirestorePayload({ ...entry, id: cleanId });
+    await setDoc(docRef, payload, { merge: true });
     return true;
   } catch (error) {
-    console.warn(`Firestore sync note for ${collectionName}:`, error);
+    if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+    console.warn(`Firestore sync note for ${path}:`, error);
     return false;
   }
 }
 
-export async function fetchEntriesFromFirestore(collectionName: 'potensi_pajak' | 'pbb_p2' | 'survei_ikm' | 'retribusi_daerah') {
+export async function fetchEntriesFromFirestore(collectionName: FirestoreCollectionName) {
   try {
     const colRef = collection(db, collectionName);
     const snap = await getDocs(colRef);
     return snap.docs.map((d) => d.data());
   } catch (error) {
+    if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {
+      handleFirestoreError(error, OperationType.LIST, collectionName);
+    }
     console.warn(`Firestore read note for ${collectionName}:`, error);
     return [];
   }
 }
 
-export async function deleteEntryFromFirestore(collectionName: 'potensi_pajak' | 'pbb_p2' | 'survei_ikm' | 'retribusi_daerah', id: string): Promise<boolean> {
+export async function deleteEntryFromFirestore(collectionName: FirestoreCollectionName, id: string): Promise<boolean> {
+  const cleanId = sanitizeFirestoreId(id);
+  const path = `${collectionName}/${cleanId}`;
   try {
-    const docRef = doc(db, collectionName, id);
+    const docRef = doc(db, collectionName, cleanId);
     await deleteDoc(docRef);
     return true;
   } catch (error) {
-    console.warn(`Firestore delete note for ${collectionName}:`, error);
+    if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
+    console.warn(`Firestore delete note for ${path}:`, error);
     return false;
   }
 }
 
+/**
+ * Subscribe to a Firestore collection in real time (onSnapshot).
+ * If the collection in Firestore is initially empty, seeds it with fallbackInitialData.
+ */
+export function subscribeToFirestoreCollection<T extends { id: string }>(
+  collectionName: FirestoreCollectionName,
+  fallbackInitialData: T[],
+  onDataReceived: (items: T[]) => void
+) {
+  let hasSeeded = false;
+  const colRef = collection(db, collectionName);
+
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      if (snapshot.empty && !hasSeeded && fallbackInitialData.length > 0) {
+        hasSeeded = true;
+        // Seed initial data into Firestore
+        Promise.all(
+          fallbackInitialData.map((item) => syncEntryToFirestore(collectionName, item))
+        ).catch((err) => {
+          console.warn(`Initial seed note for ${collectionName}:`, err);
+        });
+        return;
+      }
+
+      if (!snapshot.empty) {
+        hasSeeded = true;
+        const docs = snapshot.docs.map((d) => d.data() as T);
+        onDataReceived(docs);
+      }
+    },
+    (error) => {
+      if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {
+        try {
+          handleFirestoreError(error, OperationType.LIST, collectionName);
+        } catch {
+          // Logged via handleFirestoreError
+        }
+      } else {
+        console.warn(`Realtime listener note for ${collectionName}:`, error);
+      }
+    }
+  );
+}
+
 // Library Berkas Firestore Functions
 export async function syncLibraryEntryToFirestore(entry: LibraryBerkasEntry): Promise<boolean> {
+  const cleanId = sanitizeFirestoreId(entry.id);
+  const path = `library_berkas/${cleanId}`;
   try {
-    // Sanitizing ID to match Firestore rule regex ^[a-zA-Z0-9_\-]+$
-    const cleanId = entry.id.replace(/[^a-zA-Z0-9_\-]/g, '_');
     const docRef = doc(db, 'library_berkas', cleanId);
-    
-    // Prepare data fitting Firestore rules
-    const payload = {
+    const payload = sanitizeFirestorePayload({
+      ...entry,
       id: cleanId,
-      title: entry.title.slice(0, 256),
-      category: entry.category,
-      nomorSurat: entry.nomorSurat || '',
-      fileType: entry.fileType || 'Dokumen',
-      sizeStr: entry.sizeStr || '',
-      date: entry.date,
-      authorOrWp: entry.authorOrWp || 'BP2RD',
-      status: entry.status || 'Tersedia',
-      statusColor: entry.statusColor || '',
-      description: (entry.description || '').slice(0, 2048),
-      previewUrl: entry.previewUrl || '',
-      driveUrl: entry.driveUrl || '',
-      uploadedBy: entry.uploadedBy || 'Admin BP2RD',
-      statusVerifikasi: entry.statusVerifikasi || 'Menunggu Verifikasi',
-      catatanVerifikasi: entry.catatanVerifikasi || '',
-      verifiedBy: entry.verifiedBy || '',
-      verifiedAt: entry.verifiedAt || '',
+      title: (entry.title || '').slice(0, 150),
+      description: (entry.description || '').slice(0, 500),
       createdAt: entry.createdAt || new Date().toISOString(),
-      tags: entry.tags || [],
       isPublic: entry.isPublic ?? true,
-    };
-    
+    });
     await setDoc(docRef, payload, { merge: true });
     return true;
   } catch (error) {
+    if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
     console.warn('Firestore library save note:', error);
     return false;
   }
 }
 
 export async function deleteLibraryEntryFromFirestore(id: string): Promise<boolean> {
-  try {
-    const cleanId = id.replace(/[^a-zA-Z0-9_\-]/g, '_');
-    const docRef = doc(db, 'library_berkas', cleanId);
-    await deleteDoc(docRef);
-    return true;
-  } catch (error) {
-    console.warn('Firestore library delete note:', error);
-    return false;
-  }
+  return deleteEntryFromFirestore('library_berkas', id);
 }
 
 export async function fetchLibraryEntriesFromFirestore(): Promise<LibraryBerkasEntry[]> {
-  try {
-    const colRef = collection(db, 'library_berkas');
-    const snap = await getDocs(colRef);
-    return snap.docs.map((d) => d.data() as LibraryBerkasEntry);
-  } catch (error) {
-    console.warn('Firestore library fetch note:', error);
-    return [];
-  }
+  const items = await fetchEntriesFromFirestore('library_berkas');
+  return items as LibraryBerkasEntry[];
 }

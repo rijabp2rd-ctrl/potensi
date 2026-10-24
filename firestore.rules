@@ -12,7 +12,7 @@ service cloud.firestore {
     }
 
     function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
     function isOwner(userId) {
@@ -21,61 +21,61 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() && (
-        request.auth.token.email == "rija.bp2rd@gmail.com" ||
+        (request.auth.token.email == "rija.bp2rd@gmail.com" && request.auth.token.email_verified == true) ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
 
     // Connection ping test
     match /_connection_test/{id} {
-      allow read, write: if true;
+      allow read, write: if isValidId(id);
     }
 
     // Profil Akun Petugas & Admin BP2RD
     match /users/{userId} {
-      allow read: if isSignedIn();
+      allow read: if isOwner(userId) || isAdmin();
       allow create, update: if (isOwner(userId) || isAdmin()) && isValidId(userId);
       allow delete: if isOwner(userId) || isAdmin();
     }
 
     match /admins/{adminId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn() && (request.auth.token.email == "rija.bp2rd@gmail.com" || isOwner(adminId));
+      allow create, update, delete: if isAdmin() && isValidId(adminId);
     }
 
     // Koleksi Library Berkas & Regulasi
     match /library_berkas/{berkasId} {
-      allow read: if true;
-      allow create, update: if isSignedIn() && isValidId(berkasId);
-      allow delete: if isSignedIn();
+      allow get, list: if true;
+      allow create, update: if isValidId(berkasId);
+      allow delete: if isValidId(berkasId);
     }
 
     // Koleksi Penggalian Potensi Pajak Daerah
     match /potensi_pajak/{potensiId} {
-      allow read: if true;
+      allow get, list: if true;
       allow create, update: if isValidId(potensiId);
-      allow delete: if isSignedIn();
+      allow delete: if isValidId(potensiId);
     }
 
     // Koleksi Layanan PBB-P2
     match /pbb_p2/{pbbId} {
-      allow read: if true;
+      allow get, list: if true;
       allow create, update: if isValidId(pbbId);
-      allow delete: if isSignedIn();
+      allow delete: if isValidId(pbbId);
     }
 
     // Koleksi Penggalian Potensi Retribusi Daerah
     match /retribusi_daerah/{retribusiId} {
-      allow read: if true;
+      allow get, list: if true;
       allow create, update: if isValidId(retribusiId);
-      allow delete: if isSignedIn();
+      allow delete: if isValidId(retribusiId);
     }
 
     // Koleksi Survei IKM
     match /survei_ikm/{ikmId} {
-      allow read: if true;
+      allow get, list: if true;
       allow create, update: if isValidId(ikmId);
-      allow delete: if isSignedIn();
+      allow delete: if isValidId(ikmId);
     }
   }
 }
