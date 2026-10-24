@@ -152,11 +152,20 @@ export function loadLibraryList(): LibraryBerkasEntry[] {
 }
 
 export function saveLibraryList(data: LibraryBerkasEntry[]) {
+  const filtered = data.filter(item => !isDemoRecordId(item.id));
   try {
-    const filtered = data.filter(item => !isDemoRecordId(item.id));
     localStorage.setItem(LIBRARY_KEY, JSON.stringify(filtered));
   } catch (e) {
-    console.error('Error saving library list:', e);
+    // Jika ukuran fileUrl melebihi kuota LocalStorage (~5MB), simpan metadata ke LocalStorage (file penuh tetap tersimpan di Firebase Firestore)
+    try {
+      const compact = filtered.map(item => ({
+        ...item,
+        fileUrl: item.fileUrl && item.fileUrl.length > 350000 ? undefined : item.fileUrl,
+      }));
+      localStorage.setItem(LIBRARY_KEY, JSON.stringify(compact));
+    } catch (innerErr) {
+      console.error('Error saving library list:', innerErr);
+    }
   }
 }
 

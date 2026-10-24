@@ -48,6 +48,12 @@ service cloud.firestore {
       allow get, list: if true;
       allow create, update: if isValidId(berkasId);
       allow delete: if isValidId(berkasId);
+
+      // Subkoleksi potongan file besar (>700KB) agar dokumen utama tidak melebihi batas 1MB Firestore
+      match /chunks/{chunkId} {
+        allow get, list: if true;
+        allow create, update, delete: if isValidId(berkasId) && isValidId(chunkId);
+      }
     }
 
     // Koleksi Penggalian Potensi Pajak Daerah

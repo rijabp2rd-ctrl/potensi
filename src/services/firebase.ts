@@ -399,14 +399,47 @@ export const subscribeToAuth = (onUserChanged: (user: AppUser | null) => void) =
 
 export type FirestoreCollectionName = 'potensi_pajak' | 'pbb_p2' | 'survei_ikm' | 'retribusi_daerah' | 'library_berkas';
 
+// In-memory cache for large uploaded file DataURLs during active session
+const libraryFileMemoryCache = new Map<string, string>();
+const MAX_INLINE_FILE_URL_CHARS = 650000; // ~650KB safe inline limit per Firestore 1MB doc
+const CHUNK_SIZE_CHARS = 600000; // ~600KB per chunk document
+const MAX_CHUNKS = 15; // Up to ~9MB total file size in Firestore chunks
+
+export function formatWaktuPenginputan(dateObj: Date = new Date()): {
+  tanggalUpload: string;
+  jamUpload: string;
+  waktuPenginputan: string;
+  isoString: string;
+} {
+  const isoString = dateObj.toISOString();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const yyyy = dateObj.getFullYear();
+  const mm = pad(dateObj.getMonth() + 1);
+  const dd = pad(dateObj.getDate());
+  const hh = pad(dateObj.getHours());
+  const min = pad(dateObj.getMinutes());
+  const ss = pad(dateObj.getSeconds());
+  const tanggalUpload = `${yyyy}-${mm}-${dd}`;
+  const jamUpload = `${hh}:${min}:${ss} WITA`;
+  const waktuPenginputan = `${tanggalUpload} ${jamUpload}`;
+  return { tanggalUpload, jamUpload, waktuPenginputan, isoString };
+}
+
 // Firestore Sync Functions
 export async function syncEntryToFirestore(collectionName: FirestoreCollectionName, entry: any): Promise<boolean> {
   const cleanId = sanitizeFirestoreId(entry.id);
   const path = `${collectionName}/${cleanId}`;
+  const docRef = doc(db, collectionName, cleanId);
   try {
-    const docRef = doc(db, collectionName, cleanId);
-    const payload = sanitizeFirestorePayload({ ...entry, id: cleanId });
-    await setDoc(docRef, payload, { merge: true });
+    const rawPayload = sanitizeFirestorePayload({ ...entry, id: cleanId });
+    // Guard against oversized base64 fields (> 650KB) causing 1MB Firestore document rejection
+    for (const key of ['dpaFileUrl', 'fotoObjekUrl', 'strukBayarUrl', 'fotoObjekPbbUrl', 'fotoObjekRetribusiUrl', 'fileUrl']) {
+      if (typeof rawPayload[key] === 'string' && rawPayload[key].length > MAX_INLINE_FILE_URL_CHARS) {
+        libraryFileMemoryCache.set(`${cleanId}_${key}`, rawPayload[key]);
+        delete rawPayload[key];
+      }
+    }
+    await setDoc(docRef, rawPayload, { merge: true });
     return true;
   } catch (error) {
     if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {
@@ -466,7 +499,7 @@ export async function purgeDemoDataFromFirestore(): Promise<void> {
 
 /**
  * Subscribe to a Firestore collection in real time (onSnapshot).
- * Automatically removes any legacy demo data IDs from Firestore and returns only real user records.
+ * Automatically removes any legacy demo data IDs from Firestore and returns only real user records sorted newest first.
  */
 export function subscribeToFirestoreCollection<T extends { id: string }>(
   collectionName: FirestoreCollectionName,
@@ -480,15 +513,27 @@ export function subscribeToFirestoreCollection<T extends { id: string }>(
     (snapshot) => {
       const validDocs: T[] = [];
       snapshot.docs.forEach((docSnap) => {
-        const data = docSnap.data() as T;
+        const data = docSnap.data() as any;
         const docId = data?.id || docSnap.id;
         if (isDemoRecordId(docId) || isDemoRecordId(docSnap.id)) {
           // Hapus dokumen demo secara otomatis dari Firestore
           deleteDoc(docSnap.ref).catch(() => {});
         } else {
-          validDocs.push(data);
+          // Restore in-memory cached fileUrl if chunked in current session
+          if (collectionName === 'library_berkas' && !data.fileUrl && libraryFileMemoryCache.has(docId)) {
+            data.fileUrl = libraryFileMemoryCache.get(docId);
+          }
+          validDocs.push({ ...data, id: docId } as T);
         }
       });
+
+      // Urutkan dari yang terbaru berdasarkan createdAt / waktuPenginputan / id
+      validDocs.sort((a: any, b: any) => {
+        const timeA = a.createdAt || a.waktuPenginputan || a.tanggalUpload || a.tanggalPendataan || a.id || '';
+        const timeB = b.createdAt || b.waktuPenginputan || b.tanggalUpload || b.tanggalPendataan || b.id || '';
+        return String(timeB).localeCompare(String(timeA));
+      });
+
       onDataReceived(validDocs);
     },
     (error) => {
@@ -505,32 +550,116 @@ export function subscribeToFirestoreCollection<T extends { id: string }>(
   );
 }
 
-// Library Berkas Firestore Functions
+// Library Berkas Firestore Functions (with automatic chunking for files > 650KB & full timestamp persistence)
 export async function syncLibraryEntryToFirestore(entry: LibraryBerkasEntry): Promise<boolean> {
   const cleanId = sanitizeFirestoreId(entry.id);
   const path = `library_berkas/${cleanId}`;
+  const docRef = doc(db, 'library_berkas', cleanId);
+
+  const timeMeta = formatWaktuPenginputan();
+  const rawFileUrl = entry.fileUrl || '';
+  const isLargeFile = rawFileUrl.length > MAX_INLINE_FILE_URL_CHARS;
+
+  if (rawFileUrl) {
+    libraryFileMemoryCache.set(cleanId, rawFileUrl);
+  }
+
+  let chunkCount = 0;
+  const chunks: string[] = [];
+  if (isLargeFile) {
+    for (let i = 0; i < rawFileUrl.length && chunks.length < MAX_CHUNKS; i += CHUNK_SIZE_CHARS) {
+      chunks.push(rawFileUrl.slice(i, i + CHUNK_SIZE_CHARS));
+    }
+    chunkCount = chunks.length;
+  }
+
+  const basePayload = sanitizeFirestorePayload({
+    ...entry,
+    id: cleanId,
+    title: (entry.title || 'Dokumen Regulasi / Berkas BP2RD HSU').slice(0, 200),
+    description: (entry.description || entry.title || 'Arsip Dokumen Digital BP2RD Kabupaten Hulu Sungai Utara').slice(0, 1000),
+    tanggalUpload: entry.tanggalUpload || timeMeta.tanggalUpload,
+    jamUpload: entry.jamUpload || timeMeta.jamUpload,
+    waktuPenginputan: entry.waktuPenginputan || timeMeta.waktuPenginputan,
+    createdAt: entry.createdAt || timeMeta.isoString,
+    updatedAt: timeMeta.isoString,
+    isPublic: entry.isPublic ?? true,
+    hasChunkedFile: isLargeFile,
+    chunkCount: isLargeFile ? chunkCount : 0,
+    fileUrl: isLargeFile ? undefined : (rawFileUrl || undefined),
+  });
+
   try {
-    const docRef = doc(db, 'library_berkas', cleanId);
-    const payload = sanitizeFirestorePayload({
-      ...entry,
-      id: cleanId,
-      title: (entry.title || '').slice(0, 150),
-      description: (entry.description || '').slice(0, 500),
-      createdAt: entry.createdAt || new Date().toISOString(),
-      isPublic: entry.isPublic ?? true,
-    });
-    await setDoc(docRef, payload, { merge: true });
+    await setDoc(docRef, basePayload, { merge: true });
+
+    // Jika file berukuran besar (>650KB), simpan potongan base64 ke subkoleksi /library_berkas/{id}/chunks
+    if (isLargeFile && chunks.length > 0) {
+      const chunkPromises = chunks.map((chunkData, index) => {
+        const chunkRef = doc(db, 'library_berkas', cleanId, 'chunks', `chunk_${String(index).padStart(3, '0')}`);
+        return setDoc(chunkRef, {
+          index,
+          data: chunkData,
+          updatedAt: timeMeta.isoString,
+        });
+      });
+      await Promise.allSettled(chunkPromises);
+    }
+
     return true;
   } catch (error) {
-    if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {
-      handleFirestoreError(error, OperationType.WRITE, path);
+    // Fallback tanpa fileUrl jika ada kendala ukuran dokumen
+    try {
+      const fallbackPayload = { ...basePayload };
+      delete fallbackPayload.fileUrl;
+      await setDoc(docRef, fallbackPayload, { merge: true });
+      return true;
+    } catch (retryError) {
+      if (retryError instanceof Error && retryError.message.includes('Missing or insufficient permissions')) {
+        handleFirestoreError(retryError, OperationType.WRITE, path);
+      }
+      console.warn('Firestore library save note:', retryError);
+      return false;
     }
-    console.warn('Firestore library save note:', error);
-    return false;
   }
 }
 
+export async function resolveLibraryFileUrl(entry: LibraryBerkasEntry): Promise<string | undefined> {
+  if (entry.fileUrl) return entry.fileUrl;
+  const cleanId = sanitizeFirestoreId(entry.id);
+  if (libraryFileMemoryCache.has(cleanId)) {
+    return libraryFileMemoryCache.get(cleanId);
+  }
+  if (entry.hasChunkedFile && (entry.chunkCount || 0) > 0) {
+    try {
+      const chunksCol = collection(db, 'library_berkas', cleanId, 'chunks');
+      const snap = await getDocs(chunksCol);
+      if (!snap.empty) {
+        const sorted = snap.docs
+          .map((d) => d.data() as { index: number; data: string })
+          .sort((a, b) => a.index - b.index);
+        const fullDataUrl = sorted.map((c) => c.data).join('');
+        if (fullDataUrl) {
+          libraryFileMemoryCache.set(cleanId, fullDataUrl);
+          return fullDataUrl;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to reassemble chunked file from Firestore:', e);
+    }
+  }
+  return undefined;
+}
+
 export async function deleteLibraryEntryFromFirestore(id: string): Promise<boolean> {
+  const cleanId = sanitizeFirestoreId(id);
+  libraryFileMemoryCache.delete(cleanId);
+  try {
+    const chunksCol = collection(db, 'library_berkas', cleanId, 'chunks');
+    const snap = await getDocs(chunksCol);
+    await Promise.allSettled(snap.docs.map((d) => deleteDoc(d.ref)));
+  } catch {
+    // Ignore chunk cleanup error
+  }
   return deleteEntryFromFirestore('library_berkas', id);
 }
 
@@ -538,3 +667,4 @@ export async function fetchLibraryEntriesFromFirestore(): Promise<LibraryBerkasE
   const items = await fetchEntriesFromFirestore('library_berkas');
   return items as LibraryBerkasEntry[];
 }
+

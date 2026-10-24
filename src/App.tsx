@@ -333,7 +333,12 @@ export function App() {
     showToast(`Status retribusi berhasil diubah menjadi: "${newStatus}"`);
   };
 
-  const triggerAutoSync = (pList = potensiList, rList = retribusiList, pbList = pbbList) => {
+  const triggerAutoSync = (
+    pList = potensiList,
+    rList = retribusiList,
+    pbList = pbbList,
+    libList = libraryList
+  ) => {
     const cfg = loadSpreadsheetConfig();
     if (!cfg || !cfg.autoSync) return;
 
@@ -343,7 +348,7 @@ export function App() {
         retribusi: rList,
         pbb: pbList,
         ikm: ikmList,
-        library: libraryList,
+        library: libList,
       }).then(res => {
         saveSpreadsheetConfig({
           ...cfg,
@@ -544,13 +549,21 @@ export function App() {
     }
   };
 
-  const handleSaveLibrary = (newEntry: LibraryBerkasEntry) => {
+  const handleSaveLibrary = async (newEntry: LibraryBerkasEntry): Promise<boolean> => {
     const updated = [newEntry, ...libraryList];
     setLibraryList(updated);
     saveLibraryList(updated);
-    syncLibraryEntryToFirestore(newEntry);
-    showToast(`Berkas ${newEntry.nomorBerkas} berhasil ditambahkan & disinkronkan ke Firebase!`);
+    const savedOk = await syncLibraryEntryToFirestore(newEntry);
+    triggerAutoSync(potensiList, retribusiList, pbbList, updated);
+    if (savedOk) {
+      showToast(
+        `Berkas "${newEntry.title}" (${newEntry.waktuPenginputan || newEntry.tanggalUpload}) berhasil disimpan ke Database Firebase!`
+      );
+    } else {
+      showToast(`Berkas "${newEntry.title}" tersimpan secara lokal (Menunggu koneksi sinkronisasi Firebase).`);
+    }
     setActiveTab('library');
+    return savedOk;
   };
 
   const handleDeleteLibrary = (id: string) => {

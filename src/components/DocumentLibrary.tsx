@@ -20,9 +20,12 @@ import {
   Calendar,
   User,
   ArrowLeft,
-  Eye
+  Eye,
+  Clock,
+  Database
 } from 'lucide-react';
 import { LibraryBerkasEntry, AppUser, PotensiPajakEntry, PbbP2Entry, LibraryCategory } from '../types';
+import { resolveLibraryFileUrl } from '../services/firebase';
 
 interface DocumentLibraryProps {
   potensiList: PotensiPajakEntry[];
@@ -98,37 +101,46 @@ export const DocumentLibrary: React.FC<DocumentLibraryProps> = ({
     return matchesCategory && matchesQuery;
   });
 
-  // Download real file or fallback document
-  const handleDownload = (item: LibraryBerkasEntry) => {
-    if (item.fileUrl) {
-      const link = document.createElement('a');
-      link.href = item.fileUrl;
-      link.download = item.fileName || `${item.nomorBerkas || 'dokumen'}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      return;
+  const [isDownloadingId, setIsDownloadingId] = useState<string | null>(null);
+
+  // Download real file or fallback document (supports chunked files stored in Firestore)
+  const handleDownload = async (item: LibraryBerkasEntry) => {
+    setIsDownloadingId(item.id);
+    try {
+      const resolvedUrl = await resolveLibraryFileUrl(item);
+      if (resolvedUrl) {
+        const link = document.createElement('a');
+        link.href = resolvedUrl;
+        link.download = item.fileName || `${item.nomorBerkas || 'dokumen'}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return;
+      }
+    } finally {
+      setIsDownloadingId(null);
     }
 
+    const waktuStr = item.waktuPenginputan || (item.jamUpload ? `${item.tanggalUpload} ${item.jamUpload}` : item.tanggalUpload);
     const textContent = `PEMERINTAH KABUPATEN HULU SUNGAI UTARA
 BADAN PENGELOLA PAJAK DAN RETRIBUSI DAERAH (BP2RD)
 Jl. Basuki Rahmat No. 01, Amuntai Tengah, Kab. Hulu Sungai Utara, Kalimantan Selatan
 
 ARSIP DOKUMEN SISTEM INFORMASI POTENSI PAJAK (SIPOTENSI HSU)
 ======================================================================
-Kategori Berkas: ${item.categoryLabel || item.category.toUpperCase()}
-Nomor Dokumen  : ${item.nomorBerkas}
-Judul Dokumen  : ${item.title}
-Tanggal Upload : ${item.tanggalUpload}
-Pengunggah     : ${item.uploadedBy} (${item.uploadedRole})
-Status Validasi: ${item.statusVerifikasi || 'Aktif'}
+Kategori Berkas  : ${item.categoryLabel || item.category.toUpperCase()}
+Nomor Dokumen    : ${item.nomorBerkas}
+Judul Dokumen    : ${item.title}
+Waktu Penginputan: ${waktuStr}
+Pengunggah       : ${item.uploadedBy} (${item.uploadedRole})
+Status Validasi  : ${item.statusVerifikasi || 'Aktif'}
 ======================================================================
 
 DESKRIPSI:
 ${item.description}
 
 Catatan Sistem:
-Dokumen ini tersimpan secara digital pada Repositori Resmi BP2RD Kabupaten Hulu Sungai Utara.
+Dokumen ini tersimpan secara digital pada Database Firebase Firestore BP2RD Kabupaten Hulu Sungai Utara.
 Kesesuaian dan keabsahan dokumen diverifikasi oleh Bagian Tata Usaha dan Hukum BP2RD HSU.
 `;
 
@@ -171,19 +183,18 @@ Kesesuaian dan keabsahan dokumen diverifikasi oleh Bagian Tata Usaha dan Hukum B
           </div>
         </div>
 
-        {/* Right Action: Input New File (for Admin) or Login Button */}
-        <div className="flex items-center gap-2.5 self-start md:self-auto">
-          {currentUser ? (
-            currentUser.role === 'admin' && onOpenInputLibrary && (
-              <button
-                onClick={onOpenInputLibrary}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-950/40 transition-all cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Tambah Berkas Baru</span>
-              </button>
-            )
-          ) : (
+        {/* Right Action: Input New File or Login Button */}
+        <div className="flex flex-wrap items-center gap-2.5 self-start md:self-auto">
+          {onOpenInputLibrary && (
+            <button
+              onClick={onOpenInputLibrary}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-950/40 transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Tambah Berkas Baru</span>
+            </button>
+          )}
+          {!currentUser && (
             <button
               onClick={onOpenLogin}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold transition-all cursor-pointer"
@@ -383,17 +394,22 @@ Kesesuaian dan keabsahan dokumen diverifikasi oleh Bagian Tata Usaha dan Hukum B
                   {/* Card Bottom: Metadata & Actions */}
                   <div className="mt-4 pt-3.5 border-t border-slate-800/80 flex items-center justify-between text-xs">
                     <div className="flex flex-col text-[10px] text-slate-500">
-                      <span className="flex items-center gap-1 text-slate-400">
-                        <Calendar className="w-3 h-3" /> {item.tanggalUpload}
+                      <span className="flex items-center gap-1 text-emerald-400 font-mono font-semibold" title="Waktu Penginputan di Database Firebase">
+                        <Clock className="w-3 h-3 shrink-0" />
+                        <span>{item.waktuPenginputan || (item.jamUpload ? `${item.tanggalUpload} ${item.jamUpload}` : item.tanggalUpload)}</span>
                       </span>
-                      <span className="truncate max-w-[120px]">
-                        {item.fileSize || 'PDF Resmi'}
+                      <span className="truncate max-w-[150px] text-slate-400 mt-0.5 flex items-center gap-1">
+                        <Database className="w-2.5 h-2.5 text-teal-400 shrink-0" />
+                        <span>{item.fileName || 'Berkas Digital'} ({item.fileSize || 'PDF'})</span>
                       </span>
                     </div>
 
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => setSelectedPreviewDoc(item)}
+                        onClick={async () => {
+                          const resolved = await resolveLibraryFileUrl(item);
+                          setSelectedPreviewDoc(resolved ? { ...item, fileUrl: resolved } : item);
+                        }}
                         className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-medium text-xs flex items-center gap-1 transition-colors cursor-pointer"
                         title="Pratinjau Dokumen"
                       >
@@ -403,11 +419,12 @@ Kesesuaian dan keabsahan dokumen diverifikasi oleh Bagian Tata Usaha dan Hukum B
 
                       <button
                         onClick={() => handleDownload(item)}
-                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-950/30 transition-all cursor-pointer active:scale-95"
+                        disabled={isDownloadingId === item.id}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-950/30 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
                         title="Unduh Berkas Resmi"
                       >
                         <Download className="w-3.5 h-3.5" />
-                        <span>Unduh</span>
+                        <span>{isDownloadingId === item.id ? 'Mengunduh...' : 'Unduh'}</span>
                       </button>
                     </div>
                   </div>
@@ -486,8 +503,10 @@ Kesesuaian dan keabsahan dokumen diverifikasi oleh Bagian Tata Usaha dan Hukum B
                   <span className="font-semibold text-slate-200">{selectedPreviewDoc.uploadedBy}</span>
                 </div>
                 <div className="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
-                  <span className="text-[10px] text-slate-500 block">Tanggal Registrasi</span>
-                  <span className="font-semibold text-slate-200">{selectedPreviewDoc.tanggalUpload}</span>
+                  <span className="text-[10px] text-slate-500 block">Waktu Penginputan (Firebase)</span>
+                  <span className="font-semibold font-mono text-emerald-400">
+                    {selectedPreviewDoc.waktuPenginputan || (selectedPreviewDoc.jamUpload ? `${selectedPreviewDoc.tanggalUpload} ${selectedPreviewDoc.jamUpload}` : selectedPreviewDoc.tanggalUpload)}
+                  </span>
                 </div>
               </div>
             </div>

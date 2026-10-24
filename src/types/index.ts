@@ -183,6 +183,8 @@ export interface LibraryBerkasEntry {
   uploadedBy: string;
   uploadedRole: 'admin' | 'user' | 'system';
   tanggalUpload: string;
+  jamUpload?: string;
+  waktuPenginputan?: string;
   statusVerifikasi?: 'Aktif' | 'Arsip' | 'Revisi';
   tags?: string[];
   nomorSurat?: string;
@@ -193,10 +195,13 @@ export interface LibraryBerkasEntry {
   statusColor?: string;
   previewUrl?: string;
   driveUrl?: string;
+  hasChunkedFile?: boolean;
+  chunkCount?: number;
   catatanVerifikasi?: string;
   verifiedBy?: string;
   verifiedAt?: string;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface GpsCoordinateResult {
