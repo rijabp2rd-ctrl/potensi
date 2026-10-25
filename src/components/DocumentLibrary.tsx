@@ -54,40 +54,26 @@ export const DocumentLibrary: React.FC<DocumentLibraryProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPreviewDoc, setSelectedPreviewDoc] = useState<LibraryBerkasEntry | null>(null);
 
-  // Kategori yang diizinkan untuk publik (landing page / belum login):
+  // Kategori berkas resmi pada Library Berkas:
   // Perda dan Regulasi, SOP & Juknis, Formulir Blanko
-  const PUBLIC_CATEGORIES: LibraryCategory[] = ['regulasi', 'sop', 'blanko'];
+  const ALLOWED_CATEGORIES: LibraryCategory[] = ['regulasi', 'sop', 'blanko'];
 
-  // Kategori internal yang HANYA tampil untuk admin dan user yang sudah login:
-  // DPA/ARKAS, Foto Objek, Struk Bayar PBB
-  const INTERNAL_CATEGORIES: LibraryCategory[] = ['dpa', 'objek', 'pbb'];
-
-  // Kategori yang tersedia berdasarkan status login
+  // Kategori yang tersedia pada menu Library Berkas
   const availableCategories: { id: 'all' | LibraryCategory; label: string; icon: React.ElementType }[] = [
     { id: 'all', label: 'Semua Berkas', icon: FolderArchive },
     { id: 'regulasi', label: 'Perda & Regulasi', icon: BookOpen },
     { id: 'sop', label: 'SOP & Juknis', icon: FileCheck },
     { id: 'blanko', label: 'Formulir Blanko', icon: FileText },
-    ...(currentUser ? [
-      { id: 'dpa' as LibraryCategory, label: 'DPA / ARKAS', icon: FileSpreadsheet },
-      { id: 'objek' as LibraryCategory, label: 'Foto Objek Pajak', icon: ImageIcon },
-      { id: 'pbb' as LibraryCategory, label: 'Struk Bayar PBB', icon: Receipt },
-    ] : []),
   ];
 
-  // Pastikan kategori yang aktif valid untuk mode saat ini
-  const effectiveCategory = (!currentUser && !PUBLIC_CATEGORIES.includes(activeCategory as LibraryCategory) && activeCategory !== 'all')
+  // Pastikan kategori yang aktif valid
+  const effectiveCategory = (!ALLOWED_CATEGORIES.includes(activeCategory as LibraryCategory) && activeCategory !== 'all')
     ? 'all'
     : activeCategory;
 
-  // Filter berkas berdasarkan hak akses (publik vs user/admin)
+  // Filter berkas agar hanya menampilkan kategori resmi (Perda & Regulasi, SOP & Juknis, Formulir Blanko)
   const accessibleItems = libraryList.filter((item) => {
-    // Jika belum login, hanya tampilkan isPublic true (regulasi, sop, blanko)
-    if (!currentUser) {
-      return item.isPublic === true && PUBLIC_CATEGORIES.includes(item.category);
-    }
-    // Jika sudah login (admin / user), semua kategori tampil
-    return true;
+    return ALLOWED_CATEGORIES.includes(item.category);
   });
 
   // Filter berdasarkan kategori terpilih dan kata kunci pencarian
@@ -178,7 +164,7 @@ Kesesuaian dan keabsahan dokumen diverifikasi oleh Bagian Tata Usaha dan Hukum B
               </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-400 mt-1">
-              Pusat penyimpanan digital peraturan daerah, SOP operasional, formulir blanko, DPA/ARKAS, dan bukti pendukung.
+              Pusat penyimpanan digital peraturan daerah, SOP &amp; petunjuk teknis operasional, serta formulir blanko resmi BP2RD HSU.
             </p>
           </div>
         </div>
@@ -208,7 +194,6 @@ Kesesuaian dan keabsahan dokumen diverifikasi oleh Bagian Tata Usaha dan Hukum B
       </div>
 
       {/* Banner Status Akses Kategori Berkas */}
-      {/* Sesuai Permintaan #1: Landing page hanya Perda & Regulasi, SOP & Juknis, Blanko. DPA/ARKAS, Foto Objek, Struk Bayar PBB untuk admin & user */}
       <div className="mt-6">
         {currentUser ? (
           <div className="p-4 rounded-2xl bg-emerald-950/30 border border-emerald-800/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
@@ -218,39 +203,32 @@ Kesesuaian dan keabsahan dokumen diverifikasi oleh Bagian Tata Usaha dan Hukum B
               </div>
               <div>
                 <p className="font-bold text-emerald-300">
-                  Akses Penuh Terbuka ({currentUser.role.toUpperCase()}) &bull; {currentUser.name}
+                  Akses Terverifikasi ({currentUser.role.toUpperCase()}) &bull; {currentUser.name}
                 </p>
                 <p className="text-slate-400 text-[11px] mt-0.5">
-                  Seluruh kategori berkas terbuka: Perda &amp; Regulasi, SOP &amp; Juknis, Formulir Blanko, <strong className="text-slate-300">DPA/ARKAS</strong>, <strong className="text-slate-300">Foto Objek Pajak</strong>, dan <strong className="text-slate-300">Struk Bayar PBB</strong>.
+                  Menampilkan koleksi berkas resmi: <strong className="text-emerald-400">Perda &amp; Regulasi</strong>, <strong className="text-blue-400">SOP &amp; Juknis</strong>, dan <strong className="text-amber-400">Formulir Blanko</strong>.
                 </p>
               </div>
             </div>
             <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold uppercase tracking-wider">
-              Mode Internal Terverifikasi
+              Mode Terverifikasi
             </span>
           </div>
         ) : (
           <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
-                <Lock className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                <FolderArchive className="w-5 h-5" />
               </div>
               <div>
                 <p className="font-bold text-slate-200">
-                  Mode Akses Publik Terbuka
+                  Repositori Dokumen Resmi BP2RD HSU
                 </p>
                 <p className="text-slate-400 text-[11px] mt-0.5">
-                  Menampilkan kategori terbuka: <strong className="text-emerald-400">Perda &amp; Regulasi</strong>, <strong className="text-blue-400">SOP &amp; Juknis</strong>, dan <strong className="text-amber-400">Formulir Blanko</strong>. Berkas internal (DPA/ARKAS, Foto Objek, Struk Bayar PBB) diproteksi.
+                  Menampilkan kategori berkas: <strong className="text-emerald-400">Perda &amp; Regulasi</strong>, <strong className="text-blue-400">SOP &amp; Juknis</strong>, dan <strong className="text-amber-400">Formulir Blanko</strong>.
                 </p>
               </div>
             </div>
-            <button
-              onClick={onOpenLogin}
-              className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold border border-slate-700 transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1.5"
-            >
-              <LogIn className="w-3.5 h-3.5 text-amber-400" />
-              <span>Login Petugas / Admin</span>
-            </button>
           </div>
         )}
       </div>
@@ -314,44 +292,29 @@ Kesesuaian dan keabsahan dokumen diverifikasi oleh Bagian Tata Usaha dan Hukum B
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredItems.map((item) => {
-              const isInternal = INTERNAL_CATEGORIES.includes(item.category);
-              
               return (
                 <div
                   key={item.id}
                   className="bg-slate-900/80 border border-slate-800 hover:border-slate-700 rounded-2xl p-5 shadow-lg flex flex-col justify-between transition-all duration-200 group hover:-translate-y-0.5"
                 >
                   <div>
-                    {/* Card Top: Category Badge & Lock indicator */}
+                    {/* Card Top: Category Badge & Status indicator */}
                     <div className="flex items-center justify-between gap-2 mb-3">
                       <span className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
                         item.category === 'regulasi'
                           ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                           : item.category === 'sop'
                           ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
-                          : item.category === 'blanko'
-                          ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                          : item.category === 'dpa'
-                          ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
-                          : item.category === 'objek'
-                          ? 'bg-pink-500/10 text-pink-400 border-pink-500/30'
-                          : 'bg-teal-500/10 text-teal-400 border-teal-500/30'
+                          : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
                       }`}>
                         {item.categoryLabel || item.category.toUpperCase()}
                       </span>
 
                       <div className="flex items-center gap-1.5">
-                        {isInternal ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                            <Lock className="w-3 h-3" />
-                            <span>Internal</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                            <CheckCircle2 className="w-3 h-3" />
-                            <span>Publik</span>
-                          </span>
-                        )}
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                          <CheckCircle2 className="w-3 h-3" />
+                          <span>Publik</span>
+                        </span>
 
                         {currentUser?.role === 'admin' && onDeleteEntry && (
                           <button

@@ -255,14 +255,11 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
             <label className="text-xs font-semibold text-slate-300 block mb-1.5">
               Kategori Dokumen Berkas <span className="text-red-400">*</span>
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {[
                 { id: 'regulasi', label: 'Perda & Regulasi', public: true },
                 { id: 'sop', label: 'SOP & Juknis', public: true },
                 { id: 'blanko', label: 'Formulir Blanko', public: true },
-                { id: 'dpa', label: 'DPA / ARKAS', public: false },
-                { id: 'objek', label: 'Foto Objek Pajak', public: false },
-                { id: 'pbb', label: 'Struk Bayar PBB', public: false },
               ].map((c) => (
                 <button
                   key={c.id}
@@ -275,12 +272,8 @@ export const AdminInputLibraryBerkas: React.FC<AdminInputLibraryBerkasProps> = (
                   }`}
                 >
                   <span className="text-white block mb-1">{c.label}</span>
-                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded w-fit ${
-                    c.public 
-                      ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' 
-                      : 'bg-amber-950 text-amber-400 border border-amber-800'
-                  }`}>
-                    {c.public ? 'Publik / Landing Page' : 'Internal (Admin & User)'}
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded w-fit bg-emerald-950 text-emerald-400 border border-emerald-800">
+                    Publik / Landing Page
                   </span>
                 </button>
               ))}

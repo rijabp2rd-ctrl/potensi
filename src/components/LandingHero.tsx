@@ -338,48 +338,6 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
             </div>
 
           </div>
-
-          {/* Notifikasi Akses Internal untuk DPA/ARKAS, Foto Objek, dan Struk Bayar PBB */}
-          <div className="mt-6 p-4 rounded-2xl bg-slate-950/50 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400 shrink-0">
-                <Lock className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-slate-200">
-                  Akses Berkas Internal: DPA/ARKAS, Foto Objek Pajak &amp; Struk Bayar PBB
-                </p>
-                <p className="text-[11px] text-slate-400">
-                  {currentUser ? (
-                    <span className="text-emerald-400">
-                      Anda login sebagai {currentUser.role.toUpperCase()} ({currentUser.name}). Seluruh berkas internal terbuka penuh untuk Anda di menu Library.
-                    </span>
-                  ) : (
-                    <span>
-                      Berkas DPA/ARKAS, Foto Objek Lapangan, dan Struk Bayar PBB hanya dapat diakses oleh Admin &amp; Petugas terverifikasi.
-                    </span>
-                  )}
-                </p>
-              </div>
-            </div>
-
-            {currentUser ? (
-              <button
-                onClick={() => onSelectTab('library')}
-                className="px-4 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/30 whitespace-nowrap cursor-pointer transition-colors"
-              >
-                Akses Berkas Internal
-              </button>
-            ) : (
-              <button
-                onClick={onOpenLogin}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold border border-slate-700 whitespace-nowrap cursor-pointer transition-colors flex items-center gap-1.5"
-              >
-                <LogIn className="w-3.5 h-3.5 text-amber-400" />
-                <span>Login untuk Akses</span>
-              </button>
-            )}
-          </div>
         </motion.div>
 
         {/* 10 KECAMATAN DI KABUPATEN HULU SUNGAI UTARA */}

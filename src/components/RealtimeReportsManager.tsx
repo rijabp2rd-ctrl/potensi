@@ -1076,139 +1076,15 @@ Diterbitkan oleh: Sistem Informasi SIPOTENSI BP2RD Kabupaten Hulu Sungai Utara`;
                           <td className="py-3 px-4 text-center">
                             <div className="flex items-center justify-center gap-1.5">
                               
-                              {/* Aksi Verifikasi: Lihat Map */}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const lat = isPotensi ? pot!.latitude : isRetribusi ? ret!.latitude : pbb!.latitude;
-                                  const lng = isPotensi ? pot!.longitude : isRetribusi ? ret!.longitude : pbb!.longitude;
-                                  const title = isPotensi ? `${pot!.namaWajibPajak} (${pot!.namaUsaha})` : isRetribusi ? ret!.subObjekRetribusi : pbb!.namaWajibPajak;
-                                  const no = isPotensi ? pot!.nomorFormulir : isRetribusi ? ret!.nomorRegister : pbb!.nop;
-                                  const foto = isPotensi ? pot?.fotoObjekUrl : isRetribusi ? ret?.fotoObjekRetribusiUrl : pbb?.fotoObjekPbbUrl;
-                                  const fotoN = isPotensi ? pot?.fotoObjekName : isRetribusi ? ret?.fotoObjekRetribusiName : pbb?.fotoObjekPbbName;
-
-                                  setVerifikasiMapModal({
-                                    itemType: item.type,
-                                    id: item.data.id,
-                                    name: title,
-                                    nomor: no,
-                                    kecamatan: item.data.kecamatan,
-                                    kelurahanDesa: kelurahanDesaVal,
-                                    alamat: alamatVal,
-                                    latitude: lat || 0,
-                                    longitude: lng || 0,
-                                    statusVerifikasi: (item.data.statusVerifikasi as VerificationStatus) || 'Menunggu Verifikasi',
-                                    nilaiFiskalLabel: isPotensi ? 'Potensi Pajak Tahunan' : isRetribusi ? 'Potensi Retribusi Tahunan' : 'PBB Terhutang',
-                                    nilaiFiskalRp: formatRupiah(isPotensi ? (pot?.potensiRupiahTahunan || 0) : isRetribusi ? (ret?.potensiPertahun || 0) : (pbb?.pbbTerhutang || 0)),
-                                    petugas: isPotensi ? pot?.petugasPendata : isRetribusi ? ret?.petugasPendata : pbb?.petugasValidasi,
-                                    fotoUrl: foto,
-                                    fotoName: fotoN,
-                                  });
-                                }}
-                                title="Verifikasi Titik Koordinat GPS & Lihat Map"
-                                className="px-2.5 py-1.5 rounded-xl bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 hover:text-white font-bold text-[11px] flex items-center gap-1 border border-teal-500/40 transition-all cursor-pointer shadow-sm active:scale-95"
-                              >
-                                <MapPin className="w-3.5 h-3.5 text-teal-400" />
-                                <span>Lihat Map</span>
-                              </button>
-
                               {/* Lihat Hasil Inputan Detail */}
                               <button
                                 onClick={() => handleOpenDetailModal(item)}
                                 title="Lihat Hasil Inputan Lengkap"
-                                className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 hover:text-white font-bold text-[11px] flex items-center gap-1 border border-slate-700 transition-colors"
+                                className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 hover:text-white font-bold text-[11px] flex items-center gap-1 border border-slate-700 transition-colors cursor-pointer"
                               >
                                 <Eye className="w-3.5 h-3.5" />
                                 <span>Lihat</span>
                               </button>
-
-                              {/* Lihat File Hasil Inputan (Foto Objek / DPA / Struk Bayar) */}
-                              {(() => {
-                                const hasPhoto = Boolean(
-                                  isPotensi
-                                    ? pot?.fotoObjekUrl
-                                    : isRetribusi
-                                    ? ret?.fotoObjekRetribusiUrl
-                                    : pbb?.fotoObjekPbbUrl
-                                );
-                                const hasDpa = Boolean(isPotensi && pot?.dpaFileUrl);
-                                const hasStruk = Boolean(isPbb && pbb?.strukBayarUrl);
-                                const hasAnyFile = hasPhoto || hasDpa || hasStruk;
-
-                                return (
-                                  <button
-                                    onClick={() => {
-                                      if (isPotensi) {
-                                        if (pot?.fotoObjekUrl) {
-                                          setPreviewFileModal({
-                                            title: `Foto Objek Pajak: ${pot.namaUsaha}`,
-                                            fileName: pot.fotoObjekName || 'Foto_Objek_PJRD.jpg',
-                                            fileUrl: pot.fotoObjekUrl,
-                                            fileType: 'image',
-                                            fileSize: pot.fotoObjekSize || 'Foto Lapangan',
-                                            sourceInfo: `No. Form: ${pot.nomorFormulir} • ${pot.jenisPajak} • ${pot.kecamatan}`,
-                                          });
-                                        } else if (pot?.dpaFileUrl) {
-                                          setPreviewFileModal({
-                                            title: `Dokumen DPA / Kertas Kerja: ${pot.namaUsaha}`,
-                                            fileName: pot.dpaFileName || 'Dokumen_DPA.pdf',
-                                            fileUrl: pot.dpaFileUrl,
-                                            fileType: 'pdf',
-                                            fileSize: pot.dpaFileSize || 'Dokumen Valid',
-                                            sourceInfo: `No. Form: ${pot.nomorFormulir} • ${pot.jenisPajak}`,
-                                          });
-                                        } else {
-                                          handleOpenDetailModal(item);
-                                        }
-                                      } else if (isRetribusi) {
-                                        if (ret?.fotoObjekRetribusiUrl) {
-                                          setPreviewFileModal({
-                                            title: `Foto Objek Retribusi: ${ret.subObjekRetribusi}`,
-                                            fileName: ret.fotoObjekRetribusiName || 'Foto_Objek_Retribusi.jpg',
-                                            fileUrl: ret.fotoObjekRetribusiUrl,
-                                            fileType: 'image',
-                                            fileSize: ret.fotoObjekRetribusiSize || 'Foto Lapangan',
-                                            sourceInfo: `No. Register: ${ret.nomorRegister} • ${ret.subRekening} • ${ret.kecamatan}`,
-                                          });
-                                        } else {
-                                          handleOpenDetailModal(item);
-                                        }
-                                      } else {
-                                        if (pbb?.fotoObjekPbbUrl) {
-                                          setPreviewFileModal({
-                                            title: `Foto Objek Persil PBB NOP: ${pbb.nop}`,
-                                            fileName: pbb.fotoObjekPbbName || 'Foto_Persil_PBB.jpg',
-                                            fileUrl: pbb.fotoObjekPbbUrl,
-                                            fileType: 'image',
-                                            fileSize: pbb.fotoObjekPbbSize || 'Foto Lapangan',
-                                            sourceInfo: `NOP: ${pbb.nop} • ${pbb.namaWajibPajak} • ${pbb.kecamatan}`,
-                                          });
-                                        } else if (pbb?.strukBayarUrl) {
-                                          setPreviewFileModal({
-                                            title: `Struk Bayar PBB NOP: ${pbb.nop}`,
-                                            fileName: pbb.strukBayarName || 'Struk_Bayar_PBB.pdf',
-                                            fileUrl: pbb.strukBayarUrl,
-                                            fileType: 'pdf',
-                                            fileSize: 'Struk Sah',
-                                            sourceInfo: `NOP: ${pbb.nop} • ${pbb.namaWajibPajak}`,
-                                          });
-                                        } else {
-                                          handleOpenDetailModal(item);
-                                        }
-                                      }
-                                    }}
-                                    title={hasAnyFile ? "Lihat Berkas / Foto Hasil Inputan Lapangan" : "Buka Detail Berkas Inputan"}
-                                    className={`px-2.5 py-1.5 rounded-xl font-bold text-[11px] flex items-center gap-1 border transition-all ${
-                                      hasAnyFile
-                                        ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/30 hover:border-amber-500/50'
-                                        : 'bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border-slate-700'
-                                    }`}
-                                  >
-                                    <Paperclip className="w-3.5 h-3.5 text-amber-400" />
-                                    <span>Lihat File</span>
-                                  </button>
-                                );
-                              })()}
 
                               {/* Action: Ubah Status Cepat */}
                               {status !== 'Verifikasi' && (
