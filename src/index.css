@@ -14,6 +14,83 @@
   background-size: 200% 100%;
 }
 
+@keyframes btn-shimmer {
+  0% {
+    transform: translateX(-120%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(260%) skewX(-20deg);
+  }
+}
+
+.btn-shimmer-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-shimmer-effect::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.32), transparent);
+  transform: translateX(-120%) skewX(-20deg);
+  animation: btn-shimmer 3.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes orbit-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orbit-reverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+.animate-orbit-slow {
+  animation: orbit-slow 26s linear infinite;
+}
+
+.animate-orbit-reverse {
+  animation: orbit-reverse 18s linear infinite;
+}
+
+@keyframes text-gradient-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-text-gradient {
+  background-size: 240% 240%;
+  animation: text-gradient-flow 4.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-shimmer-effect::after,
+  .animate-orbit-slow,
+  .animate-orbit-reverse,
+  .animate-text-gradient {
+    animation: none !important;
+  }
+}
+
 /* Custom scrollbars that look sleek */
 ::-webkit-scrollbar {
   width: 6px;
