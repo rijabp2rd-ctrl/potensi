@@ -22,13 +22,56 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && (
         (request.auth.token.email == "rija.bp2rd@gmail.com" && request.auth.token.email_verified == true) ||
+        request.auth.token.email == "admin.bp2rd@sipotensi-hsu.go.id" ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
+    }
+
+    function isValidAppSettings(data) {
+      return data.keys().hasAll(['id', 'requireSaveCode', 'cloudflareEnabled']) &&
+        data.keys().hasOnly([
+          'id',
+          'requireSaveCode',
+          'protectPotensi',
+          'protectPbb',
+          'protectRetribusi',
+          'saveCodeHash',
+          'saveCodeMasked',
+          'saveCodeHint',
+          'cloudflareEnabled',
+          'cloudflareMode',
+          'spreadsheetPasscodeHash',
+          'spreadsheetPasscodeMasked',
+          'updatedAt',
+          'updatedBy'
+        ]) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 64 &&
+        data.requireSaveCode is bool &&
+        data.cloudflareEnabled is bool &&
+        (!('protectPotensi' in data) || data.protectPotensi is bool) &&
+        (!('protectPbb' in data) || data.protectPbb is bool) &&
+        (!('protectRetribusi' in data) || data.protectRetribusi is bool) &&
+        (!('saveCodeHash' in data) || (data.saveCodeHash is string && data.saveCodeHash.size() <= 128)) &&
+        (!('saveCodeMasked' in data) || (data.saveCodeMasked is string && data.saveCodeMasked.size() <= 40)) &&
+        (!('saveCodeHint' in data) || (data.saveCodeHint is string && data.saveCodeHint.size() <= 280)) &&
+        (!('cloudflareMode' in data) || data.cloudflareMode in ['managed', 'strict']) &&
+        (!('spreadsheetPasscodeHash' in data) || (data.spreadsheetPasscodeHash is string && data.spreadsheetPasscodeHash.size() <= 128)) &&
+        (!('spreadsheetPasscodeMasked' in data) || (data.spreadsheetPasscodeMasked is string && data.spreadsheetPasscodeMasked.size() <= 40)) &&
+        (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64)) &&
+        (!('updatedBy' in data) || (data.updatedBy is string && data.updatedBy.size() <= 120));
     }
 
     // Connection ping test
     match /_connection_test/{id} {
       allow read, write: if isValidId(id);
+    }
+
+    // Pengaturan Keamanan & Kode Simpan Data (Hanya Admin yang dapat mengubah; konfigurasi non-rahasia/hash dapat dibaca klien untuk verifikasi)
+    match /app_settings/{settingId} {
+      allow get: if isValidId(settingId);
+      allow list: if isAdmin();
+      allow create, update: if isAdmin() && isValidId(settingId) && isValidAppSettings(request.resource.data);
+      allow delete: if false;
     }
 
     // Profil Akun Petugas & Admin BP2RD

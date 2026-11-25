@@ -50,7 +50,7 @@ import { compressImageFile } from '../utils/imageCompressor';
 interface RetribusiDaerahFormProps {
   currentUser: AppUser | null;
   retribusiList?: RetribusiDaerahEntry[];
-  onSave: (entry: RetribusiDaerahEntry) => void;
+  onSave: (entry: RetribusiDaerahEntry) => Promise<boolean> | boolean | void;
   onCancel: () => void;
   onNavigateToTab?: (tab: string) => void;
   initialSubTab?: 'form' | 'riwayat';
@@ -308,7 +308,7 @@ export const RetribusiDaerahForm: React.FC<RetribusiDaerahFormProps> = ({
     setJustSavedItem(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const finalSubRekening = subRekeningSelect === 'Lainnya (Ketik Manual)'
@@ -363,7 +363,9 @@ export const RetribusiDaerahForm: React.FC<RetribusiDaerahFormProps> = ({
       updatedAt: new Date().toISOString(),
     };
 
-    onSave(newEntry);
+    const saved = await onSave(newEntry);
+    if (saved === false) return;
+
     setJustSavedItem(newEntry);
     if (isAdmin) {
       setActiveSubTab('riwayat');

@@ -44,7 +44,7 @@ import { compressImageFile } from '../utils/imageCompressor';
 
 interface PotensiPajakFormProps {
   currentUser: AppUser | null;
-  onSave: (entry: PotensiPajakEntry) => void;
+  onSave: (entry: PotensiPajakEntry) => Promise<boolean> | boolean | void;
   onCancel: () => void;
   potensiList?: PotensiPajakEntry[];
   onNavigateToTab?: (tab: string) => void;
@@ -252,7 +252,7 @@ export const PotensiPajakForm: React.FC<PotensiPajakFormProps> = ({
     setFormError(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!namaWajibPajak.trim() || !namaUsaha.trim()) {
@@ -296,7 +296,9 @@ export const PotensiPajakForm: React.FC<PotensiPajakFormProps> = ({
       updatedAt: new Date().toISOString(),
     };
 
-    onSave(newEntry);
+    const saved = await onSave(newEntry);
+    if (saved === false) return;
+
     setJustSavedItem(newEntry);
     if (isInternalUser) {
       setActiveSubTab('riwayat');

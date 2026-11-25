@@ -54,7 +54,7 @@ import { compressImageFile } from '../utils/imageCompressor';
 
 interface PbbP2FormProps {
   currentUser: AppUser | null;
-  onSave: (entry: PbbP2Entry) => void;
+  onSave: (entry: PbbP2Entry) => Promise<boolean> | boolean | void;
   onCancel: () => void;
   pbbList?: PbbP2Entry[];
   onNavigateToTab?: (tab: string) => void;
@@ -338,7 +338,7 @@ export const PbbP2Form: React.FC<PbbP2FormProps> = ({
 
   const [formError, setFormError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!namaWajibPajak.trim()) {
@@ -413,7 +413,9 @@ export const PbbP2Form: React.FC<PbbP2FormProps> = ({
       updatedAt: new Date().toISOString(),
     };
 
-    onSave(newEntry);
+    const saved = await onSave(newEntry);
+    if (saved === false) return;
+
     setJustSavedItem(newEntry);
     if (isInternalUser) {
       setActiveSubTab('riwayat');

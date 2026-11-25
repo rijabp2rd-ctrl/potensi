@@ -14,7 +14,8 @@ import {
   Navigation2,
   Coins,
   HeartHandshake,
-  Lock
+  Lock,
+  Settings
 } from 'lucide-react';
 import { AppUser } from '../types';
 
@@ -209,6 +210,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               </>
             )}
+
+            {/* Menu Pengaturan Keamanan & Spreadsheet HANYA TAMPIL pada Login Admin */}
+            {currentUser?.role === 'admin' && (
+              <button
+                onClick={() => onSelectTab('pengaturan')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center gap-2 ${
+                  activeTab === 'pengaturan'
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/25'
+                    : 'text-amber-300/90 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <Settings className="w-3.5 h-3.5" />
+                <span>Pengaturan</span>
+              </button>
+            )}
           </nav>
 
           {/* Spreadsheet & User Auth Section */}
@@ -332,6 +348,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                 Analitik
               </button>
             </>
+          )}
+          {currentUser?.role === 'admin' && (
+            <button
+              onClick={() => onSelectTab('pengaturan')}
+              className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap flex items-center gap-1 ${
+                activeTab === 'pengaturan'
+                  ? 'bg-amber-600 text-white font-bold'
+                  : 'text-amber-300 bg-amber-950/40 border border-amber-500/30'
+              }`}
+            >
+              <Settings className="w-3 h-3" />
+              <span>Pengaturan</span>
+            </button>
           )}
           {onOpenSpreadsheetModal && (
             <button

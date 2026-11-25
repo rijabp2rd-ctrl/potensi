@@ -52,6 +52,14 @@ import {
   AppUser 
 } from '../types';
 import { KODE_GS_TEMPLATE } from '../constants/kodeGsTemplate';
+import {
+  AppSecuritySettings,
+  hashVerificationCode,
+  loadLocalSecuritySettings,
+  maskSecretCode,
+  saveSecuritySettingsToFirestore,
+  verifySpreadsheetCodeWithSettings,
+} from '../services/securitySettings';
 
 interface GoogleSpreadsheetSyncModalProps {
   isOpen: boolean;
@@ -61,15 +69,20 @@ interface GoogleSpreadsheetSyncModalProps {
   retribusiList: RetribusiDaerahEntry[];
   pbbList: PbbP2Entry[];
   onSyncSuccess?: (message: string) => void;
+  securitySettings?: AppSecuritySettings;
+  onSecuritySettingsUpdated?: (updated: AppSecuritySettings) => void;
 }
 
 export const GoogleSpreadsheetSyncModal: React.FC<GoogleSpreadsheetSyncModalProps> = ({
   isOpen,
   onClose,
+  currentUser,
   potensiList,
   retribusiList,
   pbbList,
   onSyncSuccess,
+  securitySettings,
+  onSecuritySettingsUpdated,
 }) => {
   // Security Passcode Gate State
   const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
@@ -133,26 +146,28 @@ export const GoogleSpreadsheetSyncModal: React.FC<GoogleSpreadsheetSyncModalProp
     });
   }, [isOpen]);
 
-  const handleVerifyPasscode = (e: React.FormEvent) => {
+  const handleVerifyPasscode = async (e: React.FormEvent) => {
     e.preventDefault();
     const entered = passcodeInput.trim();
     const savedPasscode = loadSpreadsheetPasscode();
+    const activeSettings = securitySettings || loadLocalSecuritySettings();
 
-    if (
-      entered === savedPasscode ||
-      entered.toUpperCase() === DEFAULT_SPREADSHEET_PASSCODE ||
-      entered.toUpperCase() === 'HSU2026' ||
-      entered === '19900709'
-    ) {
+    const isValid = await verifySpreadsheetCodeWithSettings(
+      entered,
+      activeSettings,
+      savedPasscode
+    );
+
+    if (isValid) {
       setIsUnlocked(true);
       setPasscodeError(null);
       setStatusMessage(null);
     } else {
-      setPasscodeError('Kode Login Spreadsheet tidak sesuai. Silakan masukkan Kode Login resmi BP2RD HSU.');
+      setPasscodeError('Kode Login Spreadsheet tidak sesuai. Silakan masukkan Kode Login resmi yang diatur oleh Admin BP2RD HSU.');
     }
   };
 
-  const handleSaveNewPasscode = (e: React.FormEvent) => {
+  const handleSaveNewPasscode = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = newPasscodeInput.trim();
     if (trimmed.length < 4) {
@@ -162,12 +177,30 @@ export const GoogleSpreadsheetSyncModal: React.FC<GoogleSpreadsheetSyncModalProp
       });
       return;
     }
+
     saveSpreadsheetPasscode(trimmed);
+
+    const activeSettings = securitySettings || loadLocalSecuritySettings();
+    const updatedSettings: AppSecuritySettings = {
+      ...activeSettings,
+      spreadsheetPasscodeHash: await hashVerificationCode(trimmed),
+      spreadsheetPasscodeMasked: maskSecretCode(trimmed),
+      updatedBy: currentUser?.name || 'Administrator BP2RD HSU',
+      updatedAt: new Date().toISOString(),
+    };
+
+    const syncRes = await saveSecuritySettingsToFirestore(updatedSettings, trimmed);
+    if (onSecuritySettingsUpdated) {
+      onSecuritySettingsUpdated(updatedSettings);
+    }
+
     setNewPasscodeInput('');
     setIsChangingPasscode(false);
     setStatusMessage({
       type: 'success',
-      text: `Kode Login akses Spreadsheet berhasil diperbarui menjadi: "${trimmed}"`,
+      text: syncRes.syncedToFirebase
+        ? `Kode Login akses Spreadsheet berhasil diperbarui (${updatedSettings.spreadsheetPasscodeMasked}) dan disinkronkan ke Firebase.`
+        : `Kode Login akses Spreadsheet berhasil diperbarui (${updatedSettings.spreadsheetPasscodeMasked}) pada perangkat ini.`,
     });
   };
 

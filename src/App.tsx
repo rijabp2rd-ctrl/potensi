@@ -12,6 +12,13 @@ import { AnalyticsDashboard } from './components/AnalyticsDashboard';
 import { IndeksKepuasanMasyarakat } from './components/IndeksKepuasanMasyarakat';
 import { LoginModal } from './components/LoginModal';
 import { GoogleSpreadsheetSyncModal } from './components/GoogleSpreadsheetSyncModal';
+import { AdminSecuritySettings } from './components/AdminSecuritySettings';
+import { SaveVerificationModal, ProtectedSaveModule } from './components/SaveVerificationModal';
+import {
+  AppSecuritySettings,
+  loadLocalSecuritySettings,
+  subscribeToSecuritySettings,
+} from './services/securitySettings';
 import { 
   PotensiPajakEntry, 
   PbbP2Entry, 
@@ -65,6 +72,15 @@ export function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isSpreadsheetModalOpen, setIsSpreadsheetModalOpen] = useState(false);
   const [spreadsheetConfig, setSpreadsheetConfig] = useState<ConnectedSpreadsheetConfig | null>(null);
+  const [securitySettings, setSecuritySettings] = useState<AppSecuritySettings>(() =>
+    loadLocalSecuritySettings()
+  );
+  const [pendingSaveVerification, setPendingSaveVerification] = useState<{
+    moduleType: ProtectedSaveModule;
+    summaryTitle: string;
+    summarySubtitle?: string;
+    resolve: (verified: boolean) => void;
+  } | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [libraryCategoryFilter, setLibraryCategoryFilter] = useState<'all' | LibraryCategory>('all');
 
@@ -141,6 +157,10 @@ export function App() {
       }
     );
 
+    const unsubSecuritySettings = subscribeToSecuritySettings((settings) => {
+      setSecuritySettings(settings);
+    });
+
     // Real-time auth listener
     const unsubscribeAuth = subscribeToAuth((appUser) => {
       if (appUser) {
@@ -155,6 +175,7 @@ export function App() {
       unsubRetribusi();
       unsubLibrary();
       unsubIkm();
+      unsubSecuritySettings();
       unsubscribeAuth();
     };
   }, []);
@@ -178,10 +199,41 @@ export function App() {
     }
     setCurrentUser(null);
     saveCurrentUser(null);
-    if (activeTab === 'laporan' || activeTab === 'analitik') {
+    if (activeTab === 'laporan' || activeTab === 'analitik' || activeTab === 'pengaturan') {
       setActiveTab('beranda');
     }
     showToast('Anda telah logout dari mode aparatur internal');
+  };
+
+  // Trigger pop-up Kode Verifikasi Admin + Cloudflare Security sebelum menyimpan data
+  const requestSaveVerification = (
+    moduleType: ProtectedSaveModule,
+    summaryTitle: string,
+    summarySubtitle?: string
+  ): Promise<boolean> => {
+    const isModuleProtected =
+      moduleType === 'potensi'
+        ? securitySettings.protectPotensi
+        : moduleType === 'pbb'
+        ? securitySettings.protectPbb
+        : securitySettings.protectRetribusi;
+
+    const needsGate =
+      isModuleProtected &&
+      (securitySettings.requireSaveCode || securitySettings.cloudflareEnabled);
+
+    if (!needsGate) {
+      return Promise.resolve(true);
+    }
+
+    return new Promise((resolve) => {
+      setPendingSaveVerification({
+        moduleType,
+        summaryTitle,
+        summarySubtitle,
+        resolve,
+      });
+    });
   };
 
   // Status Verifikasi Update Handler for Potensi Pajak
@@ -380,7 +432,14 @@ export function App() {
     }
   };
 
-  const handleSavePotensi = (newEntry: PotensiPajakEntry) => {
+  const handleSavePotensi = async (newEntry: PotensiPajakEntry): Promise<boolean> => {
+    const verified = await requestSaveVerification(
+      'potensi',
+      newEntry.namaUsaha || newEntry.namaWajibPajak,
+      `${newEntry.jenisPajak} • ${newEntry.kecamatan}`
+    );
+    if (!verified) return false;
+
     const updated = [newEntry, ...potensiList];
     setPotensiList(updated);
     savePotensiList(updated);
@@ -439,13 +498,21 @@ export function App() {
       newLibraryEntries.forEach((entry) => syncLibraryEntryToFirestore(entry));
     }
 
-    showToast(`Data potensi ${newEntry.namaUsaha} berhasil disimpan & disinkronkan ke Firebase!`);
+    showToast(`Data potensi ${newEntry.namaUsaha} berhasil diverifikasi & disimpan ke Firebase!`);
     if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'user')) {
       setActiveTab('laporan');
     }
+    return true;
   };
 
-  const handleSavePbb = (newEntry: PbbP2Entry) => {
+  const handleSavePbb = async (newEntry: PbbP2Entry): Promise<boolean> => {
+    const verified = await requestSaveVerification(
+      'pbb',
+      `${newEntry.namaWajibPajak} (${newEntry.nop})`,
+      `SPPT PBB-P2 Tahun ${newEntry.tahunPajak} • ${newEntry.kecamatan}`
+    );
+    if (!verified) return false;
+
     const updated = [newEntry, ...pbbList];
     setPbbList(updated);
     savePbbList(updated);
@@ -504,13 +571,21 @@ export function App() {
     }
 
     triggerAutoSync(potensiList, retribusiList, updated);
-    showToast(`Data SPPT NOP ${newEntry.nop} berhasil disimpan & disinkronkan ke Firebase!`);
+    showToast(`Data SPPT NOP ${newEntry.nop} berhasil diverifikasi & disimpan ke Firebase!`);
     if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'user')) {
       setActiveTab('laporan');
     }
+    return true;
   };
 
-  const handleSaveRetribusi = (newEntry: RetribusiDaerahEntry) => {
+  const handleSaveRetribusi = async (newEntry: RetribusiDaerahEntry): Promise<boolean> => {
+    const verified = await requestSaveVerification(
+      'retribusi',
+      newEntry.subObjekRetribusi,
+      `${newEntry.subRekening} • ${newEntry.kecamatan}`
+    );
+    if (!verified) return false;
+
     const updated = [newEntry, ...retribusiList];
     setRetribusiList(updated);
     saveRetribusiList(updated);
@@ -543,10 +618,11 @@ export function App() {
       syncLibraryEntryToFirestore(newLibraryEntry);
     }
 
-    showToast(`Potensi retribusi "${newEntry.subObjekRetribusi}" berhasil disimpan & disinkronkan ke Firebase!`);
+    showToast(`Potensi retribusi "${newEntry.subObjekRetribusi}" berhasil diverifikasi & disimpan ke Firebase!`);
     if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'user')) {
       setActiveTab('laporan');
     }
+    return true;
   };
 
   const handleSaveLibrary = async (newEntry: LibraryBerkasEntry): Promise<boolean> => {
@@ -837,6 +913,50 @@ export function App() {
             </div>
           )
         )}
+        {/* Tab Pengaturan Kode Verifikasi, Cloudflare Security & Spreadsheet (KHUSUS ADMIN) */}
+        {activeTab === 'pengaturan' && (
+          currentUser?.role === 'admin' ? (
+            <AdminSecuritySettings
+              currentUser={currentUser}
+              securitySettings={securitySettings}
+              onSettingsUpdated={(updated) => {
+                setSecuritySettings(updated);
+                showToast('Pengaturan keamanan & verifikasi berhasil diperbarui.');
+              }}
+              spreadsheetConfig={spreadsheetConfig}
+              onSpreadsheetConfigUpdated={(cfg) => setSpreadsheetConfig(cfg)}
+              onOpenSpreadsheetModal={() => setIsSpreadsheetModalOpen(true)}
+            />
+          ) : (
+            <div className="max-w-xl mx-auto my-20 p-8 bg-slate-900 border border-amber-500/40 rounded-3xl text-center shadow-2xl">
+              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 mx-auto flex items-center justify-center mb-4">
+                <ShieldCheck className="w-8 h-8" />
+              </div>
+              <h2 className="text-xl font-bold text-white">
+                Akses Khusus Administrator BP2RD
+              </h2>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                Menu <strong>Pengaturan Kode Verifikasi Simpan Data, Cloudflare Security &amp; Spreadsheet</strong> hanya dapat diakses oleh akun Administrator BP2RD Kabupaten Hulu Sungai Utara.
+              </p>
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <button
+                  onClick={() => setIsLoginModalOpen(true)}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold text-xs shadow-lg transition-all cursor-pointer"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>Login Administrator</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('beranda')}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-colors cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Kembali ke Beranda</span>
+                </button>
+              </div>
+            </div>
+          )
+        )}
       </main>
 
       {/* Footer */}
@@ -862,6 +982,27 @@ export function App() {
         onLogin={handleLogin}
       />
 
+      {/* Pop-up Kode Verifikasi Admin + Cloudflare Security saat Simpan Data */}
+      {pendingSaveVerification && (
+        <SaveVerificationModal
+          isOpen={true}
+          moduleType={pendingSaveVerification.moduleType}
+          summaryTitle={pendingSaveVerification.summaryTitle}
+          summarySubtitle={pendingSaveVerification.summarySubtitle}
+          securitySettings={securitySettings}
+          onVerified={() => {
+            const resolver = pendingSaveVerification.resolve;
+            setPendingSaveVerification(null);
+            resolver(true);
+          }}
+          onCancel={() => {
+            const resolver = pendingSaveVerification.resolve;
+            setPendingSaveVerification(null);
+            resolver(false);
+          }}
+        />
+      )}
+
       {/* Google Spreadsheet Database Sync Modal */}
       <GoogleSpreadsheetSyncModal
         isOpen={isSpreadsheetModalOpen}
@@ -873,6 +1014,8 @@ export function App() {
         potensiList={potensiList}
         retribusiList={retribusiList}
         pbbList={pbbList}
+        securitySettings={securitySettings}
+        onSecuritySettingsUpdated={(updated) => setSecuritySettings(updated)}
         onSyncSuccess={(msg) => {
           showToast(msg);
           setSpreadsheetConfig(loadSpreadsheetConfig());
