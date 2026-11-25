@@ -14,7 +14,6 @@ import {
   Navigation2,
   Coins,
   HeartHandshake,
-  Lock,
   Settings
 } from 'lucide-react';
 import { AppUser } from '../types';
@@ -227,28 +226,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </nav>
 
-          {/* Spreadsheet & User Auth Section */}
-          <div className="flex items-center gap-2.5">
-            {onOpenSpreadsheetModal && (
-              <button
-                type="button"
-                onClick={onOpenSpreadsheetModal}
-                title="Koneksi Database ke Google Spreadsheet (Dilindungi Kode Login)"
-                className={`px-3 py-2 rounded-2xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 border cursor-pointer active:scale-95 ${
-                  isSpreadsheetConnected
-                    ? 'bg-emerald-950/70 border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/60 shadow-sm shadow-emerald-950/40'
-                    : 'bg-slate-800/80 border-slate-700 hover:border-emerald-500/50 text-slate-300 hover:text-white'
-                }`}
-              >
-                <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span className="hidden sm:inline">Spreadsheet</span>
-                <Lock className="w-3 h-3 text-amber-400 shrink-0 ml-0.5" />
-                {isSpreadsheetConnected && (
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" title="Terhubung" />
-                )}
-              </button>
-            )}
-
+          {/* User Auth Section */}
+          <div className="flex items-center gap-2.5 shrink-0">
             {currentUser ? (
               <div className="flex items-center gap-3 bg-slate-800/80 pl-3 pr-2 py-1.5 rounded-2xl border border-slate-700/80">
                 <div className="flex flex-col text-right">
@@ -360,19 +339,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Settings className="w-3 h-3" />
               <span>Pengaturan</span>
-            </button>
-          )}
-          {onOpenSpreadsheetModal && (
-            <button
-              onClick={onOpenSpreadsheetModal}
-              className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap flex items-center gap-1 font-bold ${
-                isSpreadsheetConnected
-                  ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-500/40'
-                  : 'bg-slate-800 text-slate-300'
-              }`}
-            >
-              <FileSpreadsheet className="w-3 h-3 text-emerald-400" />
-              <span>Spreadsheet</span>
             </button>
           )}
         </div>
